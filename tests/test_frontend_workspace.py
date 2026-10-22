@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.1" in html
-    assert "/static/style.css?v=0.5.1" in html
+    assert "/static/app.js?v=0.5.2" in html
+    assert "/static/style.css?v=0.5.2" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -124,3 +124,31 @@ def test_task_panel_can_upload_images_pasted_from_clipboard(client):
 
     css = client.get("/static/style.css").text
     assert ".attachment-paste-hint" in css
+
+
+def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(client):
+    html = client.get("/").text
+    for element_id in (
+        "task-tag-list",
+        "task-tag-input",
+        "add-task-tag",
+        "export-task",
+        "task-description-section",
+    ):
+        assert f'id="{element_id}"' in html
+    assert "/static/app.js?v=0.5.2" in html
+    assert "/static/style.css?v=0.5.2" in html
+
+    script = client.get("/static/app.js").text
+    assert "function renderTaskTagEditor()" in script
+    assert 'remove.setAttribute("aria-label", `Удалить тег ${tag}`)' in script
+    assert 'els.addTaskTag.addEventListener("click", () => addTaskTags())' in script
+    assert 'els.exportTask.addEventListener("click", handleTaskExport)' in script
+    assert 'window.location.href = `/api/tasks/${task.id}/export`' in script
+    assert "async function handleTaskExport()" in script
+
+    css = client.get("/static/style.css").text
+    assert "grid-template-columns: minmax(0, 1.08fr) minmax(245px, .92fr)" in css
+    assert ".tag-chip-remove:hover" in css
+    assert "overflow-y: auto" in css
+    assert "@media (max-height: 720px) and (min-width: 721px)" in css

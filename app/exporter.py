@@ -95,6 +95,65 @@ def build_zip_export(
     return output.getvalue()
 
 
+def _unique_export_filename(filename: str, used_names: set[str]) -> str:
+    """Return a flat, collision-free filename safe to use at the archive root."""
+    raw_name = str(filename or "attachment").replace("\\", "/")
+    basename = raw_name.rsplit("/", 1)[-1]
+    basename = "".join(character for character in basename if character.isprintable()).strip()
+    if basename in {"", ".", ".."}:
+        basename = "attachment"
+    basename = basename[:255]
+    candidate = basename
+    index = 2
+    while candidate.casefold() in used_names:
+        suffix = Path(basename).suffix
+        stem = basename[:-len(suffix)] if suffix else basename
+        extra = f" ({index})"
+        candidate = f"{stem[:max(1, 255 - len(suffix) - len(extra))]}{extra}{suffix}"
+        index += 1
+    used_names.add(candidate.casefold())
+    return candidate
+
+
+def build_task_zip_export(
+    task: dict[str, Any],
+    attachments: list[dict[str, Any]],
+    attachment_paths: dict[int, Path],
+) -> bytes:
+    """Package one task as a portable Markdown file with sibling attachment files."""
+    markdown_filename = f"task-{task['id']}.md"
+    used_names = {markdown_filename.casefold()}
+    export_names: list[tuple[dict[str, Any], str]] = []
+    for attachment in attachments:
+        export_names.append(
+            (attachment, _unique_export_filename(attachment["filename"], used_names))
+        )
+
+    metadata: dict[str, Any] = {
+        "title": task["title"],
+        "status": task["status"],
+        "tags": _tags(task["tags"]),
+        "created_at": task["created_at"],
+        "updated_at": task["updated_at"],
+        "attachments": [filename for _, filename in export_names],
+    }
+    if task.get("closed_at"):
+        metadata["closed_at"] = task["closed_at"]
+    markdown = (
+        frontmatter.dumps(frontmatter.Post(task["description"] or "", **metadata)).rstrip() + "\n"
+    )
+
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(markdown_filename, markdown.encode("utf-8"))
+        for attachment, filename in export_names:
+            path = attachment_paths.get(int(attachment["id"]))
+            if path is None or not path.is_file():
+                raise FileNotFoundError(f"Вложение «{attachment['filename']}» не найдено")
+            archive.write(path, arcname=filename)
+    return output.getvalue()
+
+
 def export_filename(extension: str) -> str:
     date = datetime.now(UTC).date().isoformat()
     return f"tasks-{date}.{extension}"

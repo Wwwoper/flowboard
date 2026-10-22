@@ -17,7 +17,7 @@
   </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.5.1">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.2">
 </head>
 <body>
   <div class="app-shell">
@@ -198,8 +198,10 @@
     </header>
     <form id="task-form" class="task-form">
       <input id="panel-task-id" type="hidden">
-      <label class="field-label" for="task-title">Заголовок</label>
-      <input id="task-title" class="text-field title-field" maxlength="200" required>
+      <div class="task-title-field">
+        <label class="field-label" for="task-title">Заголовок</label>
+        <input id="task-title" class="text-field title-field" maxlength="200" required>
+      </div>
 
       <div class="field-grid">
         <div>
@@ -211,43 +213,50 @@
             <option value="done">Готово</option>
           </select>
         </div>
-        <div>
-          <label class="field-label" for="task-tags">Теги</label>
-          <input id="task-tags" class="text-field" maxlength="1000" placeholder="backend, идея">
+        <div class="task-tags-field">
+          <label class="field-label" for="task-tag-input">Теги</label>
+          <div id="task-tag-list" class="tag-editor-list" aria-label="Текущие теги"></div>
+          <div class="tag-add-row">
+            <input id="task-tag-input" class="text-field" maxlength="1000" placeholder="Добавить тег…" autocomplete="off">
+            <button id="add-task-tag" class="button button-small button-quiet" type="button" aria-label="Добавить тег" title="Добавить тег">＋</button>
+          </div>
+          <input id="task-tags" class="visually-hidden" maxlength="1000" aria-hidden="true" tabindex="-1">
         </div>
       </div>
 
-      <div class="description-heading">
-        <label class="field-label" for="task-description">Описание</label>
-        <button id="toggle-preview" class="text-button" type="button">Предпросмотр</button>
-      </div>
-      <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown."></textarea>
-      <div id="description-preview" class="markdown-preview" hidden></div>
+      <section id="task-description-section" class="task-description-section">
+        <div class="description-heading">
+          <label class="field-label" for="task-description">Описание</label>
+          <button id="toggle-preview" class="text-button" type="button">Предпросмотр</button>
+        </div>
+        <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown."></textarea>
+        <div id="description-preview" class="markdown-preview" hidden></div>
+      </section>
 
       <section class="attachment-section">
         <div class="attachment-heading"><h3>Вложения</h3><span id="attachment-count" class="subtle-count">0</span></div>
         <div id="attachment-dropzone" class="attachment-dropzone" tabindex="0">
-          <span class="upload-icon" aria-hidden="true">↥</span>
           <strong>Перетащите файлы сюда</strong>
           <span>или выберите с устройства · до <span id="max-file-mb">20</span> МБ на файл</span>
           <span class="attachment-paste-hint">Можно также вставить изображение: ⌘/Ctrl+V</span>
           <input id="attachment-files" class="visually-hidden" type="file" multiple>
-          <button id="choose-files" class="button button-small button-quiet" type="button">Выбрать файлы</button>
+          <button id="choose-files" class="button button-small button-quiet" type="button">＋ Выбрать файлы</button>
         </div>
         <ul id="attachment-list" class="attachment-list"></ul>
       </section>
 
       <div class="task-meta" id="task-meta"></div>
       <div class="panel-actions">
-        <button id="save-task" class="button button-primary" type="submit">Сохранить изменения</button>
+        <button id="save-task" class="button button-primary" type="submit">Сохранить</button>
+        <button id="export-task" class="button button-quiet" type="button" title="Экспорт задачи в ZIP вместе с вложениями">Экспорт ZIP</button>
         <button id="focus-task" class="button button-quiet" type="button">◎ В фокус</button>
         <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
-        <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
+        <button id="delete-task" class="button button-danger-quiet" type="button">Удалить</button>
       </div>
     </form>
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.5.1" defer></script>
+  <script src="/static/app.js?v=0.5.2" defer></script>
 </body>
 </html>

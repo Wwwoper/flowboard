@@ -125,6 +125,67 @@ def test_zip_export_contains_manifest_and_all_attachments(client, tmp_path):
         assert archived_task["attachments"][0]["archive_path"] == attachment_path
 
 
+def test_single_task_export_contains_markdown_and_sibling_attachments(client):
+    task = client.post(
+        "/api/tasks",
+        json={
+            "title": "Export just this task",
+            "description": "A **Markdown** description.",
+            "tags": "project:flowboard, bug, needs-review",
+        },
+    ).json()
+    attached = client.post(
+        f"/api/tasks/{task['id']}/files",
+        files=[
+            ("files", ("notes.txt", b"first file", "text/plain")),
+            ("files", ("notes.txt", b"second file", "text/plain")),
+            ("files", (f"task-{task['id']}.md", b"name collision", "text/markdown")),
+        ],
+    )
+    assert attached.status_code == 201, attached.text
+    other = client.post("/api/tasks", json={"title": "Keep out of archive"}).json()
+    client.post(
+        f"/api/tasks/{other['id']}/files",
+        files=[("files", ("secret.txt", b"different task", "text/plain"))],
+    )
+
+    response = client.get(f"/api/tasks/{task['id']}/export")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("application/zip")
+    assert f'filename="task-{task["id"]}.zip"' in response.headers["content-disposition"]
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = archive.namelist()
+        markdown_name = f"task-{task['id']}.md"
+        assert markdown_name in names
+        assert "notes.txt" in names
+        assert "notes (2).txt" in names
+        assert f"task-{task['id']} (2).md" in names
+        assert "secret.txt" not in names
+        assert len(names) == 4
+        markdown = archive.read(markdown_name).decode("utf-8")
+        from app.frontmatter_compat import loads
+
+        post = loads(markdown)
+        assert post.metadata["title"] == "Export just this task"
+        assert post.metadata["status"] == "todo"
+        assert post.metadata["tags"] == ["project:flowboard", "bug", "needs-review"]
+        assert post.metadata["attachments"] == [
+            "notes.txt",
+            "notes (2).txt",
+            f"task-{task['id']} (2).md",
+        ]
+        assert post.content.strip() == "A **Markdown** description."
+        assert archive.read("notes.txt") == b"first file"
+        assert archive.read("notes (2).txt") == b"second file"
+        assert archive.read(f"task-{task['id']} (2).md") == b"name collision"
+
+
+def test_single_task_export_returns_404_for_unknown_task(client):
+    response = client.get("/api/tasks/987654/export")
+    assert response.status_code == 404
+
+
 def test_invalid_export_format_returns_400(client):
     response = client.get("/api/export?format=csv")
     assert response.status_code == 400

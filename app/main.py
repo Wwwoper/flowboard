@@ -423,6 +423,38 @@ def export_tasks(format: str = "md", connection: sqlite3.Connection = Depends(ge
     )
 
 
+@app.get("/api/tasks/{task_id}/export")
+def export_one_task(
+    task_id: int, connection: sqlite3.Connection = Depends(get_db)
+) -> Response:
+    # Import locally to avoid coupling this endpoint to the export module's import layout.
+    from app.exporter import build_task_zip_export
+
+    task = _require_task(connection, task_id)
+    attachments = _attachments_for_task(connection, task_id)
+    attachment_paths: dict[int, Path] = {}
+    for attachment in attachments:
+        path = _get_attachment_path(task_id, attachment["stored_name"])
+        if not path.is_file():
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "Не удалось экспортировать задачу: вложение "
+                    f"«{attachment['filename']}» отсутствует на диске"
+                ),
+            )
+        attachment_paths[int(attachment["id"])] = path
+    try:
+        content = build_task_zip_export(task, attachments, attachment_paths)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return Response(
+        content=content,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="task-{task_id}.zip"'},
+    )
+
+
 @app.post("/api/preview-markdown")
 def preview_markdown(payload: MarkdownPreviewRequest) -> dict[str, str]:
     return {"html": render_safe_markdown(payload.text)}

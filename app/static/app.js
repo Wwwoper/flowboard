@@ -83,12 +83,16 @@
     taskTitle: $("#task-title"),
     taskStatus: $("#task-status"),
     taskTags: $("#task-tags"),
+    taskTagList: $("#task-tag-list"),
+    taskTagInput: $("#task-tag-input"),
+    addTaskTag: $("#add-task-tag"),
     taskDescription: $("#task-description"),
     descriptionPreview: $("#description-preview"),
     togglePreview: $("#toggle-preview"),
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
     saveTask: $("#save-task"),
+    exportTask: $("#export-task"),
     focusTask: $("#focus-task"),
     attachmentInput: $("#attachment-files"),
     chooseFiles: $("#choose-files"),
@@ -551,6 +555,8 @@
       els.taskTitle.value = task.title;
       els.taskStatus.value = task.status;
       els.taskTags.value = task.tags || "";
+      renderTaskTagEditor();
+      els.taskTagInput.value = "";
       els.taskDescription.value = task.description || "";
       els.descriptionPreview.replaceChildren();
       els.descriptionPreview.hidden = true;
@@ -571,6 +577,59 @@
 
   async function refreshSelectedTask() {
     if (state.selectedTask) await openTaskPanel(state.selectedTask.id);
+  }
+
+  function editableTaskTags() {
+    return [...new Set(String(els.taskTags.value || "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean))];
+  }
+
+  function renderTaskTagEditor() {
+    const tags = editableTaskTags();
+    els.taskTags.value = tags.join(", ");
+    els.taskTagList.replaceChildren();
+    tags.forEach((tag, index) => {
+      const chip = make("span", "tag-chip");
+      chip.appendChild(make("span", "tag-chip-label", tag));
+      const remove = make("button", "tag-chip-remove", "×");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Удалить тег ${tag}`);
+      remove.title = `Удалить тег «${tag}»`;
+      remove.addEventListener("click", () => {
+        const current = editableTaskTags();
+        current.splice(index, 1);
+        els.taskTags.value = current.join(", ");
+        renderTaskTagEditor();
+        els.taskTagInput.focus({ preventScroll: true });
+      });
+      chip.appendChild(remove);
+      els.taskTagList.appendChild(chip);
+    });
+  }
+
+  function addTaskTags(value = els.taskTagInput.value) {
+    const incoming = String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+    if (!incoming.length) return;
+    const tags = editableTaskTags();
+    const known = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
+    for (const tag of incoming) {
+      const normalized = tag.toLocaleLowerCase("ru");
+      if (!known.has(normalized)) {
+        tags.push(tag);
+        known.add(normalized);
+      }
+    }
+    const combined = tags.join(", ");
+    if (combined.length > 1000) {
+      toast("Список тегов не должен превышать 1000 символов", "error");
+      return;
+    }
+    els.taskTags.value = combined;
+    els.taskTagInput.value = "";
+    renderTaskTagEditor();
+    els.taskTagInput.focus({ preventScroll: true });
   }
 
   function renderAttachments(attachments) {
@@ -695,6 +754,43 @@
     await loadTasks();
     if (state.selectedTask?.id === taskId) await refreshSelectedTask();
     toast("Вложение восстановлено");
+  }
+
+  async function handleTaskExport() {
+    const task = state.selectedTask;
+    if (!task) return;
+    els.exportTask.disabled = true;
+    try {
+      const current = {
+        title: els.taskTitle.value.trim(),
+        status: els.taskStatus.value,
+        tags: editableTaskTags().join(", "),
+        description: els.taskDescription.value,
+      };
+      const previousTags = String(task.tags || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .join(", ");
+      if (
+        current.title !== task.title ||
+        current.status !== task.status ||
+        current.tags !== previousTags ||
+        current.description !== (task.description || "")
+      ) {
+        await api(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          body: current,
+        });
+        await loadTasks();
+        await openTaskPanel(task.id);
+      }
+      window.location.href = `/api/tasks/${task.id}/export`;
+    } catch (error) {
+      toast(`Не удалось экспортировать задачу: ${error.message}`, "error");
+    } finally {
+      els.exportTask.disabled = false;
+    }
   }
 
   async function handleTaskSave(event) {
@@ -1076,6 +1172,14 @@
   }));
 
   els.taskForm.addEventListener("submit", handleTaskSave);
+  els.addTaskTag.addEventListener("click", () => addTaskTags());
+  els.taskTagInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addTaskTags();
+    }
+  });
+  els.exportTask.addEventListener("click", handleTaskExport);
   els.closePanel.addEventListener("click", closePanel);
   els.overlay.addEventListener("click", closePanel);
   els.closeTask.addEventListener("click", handleCloseTask);

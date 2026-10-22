@@ -339,6 +339,32 @@
     return node;
   }
 
+  const TASK_TYPE_LABELS = {
+    bug: "Ошибка",
+    feature: "Функция",
+    docs: "Документация",
+    refactor: "Рефакторинг",
+  };
+  const PROJECT_ACCENTS = ["#6975e8", "#239b8a", "#bd8242", "#a16ac8", "#477fbb", "#c56579"];
+
+  function taskDescriptionExcerpt(description, limit = 112) {
+    const plainText = String(description || "")
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/[`*_~>#]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!plainText) return "";
+    return plainText.length > limit ? `${plainText.slice(0, limit - 1).trimEnd()}…` : plainText;
+  }
+
+  function projectAccent(slug) {
+    let hash = 0;
+    for (const char of String(slug || "")) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    return PROJECT_ACCENTS[hash % PROJECT_ACCENTS.length];
+  }
+
   function makeTaskCard(task) {
     const card = make("article", `task-card${task.status === "done" ? " done-card" : ""}${state.focusTaskId === task.id ? " is-focused" : ""}`);
     card.dataset.taskId = String(task.id);
@@ -348,22 +374,44 @@
     card.setAttribute("tabindex", "0");
     card.setAttribute("aria-label", `Открыть задачу: ${task.title}`);
 
+    const tags = taskTags(task);
+    const project = projectForTask(task);
+    const typeTag = tags.find((tag) => Object.hasOwn(TASK_TYPE_LABELS, tag.toLowerCase()));
+    const hiddenTags = tags.filter((tag) => !projectFromTag(tag) && (!typeTag || tag !== typeTag));
+
     const top = make("div", "task-card-top");
     top.appendChild(make("div", "task-card-title", task.title));
     top.appendChild(make("span", "task-open-hint", "↗"));
     card.appendChild(top);
 
-    const tags = taskTags(task);
-    if (tags.length) {
+    const metadata = make("div", "task-card-meta");
+    const projectChip = make("span", `task-project-chip${project ? "" : " task-project-chip-empty"}`);
+    const projectMark = make("span", "task-project-mark");
+    if (project) projectMark.style.backgroundColor = projectAccent(project);
+    projectChip.appendChild(projectMark);
+    projectChip.appendChild(make("span", "task-project-name", project ? projectLabel(project) : "Без проекта"));
+    metadata.appendChild(projectChip);
+    if (typeTag) {
+      metadata.appendChild(make("span", `task-type-chip task-type-${typeTag.toLowerCase()}`, TASK_TYPE_LABELS[typeTag.toLowerCase()]));
+    }
+    card.appendChild(metadata);
+
+    const excerpt = taskDescriptionExcerpt(task.description);
+    if (excerpt) card.appendChild(make("p", "task-card-excerpt", excerpt));
+
+    if (hiddenTags.length) {
       const tagRow = make("div", "task-tags");
-      tags.forEach((tag) => tagRow.appendChild(make("span", "tag-pill", tag)));
+      hiddenTags.slice(0, 2).forEach((tag) => tagRow.appendChild(make("span", "tag-pill", tag)));
+      if (hiddenTags.length > 2) tagRow.appendChild(make("span", "tag-pill tag-pill-more", `+${hiddenTags.length - 2}`));
       card.appendChild(tagRow);
     }
 
     const footer = make("div", "task-card-footer");
     const metrics = make("span", "task-card-metrics");
     if (task.attachments_count) {
-      metrics.appendChild(make("span", "attachment-mini", `↗ ${task.attachments_count}`));
+      const attachment = make("span", "attachment-mini", `↗ ${task.attachments_count}`);
+      attachment.setAttribute("aria-label", `Вложений: ${task.attachments_count}`);
+      metrics.appendChild(attachment);
     }
     footer.appendChild(metrics);
     footer.appendChild(make("time", "task-updated", formatDate(task.updated_at)));

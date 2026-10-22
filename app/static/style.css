@@ -94,13 +94,26 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .task-card:hover { border-color: #cbd1e6; box-shadow: 0 4px 12px rgba(32,45,78,.055); transform: translateY(-1px); }
 .task-card:active { cursor: grabbing; }
 .task-card.dragging { opacity: .4; box-shadow: 0 6px 20px rgba(32,45,78,.12); }
-.task-card-title { color: #2c354d; font-size: 12px; font-weight: 690; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.task-card-title { color: #2c354d; font-size: 13px; font-weight: 720; line-height: 1.42; letter-spacing: -.12px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .task-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
-.task-open-hint { color: #c1c7d4; font-size: 14px; opacity: 0; transition: opacity .15s ease; }
-.task-card:hover .task-open-hint { opacity: 1; }
-.task-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.task-open-hint { flex: 0 0 auto; color: #a5aec0; font-size: 14px; opacity: 0; transition: opacity .15s ease; }
+.task-card:hover .task-open-hint, .task-card:focus-visible .task-open-hint { opacity: 1; }
+.task-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 9px; min-width: 0; }
+.task-project-chip, .task-type-chip { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; gap: 5px; border-radius: 5px; padding: 3px 6px; font-size: 9px; line-height: 1.35; font-weight: 750; }
+.task-project-chip { color: #515c78; background: #f0f2f9; }
+.task-project-chip-empty { color: #8b93a5; background: #f6f7fa; font-weight: 600; }
+.task-project-mark { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 2px; background: #a7afc1; }
+.task-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-type-chip { color: #5265a5; background: #edf0ff; }
+.task-type-bug { color: #a44e58; background: #fff0f1; }
+.task-type-feature { color: #267c69; background: #e8f7f1; }
+.task-type-docs { color: #8b672b; background: #fff5df; }
+.task-type-refactor { color: #7654a3; background: #f4edff; }
+.task-card-excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 8px 0 0; color: #78839a; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.task-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .tag-pill { display: inline-flex; max-width: 100%; padding: 3px 7px; color: #66708a; border-radius: 5px; background: #f1f3f9; font-size: 9px; font-weight: 680; overflow-wrap: anywhere; }
-.task-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: #a0a8b8; font-size: 9px; margin-top: 12px; border-top: 1px solid #f1f3f7; padding-top: 8px; }
+.tag-pill-more { color: #7c86a0; background: transparent; padding-inline: 2px; }
+.task-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: #a0a8b8; font-size: 9px; margin-top: 10px; border-top: 1px solid #f1f3f7; padding-top: 7px; }
 .task-card-metrics { display: flex; align-items: center; gap: 7px; }
 .attachment-mini { display: inline-flex; align-items: center; gap: 3px; }
 .done-card { opacity: .85; }
@@ -320,6 +333,15 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 }
 [data-theme="dark"] .task-card.dragging { box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
 [data-theme="dark"] .task-card-title { color: #e2e8f6; }
+[data-theme="dark"] .task-project-chip { color: #c3cce0; background: #252e43; }
+[data-theme="dark"] .task-project-chip-empty { color: #8490a8; background: #1b2231; }
+[data-theme="dark"] .task-type-chip { color: #c0c9ff; background: #292e4e; }
+[data-theme="dark"] .task-type-bug { color: #ffb8bf; background: #46282f; }
+[data-theme="dark"] .task-type-feature { color: #9ce4ce; background: #1d3b37; }
+[data-theme="dark"] .task-type-docs { color: #f0d39a; background: #443923; }
+[data-theme="dark"] .task-type-refactor { color: #d7baff; background: #392b4e; }
+[data-theme="dark"] .task-card-excerpt { color: #9ba7bd; }
+[data-theme="dark"] .tag-pill-more { color: #9ba7bd; background: transparent; }
 [data-theme="dark"] .task-open-hint { color: #8290aa; }
 [data-theme="dark"] .tag-pill {
   color: #b9c4dc;
@@ -454,6 +476,9 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 /* Compact density is optional and remains local to this browser. */
 :root[data-density="compact"] .task-list { gap: 5px; }
 :root[data-density="compact"] .task-card { padding: 8px 9px 7px; border-radius: 8px; }
+:root[data-density="compact"] .task-card-title { font-size: 12px; }
+:root[data-density="compact"] .task-card-meta { margin-top: 6px; }
+:root[data-density="compact"] .task-card-excerpt { margin-top: 5px; -webkit-line-clamp: 1; }
 :root[data-density="compact"] .task-tags { margin-top: 6px; gap: 4px; }
 :root[data-density="compact"] .tag-pill { padding: 2px 5px; }
 :root[data-density="compact"] .task-card-footer { margin-top: 7px; padding-top: 5px; }

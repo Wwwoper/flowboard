@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.3.0" in html
-    assert "/static/style.css?v=0.3.0" in html
+    assert "/static/app.js?v=0.4.0" in html
+    assert "/static/style.css?v=0.4.0" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -64,3 +64,24 @@ def test_frontend_offers_undo_for_task_edits_and_attachment_changes(client):
     assert 'toast("Вложение удалено", "success", "Восстановить"' in script
     assert '"Загрузка вложений отменена"' in script
     assert '"Вложение восстановлено"' in script
+
+
+def test_task_cards_have_scan_friendly_project_type_description_and_tag_hierarchy(client):
+    script = client.get("/static/app.js").text
+    assert "function taskDescriptionExcerpt(description, limit = 112)" in script
+    assert "const project = projectForTask(task);" in script
+    assert "TASK_TYPE_LABELS = {" in script
+    assert "hiddenTags.slice(0, 2)" in script
+    assert "task.attachments_count" in script
+
+    css = client.get("/static/style.css").text
+    for selector in (
+        ".task-card-meta",
+        ".task-project-chip",
+        ".task-type-chip",
+        ".task-card-excerpt",
+        ".tag-pill-more",
+        ':root[data-density="compact"] .task-card-excerpt',
+        '[data-theme="dark"] .task-card-excerpt',
+    ):
+        assert selector in css

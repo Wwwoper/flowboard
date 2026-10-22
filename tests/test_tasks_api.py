@@ -93,4 +93,25 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.1.1" in response.text
+    assert "/static/app.js?v=0.2.0" in response.text
+
+
+def test_index_exposes_accessible_theme_toggle(client):
+    response = client.get("/")
+
+    assert 'id="theme-toggle"' in response.text
+    assert 'aria-pressed="false"' in response.text
+    assert 'id="theme-toggle-icon"' in response.text
+
+
+def test_dark_theme_styles_and_theme_persistence_hook(client):
+    css_response = client.get("/static/style.css")
+    js_response = client.get("/static/app.js")
+    html_response = client.get("/")
+
+    assert css_response.status_code == 200
+    assert ':root[data-theme="dark"]' in css_response.text
+    assert '--page: #0c101a' in css_response.text
+    assert js_response.status_code == 200
+    assert 'localStorage.setItem("flowboard-theme", normalizedTheme)' in js_response.text
+    assert 'localStorage.getItem("flowboard-theme")' in html_response.text

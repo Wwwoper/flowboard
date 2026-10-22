@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f6fb">
+  <script>
+    (() => {
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem("flowboard-theme"); } catch {}
+      const systemPrefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme =
+        savedTheme === "dark" || savedTheme === "light"
+          ? savedTheme
+          : systemPrefersDark ? "dark" : "light";
+    })();
+  </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.1.1">
+  <link rel="stylesheet" href="/static/style.css?v=0.2.0">
 </head>
 <body>
   <div class="app-shell">
@@ -16,6 +27,12 @@
         <span><strong>Flowboard</strong><small>PERSONAL WORKSPACE</small></span>
       </a>
       <div class="topbar-actions">
+        <button id="theme-toggle" class="button button-quiet theme-toggle" type="button"
+                aria-label="Переключить на тёмную тему" aria-pressed="false"
+                title="Переключить на тёмную тему">
+          <span id="theme-toggle-icon" class="theme-toggle-icon" aria-hidden="true">☾</span>
+          <span id="theme-toggle-label" class="theme-toggle-label">Тёмная тема</span>
+        </button>
         <input id="import-files" class="visually-hidden" type="file" accept=".md,text/markdown" multiple>
         <button id="import-button" class="button button-quiet" type="button"><span aria-hidden="true">↑</span> Импорт MD</button>
         <div class="export-menu">
@@ -169,7 +186,7 @@
     </form>
   </aside>
 
-  <script src="/static/dragdrop.js?v=0.1.1" defer></script>
-  <script src="/static/app.js?v=0.1.1" defer></script>
+  <script src="/static/dragdrop.js?v=0.2.0" defer></script>
+  <script src="/static/app.js?v=0.2.0" defer></script>
 </body>
 </html>

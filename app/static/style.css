@@ -211,3 +211,194 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Dark theme overrides; the selected theme is stored in localStorage. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0c101a;
+  --surface: #151b29;
+  --surface-soft: #1b2333;
+  --ink: #edf1fb;
+  --ink-soft: #c5cde0;
+  --muted: #929db4;
+  --line: #2a3448;
+  --line-strong: #3a465e;
+  --accent: #8992ff;
+  --accent-dark: #a4aaff;
+  --accent-pale: #282d50;
+  --green: #68c6aa;
+  --orange: #e0b36d;
+  --red: #e58a93;
+  --shadow: 0 12px 36px rgba(0, 0, 0, .3);
+}
+
+[data-theme="dark"] body { background: var(--page); color: var(--ink); }
+[data-theme="dark"] .topbar { border-bottom-color: var(--line); }
+[data-theme="dark"] .brand small,
+[data-theme="dark"] .eyebrow { color: var(--muted); }
+[data-theme="dark"] .button-quiet {
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+[data-theme="dark"] .button-quiet:hover {
+  color: var(--ink);
+  background: #252e43;
+  border-color: #53617d;
+}
+[data-theme="dark"] .button-danger-quiet {
+  color: #f19ba2;
+  background: #321e2a;
+  border-color: #55303d;
+}
+[data-theme="dark"] .button-danger-quiet:hover { background: #40212f; }
+[data-theme="dark"] .total-stat {
+  color: var(--ink-soft);
+  background: var(--surface);
+  border-color: var(--line);
+}
+[data-theme="dark"] .quick-add {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+}
+[data-theme="dark"] .quick-add:focus-within {
+  border-color: #727bed;
+  box-shadow: 0 0 0 3px rgba(137, 146, 255, .12);
+}
+[data-theme="dark"] .quick-add-form input::placeholder,
+[data-theme="dark"] .quick-add-hint { color: var(--muted); }
+[data-theme="dark"] kbd {
+  color: #a3aec5;
+  border-color: var(--line-strong);
+  background: #1b2333;
+  box-shadow: 0 1px 0 #101622;
+}
+[data-theme="dark"] .search-box,
+[data-theme="dark"] .filter-box {
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-color: var(--line);
+}
+[data-theme="dark"] .search-box input { color: var(--ink); }
+[data-theme="dark"] .search-box input::placeholder { color: #8692ab; }
+[data-theme="dark"] .filter-box select { color: var(--ink-soft); }
+[data-theme="dark"] .board-column {
+  background: #111724;
+  border-color: var(--line);
+}
+[data-theme="dark"] .board-column.is-drop-target {
+  border-color: #6974df;
+  background: #1d2340;
+}
+[data-theme="dark"] .column-count {
+  color: #adb7cd;
+  background: #252f43;
+}
+[data-theme="dark"] .column-add { color: #8d99b2; }
+[data-theme="dark"] .column-add:hover {
+  color: var(--accent);
+  background: #252e43;
+}
+[data-theme="dark"] .board-column.wip-over-limit {
+  border-color: #705039;
+  background: #211b1a;
+}
+[data-theme="dark"] .board-column.wip-over-limit .column-header { color: #e4b986; }
+[data-theme="dark"] .wip-warning {
+  color: #e8bd8b;
+  background: #38291f;
+}
+[data-theme="dark"] .task-card {
+  background: var(--surface);
+  border-color: #2b3549;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .12);
+}
+[data-theme="dark"] .task-card:hover {
+  border-color: #4a5775;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+}
+[data-theme="dark"] .task-card.dragging { box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
+[data-theme="dark"] .task-card-title { color: #e2e8f6; }
+[data-theme="dark"] .task-open-hint { color: #8290aa; }
+[data-theme="dark"] .tag-pill {
+  color: #b9c4dc;
+  background: #252e43;
+}
+[data-theme="dark"] .task-card-footer { color: #8c98b0; border-top-color: #283245; }
+[data-theme="dark"] .done-card .task-card-title { color: #aab5ca; }
+[data-theme="dark"] .done-toggle { color: #a2aaff; }
+[data-theme="dark"] .column-empty { color: #7f8ca5; }
+[data-theme="dark"] .board-column-done { background: #111a1c; }
+[data-theme="dark"] .board-column-done .task-card { border-color: #293d3a; }
+[data-theme="dark"] .page-footer { color: #8692aa; }
+[data-theme="dark"] .task-panel {
+  background: var(--surface);
+  box-shadow: -18px 0 55px rgba(0, 0, 0, .4);
+}
+[data-theme="dark"] .panel-header { border-bottom-color: var(--line); }
+[data-theme="dark"] .icon-button {
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+[data-theme="dark"] .field-label { color: #b7c1d7; }
+[data-theme="dark"] .text-field {
+  color: var(--ink);
+  border-color: var(--line-strong);
+  background: #101622;
+}
+[data-theme="dark"] .text-field::placeholder { color: #76839c; }
+[data-theme="dark"] .text-field:focus {
+  border-color: #727bed;
+  box-shadow: 0 0 0 3px rgba(137, 146, 255, .12);
+}
+[data-theme="dark"] .markdown-preview {
+  color: var(--ink-soft);
+  background: #101622;
+  border-color: var(--line);
+}
+[data-theme="dark"] .markdown-preview pre,
+[data-theme="dark"] .markdown-preview code {
+  background: #252e43;
+}
+[data-theme="dark"] .markdown-preview a,
+[data-theme="dark"] .attachment-file-details a { color: #a4aaff; }
+[data-theme="dark"] .subtle-count {
+  color: #a4afc5;
+  background: #252e43;
+}
+[data-theme="dark"] .attachment-dropzone {
+  color: #9aa6be;
+  border-color: #3c4962;
+  background: #111724;
+}
+[data-theme="dark"] .attachment-dropzone.is-dragover {
+  border-color: #7b84f0;
+  background: #1d2340;
+}
+[data-theme="dark"] .attachment-dropzone strong { color: #c3cde1; }
+[data-theme="dark"] .attachment-item { border-color: var(--line); }
+[data-theme="dark"] .attachment-file-icon {
+  color: #a4aaff;
+  background: #282d50;
+}
+[data-theme="dark"] .attachment-file-details a,
+[data-theme="dark"] .attachment-file-details span { color: var(--ink-soft); }
+[data-theme="dark"] .attachment-file-details small { color: #8591a9; }
+[data-theme="dark"] .attachment-remove { color: #9ba7bf; }
+[data-theme="dark"] .attachment-remove:hover {
+  color: #f19ba2;
+  background: #40212f;
+}
+[data-theme="dark"] .task-meta {
+  color: #8c98b0;
+  border-top-color: var(--line);
+  border-bottom-color: var(--line);
+}
+
+@media (max-width: 640px) {
+  .theme-toggle { width: 36px; min-width: 36px; height: 36px; padding: 0 !important; }
+  .theme-toggle-label { display: none; }
+  .theme-toggle-icon { font-size: 18px; line-height: 1; }
+}

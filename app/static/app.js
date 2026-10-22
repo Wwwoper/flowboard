@@ -57,7 +57,39 @@
     toastRegion: $("#toast-region"),
     toggleDone: $("#toggle-done"),
     wipWarning: $("#wip-warning"),
+    themeToggle: $("#theme-toggle"),
+    themeToggleIcon: $("#theme-toggle-icon"),
+    themeToggleLabel: $("#theme-toggle-label"),
+    themeColor: $("meta[name=\"theme-color\"]"),
   };
+
+  function applyTheme(theme, persist = false) {
+    const normalizedTheme = theme === "dark" ? "dark" : "light";
+    const isDark = normalizedTheme === "dark";
+    document.documentElement.dataset.theme = normalizedTheme;
+    els.themeToggle.setAttribute("aria-pressed", String(isDark));
+    els.themeToggle.setAttribute(
+      "aria-label",
+      `Переключить на ${isDark ? "светлую" : "тёмную"} тему`,
+    );
+    els.themeToggle.title = `Переключить на ${isDark ? "светлую" : "тёмную"} тему`;
+    els.themeToggleIcon.textContent = isDark ? "☀" : "☾";
+    els.themeToggleLabel.textContent = isDark ? "Светлая тема" : "Тёмная тема";
+    els.themeColor.setAttribute("content", isDark ? "#0c101a" : "#f4f6fb");
+
+    if (persist) {
+      try {
+        localStorage.setItem("flowboard-theme", normalizedTheme);
+      } catch {
+        // Theme switching still works for this page when storage is unavailable.
+      }
+    }
+  }
+
+  function toggleTheme() {
+    const currentTheme = document.documentElement.dataset.theme;
+    applyTheme(currentTheme === "dark" ? "light" : "dark", true);
+  }
 
   async function api(url, options = {}) {
     const request = { ...options, cache: "no-store", headers: { ...(options.headers || {}) } };
@@ -571,6 +603,9 @@
       els.search.select();
     }
   });
+
+  els.themeToggle.addEventListener("click", toggleTheme);
+  applyTheme(document.documentElement.dataset.theme || "light");
 
   initializeSortables();
   initialize();

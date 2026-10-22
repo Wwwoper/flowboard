@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.0" in html
-    assert "/static/style.css?v=0.5.0" in html
+    assert "/static/app.js?v=0.5.1" in html
+    assert "/static/style.css?v=0.5.1" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -108,3 +108,19 @@ def test_quick_add_can_assign_optional_task_type(client):
     assert ".quick-task-type" in css
     assert '.quick-type-option[aria-pressed="true"]' in css
     assert "@media (max-width: 640px)" in css
+
+
+def test_task_panel_can_upload_images_pasted_from_clipboard(client):
+    html = client.get("/").text
+    assert "Можно также вставить изображение: ⌘/Ctrl+V" in html
+
+    script = client.get("/static/app.js").text
+    assert "function clipboardImageExtension(mimeType)" in script
+    assert "function pastedImageFiles(clipboardData)" in script
+    assert 'mimeType.startsWith("image/")' in script
+    assert "function handleTaskPanelPaste(event)" in script
+    assert 'els.panel.addEventListener("paste", handleTaskPanelPaste)' in script
+    assert "event.preventDefault();" in script
+
+    css = client.get("/static/style.css").text
+    assert ".attachment-paste-hint" in css

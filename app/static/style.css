@@ -170,6 +170,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .attachment-dropzone strong { color: #67728a; font-size: 11px; }
 .upload-icon { display: grid; place-items: center; width: 29px; height: 29px; margin-bottom: 2px; border-radius: 9px; color: var(--accent); background: var(--accent-pale); font-size: 19px; }
 .attachment-dropzone .button { margin-top: 7px; }
+.attachment-paste-hint { color: var(--muted); font-size: 10px; }
 .attachment-list { display: flex; flex-direction: column; gap: 7px; list-style: none; margin: 10px 0 0; padding: 0; }
 .attachment-item { display: flex; align-items: center; gap: 9px; padding: 9px; border: 1px solid #edf0f6; border-radius: 8px; }
 .attachment-file-icon { flex: 0 0 auto; display: grid; place-items: center; width: 28px; height: 31px; border-radius: 6px; background: #f2f3fc; color: #737bda; font-size: 10px; font-weight: 800; text-transform: uppercase; }

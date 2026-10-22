@@ -832,6 +832,48 @@
     }
   }
 
+  function clipboardImageExtension(mimeType) {
+    const extensions = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/gif": "gif",
+      "image/webp": "webp",
+      "image/avif": "avif",
+      "image/bmp": "bmp",
+      "image/x-ms-bmp": "bmp",
+      "image/heic": "heic",
+      "image/heif": "heif",
+      "image/svg+xml": "svg",
+      "image/tiff": "tiff",
+    };
+    const fallback = mimeType.split("/")[1]?.split("+")[0]?.replace(/^x-/, "").replace(/[^a-z0-9]/g, "");
+    return extensions[mimeType] || fallback || "png";
+  }
+
+  function pastedImageFiles(clipboardData) {
+    const items = Array.from(clipboardData?.items || []);
+    const files = items.flatMap((item, index) => {
+      const mimeType = String(item.type || "").toLowerCase();
+      if (!mimeType.startsWith("image/") || typeof item.getAsFile !== "function") return [];
+      const blob = item.getAsFile();
+      if (!blob) return [];
+      const extension = clipboardImageExtension(mimeType);
+      const filename = `pasted-image-${Date.now()}-${index + 1}.${extension}`;
+      return [new File([blob], filename, { type: mimeType })];
+    });
+    if (files.length) return files;
+
+    return Array.from(clipboardData?.files || []).filter((file) => file.type?.toLowerCase().startsWith("image/"));
+  }
+
+  function handleTaskPanelPaste(event) {
+    if (!state.selectedTask || !els.panel.classList.contains("is-open")) return;
+    const files = pastedImageFiles(event.clipboardData);
+    if (!files.length) return;
+    event.preventDefault();
+    void uploadFiles(files);
+  }
+
   async function removeAttachment(attachmentId, filename) {
     if (!window.confirm(`Удалить вложение «${filename}»?`)) return;
     try {
@@ -1059,6 +1101,7 @@
   els.exportZip.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });
   els.chooseFiles.addEventListener("click", () => els.attachmentInput.click());
   els.attachmentInput.addEventListener("change", () => uploadFiles(els.attachmentInput.files));
+  els.panel.addEventListener("paste", handleTaskPanelPaste);
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
 
   els.togglePreview.addEventListener("click", async () => {

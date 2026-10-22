@@ -17,7 +17,7 @@
   </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.5.0">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.1">
 </head>
 <body>
   <div class="app-shell">
@@ -230,6 +230,7 @@
           <span class="upload-icon" aria-hidden="true">↥</span>
           <strong>Перетащите файлы сюда</strong>
           <span>или выберите с устройства · до <span id="max-file-mb">20</span> МБ на файл</span>
+          <span class="attachment-paste-hint">Можно также вставить изображение: ⌘/Ctrl+V</span>
           <input id="attachment-files" class="visually-hidden" type="file" multiple>
           <button id="choose-files" class="button button-small button-quiet" type="button">Выбрать файлы</button>
         </div>
@@ -247,6 +248,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.5.0" defer></script>
+  <script src="/static/app.js?v=0.5.1" defer></script>
 </body>
 </html>

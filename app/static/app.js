@@ -596,12 +596,53 @@
     toast(successMessage);
   }
 
+  async function restoreTaskDetails(taskId, snapshot) {
+    await api(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      body: {
+        title: snapshot.title,
+        description: snapshot.description || "",
+        tags: snapshot.tags || "",
+        status: snapshot.status,
+        position: snapshot.position,
+      },
+    });
+    await loadTasks();
+    if (state.selectedTask?.id === taskId) await openTaskPanel(taskId);
+    toast("Изменения задачи отменены");
+  }
+
+  async function undoAttachmentUpload(attachments) {
+    for (const attachment of attachments) {
+      await api(`/api/files/${attachment.id}`, { method: "DELETE" });
+    }
+    await loadTasks();
+    if (state.selectedTask) await refreshSelectedTask();
+    toast("Загрузка вложений отменена");
+  }
+
+  async function undoAttachmentRemoval(taskId, file) {
+    const data = new FormData();
+    data.append("files", file, file.name);
+    await api(`/api/tasks/${taskId}/files`, { method: "POST", body: data });
+    await loadTasks();
+    if (state.selectedTask?.id === taskId) await refreshSelectedTask();
+    toast("Вложение восстановлено");
+  }
+
   async function handleTaskSave(event) {
     event.preventDefault();
     const taskId = Number(els.taskId.value);
     if (!taskId) return;
     els.saveTask.disabled = true;
     try {
+      const previous = {
+        title: state.selectedTask.title,
+        description: state.selectedTask.description || "",
+        status: state.selectedTask.status,
+        position: state.selectedTask.position,
+        tags: state.selectedTask.tags || "",
+      };
       const updated = await api(`/api/tasks/${taskId}`, {
         method: "PATCH",
         body: {
@@ -612,8 +653,8 @@
         },
       });
       await loadTasks();
-      toast("Изменения сохранены");
       await openTaskPanel(updated.id);
+      toast("Изменения сохранены", "success", "Отменить", () => restoreTaskDetails(taskId, previous));
     } catch (error) {
       toast(error.message, "error");
     } finally {
@@ -710,7 +751,12 @@
       const uploaded = await api(`/api/tasks/${task.id}/files`, { method: "POST", body: data });
       await loadTasks();
       await refreshSelectedTask();
-      toast(`Загружено файлов: ${uploaded.length}`);
+      toast(
+        `Загружено файлов: ${uploaded.length}`,
+        "success",
+        "Отменить",
+        () => undoAttachmentUpload(uploaded),
+      );
     } catch (error) {
       toast(error.message, "error");
     } finally {
@@ -722,10 +768,15 @@
   async function removeAttachment(attachmentId, filename) {
     if (!window.confirm(`Удалить вложение «${filename}»?`)) return;
     try {
+      const response = await fetch(`/api/files/${attachmentId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Не удалось сохранить вложение для отмены удаления");
+      const blob = await response.blob();
+      const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
+      const taskId = state.selectedTask?.id;
       await api(`/api/files/${attachmentId}`, { method: "DELETE" });
       await loadTasks();
       await refreshSelectedTask();
-      toast("Вложение удалено");
+      toast("Вложение удалено", "success", "Восстановить", () => undoAttachmentRemoval(taskId, file));
     } catch (error) {
       toast(error.message, "error");
     }

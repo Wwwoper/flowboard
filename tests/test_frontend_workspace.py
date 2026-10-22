@@ -53,3 +53,14 @@ def test_frontend_styles_support_compact_density_focus_and_image_previews(client
     assert ".attachment-preview" in css
     assert ".project-command-option" in css
     assert '[data-theme="dark"] .focus-bar' in css
+
+
+def test_frontend_offers_undo_for_task_edits_and_attachment_changes(client):
+    script = client.get("/static/app.js").text
+    assert "function restoreTaskDetails(taskId, snapshot)" in script
+    assert 'toast("Изменения сохранены", "success", "Отменить"' in script
+    assert "function undoAttachmentUpload(attachments)" in script
+    assert "function undoAttachmentRemoval(taskId, file)" in script
+    assert 'toast("Вложение удалено", "success", "Восстановить"' in script
+    assert '"Загрузка вложений отменена"' in script
+    assert '"Вложение восстановлено"' in script

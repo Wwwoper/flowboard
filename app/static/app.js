@@ -1,0 +1,577 @@
+(() => {
+  "use strict";
+
+  const STATUSES = ["todo", "doing", "waiting", "done"];
+  const STATUS_LABELS = {
+    todo: "К выполнению",
+    doing: "В работе",
+    waiting: "Ожидает",
+    done: "Готово",
+  };
+  const state = {
+    tasks: [],
+    selectedTask: null,
+    doneExpanded: false,
+    search: "",
+    tag: "",
+    wipLimit: 3,
+    maxFileSizeMb: 20,
+    previewVisible: false,
+    previewRequest: 0,
+  };
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const els = {
+    totalCount: $("#total-count"),
+    quickForm: $("#quick-add-form"),
+    quickTitle: $("#quick-title"),
+    search: $("#search-input"),
+    tagFilter: $("#tag-filter"),
+    filterSummary: $("#filter-summary"),
+    importButton: $("#import-button"),
+    importFiles: $("#import-files"),
+    exportMd: $("#export-md"),
+    exportZip: $("#export-zip"),
+    panel: $("#task-panel"),
+    overlay: $("#panel-overlay"),
+    closePanel: $("#close-panel"),
+    taskForm: $("#task-form"),
+    taskId: $("#panel-task-id"),
+    taskTitle: $("#task-title"),
+    taskStatus: $("#task-status"),
+    taskTags: $("#task-tags"),
+    taskDescription: $("#task-description"),
+    descriptionPreview: $("#description-preview"),
+    togglePreview: $("#toggle-preview"),
+    closeTask: $("#close-task"),
+    deleteTask: $("#delete-task"),
+    saveTask: $("#save-task"),
+    attachmentInput: $("#attachment-files"),
+    chooseFiles: $("#choose-files"),
+    attachmentDropzone: $("#attachment-dropzone"),
+    attachmentList: $("#attachment-list"),
+    attachmentCount: $("#attachment-count"),
+    maxFileMb: $("#max-file-mb"),
+    taskMeta: $("#task-meta"),
+    toastRegion: $("#toast-region"),
+    toggleDone: $("#toggle-done"),
+    wipWarning: $("#wip-warning"),
+  };
+
+  async function api(url, options = {}) {
+    const request = { ...options, cache: "no-store", headers: { ...(options.headers || {}) } };
+    if (request.body && !(request.body instanceof FormData) && typeof request.body !== "string") {
+      request.headers["Content-Type"] = "application/json";
+      request.body = JSON.stringify(request.body);
+    }
+    const response = await fetch(url, request);
+    if (response.status === 204) return null;
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await response.json() : await response.text();
+    if (!response.ok) {
+      const message = typeof data === "object" && data !== null ? data.detail : data;
+      throw new Error(Array.isArray(message) ? message.map((entry) => entry.msg || String(entry)).join("; ") : (message || `Ошибка ${response.status}`));
+    }
+    return data;
+  }
+
+  function toast(message, type = "success") {
+    const node = document.createElement("div");
+    node.className = `toast${type === "error" ? " error" : ""}`;
+    node.textContent = message;
+    els.toastRegion.appendChild(node);
+    window.setTimeout(() => node.remove(), 4200);
+  }
+
+  function pluralTasks(count) {
+    const n = Math.abs(count) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return `${count} задач`;
+    if (n1 > 1 && n1 < 5) return `${count} задачи`;
+    if (n1 === 1) return `${count} задача`;
+    return `${count} задач`;
+  }
+
+  function formatDate(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) return "сегодня";
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return "вчера";
+    return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short" }).format(date).replace(" г.", "");
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return `${bytes} Б`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  }
+
+  function taskTags(task) {
+    return String(task.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+  }
+
+  function matchesFilters(task) {
+    const search = state.search.trim().toLocaleLowerCase("ru");
+    if (search && !task.title.toLocaleLowerCase("ru").includes(search)) return false;
+    if (state.tag && !taskTags(task).includes(state.tag)) return false;
+    return true;
+  }
+
+  function make(tagName, className, text) {
+    const node = document.createElement(tagName);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function makeTaskCard(task) {
+    const card = make("article", `task-card${task.status === "done" ? " done-card" : ""}`);
+    card.dataset.taskId = String(task.id);
+    card.dataset.position = String(task.position);
+    card.draggable = true;
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", `Открыть задачу: ${task.title}`);
+
+    const top = make("div", "task-card-top");
+    top.appendChild(make("div", "task-card-title", task.title));
+    top.appendChild(make("span", "task-open-hint", "↗"));
+    card.appendChild(top);
+
+    const tags = taskTags(task);
+    if (tags.length) {
+      const tagRow = make("div", "task-tags");
+      tags.forEach((tag) => tagRow.appendChild(make("span", "tag-pill", tag)));
+      card.appendChild(tagRow);
+    }
+
+    const footer = make("div", "task-card-footer");
+    const metrics = make("span", "task-card-metrics");
+    if (task.attachments_count) {
+      metrics.appendChild(make("span", "attachment-mini", `↗ ${task.attachments_count}`));
+    }
+    footer.appendChild(metrics);
+    footer.appendChild(make("time", "task-updated", formatDate(task.updated_at)));
+    card.appendChild(footer);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button, a")) return;
+      openTaskPanel(task.id);
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openTaskPanel(task.id);
+      }
+    });
+    return card;
+  }
+
+  function populateTagFilter() {
+    const existingValue = state.tag;
+    const tags = [...new Set(state.tasks.flatMap(taskTags))].sort((a, b) => a.localeCompare(b, "ru"));
+    els.tagFilter.replaceChildren();
+    els.tagFilter.appendChild(new Option("Все теги", ""));
+    tags.forEach((tag) => els.tagFilter.appendChild(new Option(tag, tag)));
+    els.tagFilter.value = tags.includes(existingValue) ? existingValue : "";
+    state.tag = els.tagFilter.value;
+  }
+
+  function renderBoard() {
+    const visibleTasks = state.tasks.filter(matchesFilters);
+    els.totalCount.textContent = pluralTasks(state.tasks.length);
+    els.filterSummary.textContent = state.search || state.tag ? `Показано: ${visibleTasks.length} из ${state.tasks.length}` : "";
+
+    for (const status of STATUSES) {
+      const column = $(`.board-column[data-column="${status}"]`);
+      const list = $(`.task-list[data-status="${status}"]`);
+      const statusTasks = visibleTasks.filter((task) => task.status === status);
+      $(`#count-${status}`).textContent = String(statusTasks.length);
+      list.replaceChildren();
+
+      let tasksToRender = statusTasks;
+      if (status === "done" && !state.doneExpanded) {
+        const mostRecent = [...statusTasks]
+          .sort((a, b) => String(b.closed_at || b.updated_at).localeCompare(String(a.closed_at || a.updated_at)))
+          .slice(0, 5);
+        tasksToRender = mostRecent.sort((a, b) => Number(a.position) - Number(b.position));
+        els.toggleDone.hidden = statusTasks.length <= 5;
+        els.toggleDone.textContent = `Показать все (${statusTasks.length})`;
+        els.toggleDone.setAttribute("aria-expanded", "false");
+      } else if (status === "done") {
+        els.toggleDone.hidden = statusTasks.length <= 5;
+        els.toggleDone.textContent = "Свернуть";
+        els.toggleDone.setAttribute("aria-expanded", "true");
+      }
+
+      tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));
+      column.classList.toggle("is-empty", tasksToRender.length === 0);
+    }
+
+    const doingCount = state.tasks.filter((task) => task.status === "doing").length;
+    const overLimit = doingCount > state.wipLimit;
+    $(".board-column[data-column='doing']").classList.toggle("wip-over-limit", overLimit);
+    els.wipWarning.hidden = !overLimit;
+  }
+
+  async function loadTasks() {
+    state.tasks = await api("/api/tasks");
+    populateTagFilter();
+    renderBoard();
+  }
+
+  function openPanel() {
+    els.overlay.hidden = false;
+    els.panel.classList.add("is-open");
+    els.panel.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closePanel() {
+    els.panel.classList.remove("is-open");
+    els.panel.setAttribute("aria-hidden", "true");
+    els.overlay.hidden = true;
+    document.body.style.overflow = "";
+    state.selectedTask = null;
+    state.previewVisible = false;
+    els.descriptionPreview.hidden = true;
+    els.taskDescription.hidden = false;
+    els.togglePreview.textContent = "Предпросмотр";
+  }
+
+  async function openTaskPanel(taskId) {
+    try {
+      const task = await api(`/api/tasks/${taskId}`);
+      state.selectedTask = task;
+      els.taskId.value = String(task.id);
+      els.taskTitle.value = task.title;
+      els.taskStatus.value = task.status;
+      els.taskTags.value = task.tags || "";
+      els.taskDescription.value = task.description || "";
+      els.descriptionPreview.replaceChildren();
+      els.descriptionPreview.hidden = true;
+      els.taskDescription.hidden = false;
+      els.togglePreview.textContent = "Предпросмотр";
+      state.previewVisible = false;
+      els.closeTask.textContent = task.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
+      els.closeTask.dataset.action = task.status === "done" ? "reopen" : "close";
+      els.taskMeta.textContent = `Создана: ${formatDateTime(task.created_at)} · Изменена: ${formatDateTime(task.updated_at)}${task.closed_at ? ` · Закрыта: ${formatDateTime(task.closed_at)}` : ""}`;
+      renderAttachments(task.attachments || []);
+      openPanel();
+      window.setTimeout(() => els.taskTitle.focus({ preventScroll: true }), 100);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function refreshSelectedTask() {
+    if (state.selectedTask) await openTaskPanel(state.selectedTask.id);
+  }
+
+  function renderAttachments(attachments) {
+    els.attachmentList.replaceChildren();
+    els.attachmentCount.textContent = String(attachments.length);
+    attachments.forEach((attachment) => {
+      const item = make("li", "attachment-item");
+      const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().slice(0, 4) : "FILE";
+      item.appendChild(make("span", "attachment-file-icon", extension));
+      const details = make("span", "attachment-file-details");
+      const link = make("a", "", attachment.filename);
+      link.href = `/api/files/${attachment.id}`;
+      link.title = "Скачать файл";
+      details.appendChild(link);
+      details.appendChild(make("small", "", `${formatBytes(attachment.size)} · ${formatDate(attachment.created_at)}`));
+      item.appendChild(details);
+      const remove = make("button", "attachment-remove", "×");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Удалить вложение ${attachment.filename}`);
+      remove.addEventListener("click", () => removeAttachment(attachment.id, attachment.filename));
+      item.appendChild(remove);
+      els.attachmentList.appendChild(item);
+    });
+  }
+
+  async function requestMarkdownPreview() {
+    const requestId = ++state.previewRequest;
+    try {
+      const result = await api("/api/preview-markdown", { method: "POST", body: { text: els.taskDescription.value } });
+      if (requestId !== state.previewRequest || !state.previewVisible) return;
+      els.descriptionPreview.innerHTML = result.html;
+    } catch (error) {
+      toast(`Не удалось построить предпросмотр: ${error.message}`, "error");
+    }
+  }
+
+  async function createTask(title, status = "todo") {
+    const task = await api("/api/tasks", { method: "POST", body: { title: title.trim() } });
+    if (status !== "todo") await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
+    await loadTasks();
+    return task;
+  }
+
+  async function handleTaskSave(event) {
+    event.preventDefault();
+    const taskId = Number(els.taskId.value);
+    if (!taskId) return;
+    els.saveTask.disabled = true;
+    try {
+      const updated = await api(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: {
+          title: els.taskTitle.value,
+          status: els.taskStatus.value,
+          tags: els.taskTags.value,
+          description: els.taskDescription.value,
+        },
+      });
+      await loadTasks();
+      toast("Изменения сохранены");
+      await openTaskPanel(updated.id);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      els.saveTask.disabled = false;
+    }
+  }
+
+  async function handleCloseTask() {
+    const task = state.selectedTask;
+    if (!task) return;
+    const status = els.closeTask.dataset.action === "reopen" ? "todo" : "done";
+    try {
+      await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
+      closePanel();
+      await loadTasks();
+      toast(status === "done" ? "Задача закрыта" : "Задача возвращена к выполнению");
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function handleDeleteTask() {
+    const task = state.selectedTask;
+    if (!task) return;
+    if (!window.confirm(`Удалить задачу «${task.title}» вместе со всеми вложениями?`)) return;
+    try {
+      await api(`/api/tasks/${task.id}`, { method: "DELETE" });
+      closePanel();
+      await loadTasks();
+      toast("Задача удалена");
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function uploadFiles(fileList) {
+    const task = state.selectedTask;
+    const files = Array.from(fileList || []);
+    if (!task || files.length === 0) return;
+    const data = new FormData();
+    files.forEach((file) => data.append("files", file, file.name));
+    els.chooseFiles.disabled = true;
+    try {
+      const uploaded = await api(`/api/tasks/${task.id}/files`, { method: "POST", body: data });
+      await loadTasks();
+      await refreshSelectedTask();
+      toast(`Загружено файлов: ${uploaded.length}`);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      els.chooseFiles.disabled = false;
+      els.attachmentInput.value = "";
+    }
+  }
+
+  async function removeAttachment(attachmentId, filename) {
+    if (!window.confirm(`Удалить вложение «${filename}»?`)) return;
+    try {
+      await api(`/api/files/${attachmentId}`, { method: "DELETE" });
+      await loadTasks();
+      await refreshSelectedTask();
+      toast("Вложение удалено");
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function importMarkdown(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const data = new FormData();
+    files.forEach((file) => data.append("files", file, file.name));
+    try {
+      const result = await api("/api/import", { method: "POST", body: data });
+      await loadTasks();
+      if (result.skipped.length) {
+        const first = result.skipped.slice(0, 3).map((item) => `${item.filename}: ${item.reason}${item.line ? ` (строка ${item.line})` : ""}`).join("; ");
+        const suffix = result.skipped.length > 3 ? `; и ещё ${result.skipped.length - 3}` : "";
+        toast(`Создано задач: ${result.created}. Пропущено: ${result.skipped.length}. ${first}${suffix}`, result.created ? "success" : "error");
+      } else {
+        toast(`Импорт завершён: создано задач ${result.created}`);
+      }
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      els.importFiles.value = "";
+    }
+  }
+
+  async function reorderAfterDrop(event) {
+    const item = event.item;
+    const list = event.to;
+    if (!item || !list || !STATUSES.includes(list.dataset.status)) {
+      await loadTasks();
+      return;
+    }
+    const previous = item.previousElementSibling && item.previousElementSibling.classList.contains("task-card") ? item.previousElementSibling : null;
+    const next = item.nextElementSibling && item.nextElementSibling.classList.contains("task-card") ? item.nextElementSibling : null;
+    const prevPosition = previous ? Number(previous.dataset.position) : null;
+    const nextPosition = next ? Number(next.dataset.position) : null;
+    let position;
+    if (prevPosition !== null && nextPosition !== null) {
+      position = prevPosition < nextPosition ? (prevPosition + nextPosition) / 2 : prevPosition + 0.000001;
+    } else if (prevPosition !== null) {
+      position = prevPosition + 1;
+    } else if (nextPosition !== null) {
+      position = nextPosition - 1;
+    } else {
+      position = 0;
+    }
+    try {
+      await api(`/api/tasks/${item.dataset.taskId}`, {
+        method: "PATCH",
+        body: { status: list.dataset.status, position },
+      });
+      await loadTasks();
+    } catch (error) {
+      toast(`Не удалось переместить задачу: ${error.message}`, "error");
+      await loadTasks();
+    }
+  }
+
+  function initializeSortables() {
+    $$(".task-list").forEach((list) => {
+      Sortable.create(list, { group: "kanban", draggable: ".task-card", animation: 160, onEnd: reorderAfterDrop });
+    });
+  }
+
+  async function initialize() {
+    try {
+      const config = await api("/api/config");
+      state.wipLimit = config.wip_limit;
+      state.maxFileSizeMb = config.max_file_size_mb;
+      els.maxFileMb.textContent = String(config.max_file_size_mb);
+      await loadTasks();
+    } catch (error) {
+      toast(`Не удалось загрузить данные: ${error.message}`, "error");
+    }
+  }
+
+  els.quickForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = els.quickTitle.value.trim();
+    if (!title) return;
+    const status = els.quickForm.dataset.newStatus || "todo";
+    try {
+      await createTask(title, status);
+      els.quickTitle.value = "";
+      els.quickTitle.focus();
+      els.quickForm.dataset.newStatus = "todo";
+      els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";
+      toast(status === "todo" ? "Задача добавлена" : `Задача добавлена в колонку «${STATUS_LABELS[status]}»`);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  });
+
+  els.search.addEventListener("input", () => {
+    state.search = els.search.value;
+    renderBoard();
+  });
+  els.tagFilter.addEventListener("change", () => {
+    state.tag = els.tagFilter.value;
+    renderBoard();
+  });
+
+  $$("[data-add-status]").forEach((button) => button.addEventListener("click", () => {
+    els.quickTitle.focus();
+    if (button.dataset.addStatus !== "todo") {
+      els.quickTitle.placeholder = `Новая задача в колонке «${STATUS_LABELS[button.dataset.addStatus]}»…`;
+      els.quickForm.dataset.newStatus = button.dataset.addStatus;
+    } else {
+      els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";
+      els.quickForm.dataset.newStatus = "todo";
+    }
+  }));
+
+  els.taskForm.addEventListener("submit", handleTaskSave);
+  els.closePanel.addEventListener("click", closePanel);
+  els.overlay.addEventListener("click", closePanel);
+  els.closeTask.addEventListener("click", handleCloseTask);
+  els.deleteTask.addEventListener("click", handleDeleteTask);
+  els.importButton.addEventListener("click", () => els.importFiles.click());
+  els.importFiles.addEventListener("change", () => importMarkdown(els.importFiles.files));
+  els.exportMd.addEventListener("click", () => { window.location.href = "/api/export?format=md"; });
+  els.exportZip.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });
+  els.chooseFiles.addEventListener("click", () => els.attachmentInput.click());
+  els.attachmentInput.addEventListener("change", () => uploadFiles(els.attachmentInput.files));
+  els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
+
+  els.togglePreview.addEventListener("click", async () => {
+    state.previewVisible = !state.previewVisible;
+    els.descriptionPreview.hidden = !state.previewVisible;
+    els.taskDescription.hidden = state.previewVisible;
+    els.togglePreview.textContent = state.previewVisible ? "Редактировать" : "Предпросмотр";
+    if (state.previewVisible) await requestMarkdownPreview();
+  });
+  els.taskDescription.addEventListener("input", () => {
+    if (state.previewVisible) requestMarkdownPreview();
+  });
+
+  for (const eventName of ["dragenter", "dragover"]) {
+    els.attachmentDropzone.addEventListener(eventName, (event) => {
+      if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+      event.preventDefault();
+      els.attachmentDropzone.classList.add("is-dragover");
+    });
+  }
+  for (const eventName of ["dragleave", "drop"]) {
+    els.attachmentDropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      els.attachmentDropzone.classList.remove("is-dragover");
+      if (eventName === "drop" && event.dataTransfer?.files?.length) uploadFiles(event.dataTransfer.files);
+    });
+  }
+  els.attachmentDropzone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); els.attachmentInput.click(); }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const tag = event.target && event.target.tagName;
+    const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
+    if (event.key === "Escape" && !els.overlay.hidden) closePanel();
+    if (!isTyping && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLocaleLowerCase("en") === "n") {
+      event.preventDefault();
+      els.quickTitle.focus();
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("en") === "k") {
+      event.preventDefault();
+      els.search.focus();
+      els.search.select();
+    }
+  });
+
+  initializeSortables();
+  initialize();
+})();

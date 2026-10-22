@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6fb">
+  <meta name="description" content="Лёгкий личный канбан-трекер">
+  <title>Kanban Tracker</title>
+  <link rel="stylesheet" href="/static/style.css?v=0.1.1">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Kanban Tracker — на главную">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span><strong>Flowboard</strong><small>PERSONAL WORKSPACE</small></span>
+      </a>
+      <div class="topbar-actions">
+        <input id="import-files" class="visually-hidden" type="file" accept=".md,text/markdown" multiple>
+        <button id="import-button" class="button button-quiet" type="button"><span aria-hidden="true">↑</span> Импорт MD</button>
+        <div class="export-menu">
+          <button id="export-md" class="button button-quiet" type="button">Экспорт MD</button>
+          <button id="export-zip" class="button button-primary" type="button"><span aria-hidden="true">↓</span> Резервная копия ZIP</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">MY PROJECT</p>
+          <h1>Доска задач</h1>
+          <p class="page-subtitle">Небольшой следующий шаг — тоже прогресс.</p>
+        </div>
+        <div class="total-stat"><span class="stat-dot"></span><span id="total-count">0 задач</span></div>
+      </section>
+
+      <section class="quick-add" aria-label="Быстрое создание задачи">
+        <span class="quick-add-icon" aria-hidden="true">＋</span>
+        <form id="quick-add-form" class="quick-add-form">
+          <label class="visually-hidden" for="quick-title">Название новой задачи</label>
+          <input id="quick-title" name="title" maxlength="200" autocomplete="off" placeholder="Добавить задачу… и нажать Enter" required>
+          <kbd>↵</kbd>
+        </form>
+        <span class="quick-add-hint"><kbd>N</kbd> новая задача</span>
+      </section>
+
+      <section class="board-toolbar" aria-label="Поиск и фильтры">
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <span class="visually-hidden">Поиск по заголовкам</span>
+          <input id="search-input" type="search" placeholder="Найти задачу…" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+        <label class="filter-box">
+          <span aria-hidden="true">⌁</span>
+          <span class="visually-hidden">Фильтр по тегу</span>
+          <select id="tag-filter"><option value="">Все теги</option></select>
+        </label>
+        <span id="filter-summary" class="filter-summary"></span>
+      </section>
+
+      <section id="board" class="board" aria-label="Канбан-доска">
+        <section class="board-column" data-column="todo">
+          <header class="column-header">
+            <span class="column-marker marker-todo"></span>
+            <h2>К выполнению</h2>
+            <span class="column-count" id="count-todo">0</span>
+            <button class="column-add" data-add-status="todo" type="button" title="Добавить задачу">＋</button>
+          </header>
+          <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
+          <p class="column-empty">Пока пусто. Добавьте первую задачу.</p>
+        </section>
+
+        <section class="board-column" data-column="doing">
+          <header class="column-header">
+            <span class="column-marker marker-doing"></span>
+            <h2>В работе</h2>
+            <span class="column-count" id="count-doing">0</span>
+            <button class="column-add" data-add-status="doing" type="button" title="Добавить задачу">＋</button>
+          </header>
+          <div class="wip-warning" id="wip-warning" hidden>Мягкий лимит: стоит сфокусироваться на текущих задачах</div>
+          <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
+          <p class="column-empty">Здесь появятся задачи, над которыми вы работаете.</p>
+        </section>
+
+        <section class="board-column" data-column="waiting">
+          <header class="column-header">
+            <span class="column-marker marker-waiting"></span>
+            <h2>Ожидает</h2>
+            <span class="column-count" id="count-waiting">0</span>
+            <button class="column-add" data-add-status="waiting" type="button" title="Добавить задачу">＋</button>
+          </header>
+          <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
+          <p class="column-empty">Здесь появятся заблокированные или ожидающие задачи.</p>
+        </section>
+
+        <section class="board-column board-column-done" data-column="done">
+          <header class="column-header">
+            <span class="column-marker marker-done"></span>
+            <h2>Готово</h2>
+            <span class="column-count" id="count-done">0</span>
+            <button id="toggle-done" class="done-toggle" type="button" aria-expanded="false">Показать все</button>
+          </header>
+          <div class="task-list" data-status="done" aria-label="Завершённые задачи"></div>
+          <p class="column-empty">Пока нет завершённых задач.</p>
+        </section>
+      </section>
+      <footer class="page-footer">
+        <span><span class="footer-pulse"></span> Локальное хранилище · данные остаются у вас</span>
+        <span>Перетаскивайте карточки, чтобы менять порядок и статус</span>
+      </footer>
+    </main>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div id="panel-overlay" class="panel-overlay" hidden></div>
+  <aside id="task-panel" class="task-panel" aria-labelledby="panel-heading" aria-hidden="true">
+    <header class="panel-header">
+      <div><p class="eyebrow">TASK DETAILS</p><h2 id="panel-heading">Задача</h2></div>
+      <button id="close-panel" class="icon-button" type="button" aria-label="Закрыть панель">×</button>
+    </header>
+    <form id="task-form" class="task-form">
+      <input id="panel-task-id" type="hidden">
+      <label class="field-label" for="task-title">Заголовок</label>
+      <input id="task-title" class="text-field title-field" maxlength="200" required>
+
+      <div class="field-grid">
+        <div>
+          <label class="field-label" for="task-status">Статус</label>
+          <select id="task-status" class="text-field">
+            <option value="todo">К выполнению</option>
+            <option value="doing">В работе</option>
+            <option value="waiting">Ожидает</option>
+            <option value="done">Готово</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="task-tags">Теги</label>
+          <input id="task-tags" class="text-field" maxlength="1000" placeholder="backend, идея">
+        </div>
+      </div>
+
+      <div class="description-heading">
+        <label class="field-label" for="task-description">Описание</label>
+        <button id="toggle-preview" class="text-button" type="button">Предпросмотр</button>
+      </div>
+      <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown."></textarea>
+      <div id="description-preview" class="markdown-preview" hidden></div>
+
+      <section class="attachment-section">
+        <div class="attachment-heading"><h3>Вложения</h3><span id="attachment-count" class="subtle-count">0</span></div>
+        <div id="attachment-dropzone" class="attachment-dropzone" tabindex="0">
+          <span class="upload-icon" aria-hidden="true">↥</span>
+          <strong>Перетащите файлы сюда</strong>
+          <span>или выберите с устройства · до <span id="max-file-mb">20</span> МБ на файл</span>
+          <input id="attachment-files" class="visually-hidden" type="file" multiple>
+          <button id="choose-files" class="button button-small button-quiet" type="button">Выбрать файлы</button>
+        </div>
+        <ul id="attachment-list" class="attachment-list"></ul>
+      </section>
+
+      <div class="task-meta" id="task-meta"></div>
+      <div class="panel-actions">
+        <button id="save-task" class="button button-primary" type="submit">Сохранить изменения</button>
+        <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
+        <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
+      </div>
+    </form>
+  </aside>
+
+  <script src="/static/dragdrop.js?v=0.1.1" defer></script>
+  <script src="/static/app.js?v=0.1.1" defer></script>
+</body>
+</html>

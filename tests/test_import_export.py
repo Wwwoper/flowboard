@@ -175,7 +175,18 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
             "notes (2).txt",
             f"task-{task['id']} (2).md",
         ]
-        assert post.content.strip() == "A **Markdown** description."
+        assert post.metadata["flowboard_export_format"] == "single-task-v1"
+        assert post.content.startswith("# Export just this task\n")
+        assert "## Описание" in post.content
+        assert "A **Markdown** description." in post.content
+        assert "## Вложения" in post.content
+        assert "- [notes.txt](notes.txt)" in post.content
+        from app.importer import parse_markdown_file
+
+        imported, skipped = parse_markdown_file(markdown_name, markdown)
+        assert not skipped
+        assert len(imported) == 1
+        assert imported[0].description == "A **Markdown** description."
         assert archive.read("notes.txt") == b"first file"
         assert archive.read("notes (2).txt") == b"second file"
         assert archive.read(f"task-{task['id']} (2).md") == b"name collision"

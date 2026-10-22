@@ -11,6 +11,10 @@ from app import frontmatter_compat as frontmatter
 from app.config import STATUSES
 
 CHECKBOX_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
+TASK_DESCRIPTION_RE = re.compile(
+    r"(?s)<!-- flowboard-description-start -->\r?\n(.*?)\r?\n"
+    r"<!-- flowboard-description-end -->"
+)
 EXPORTED_TASK_RE = re.compile(
     r"(?ms)^<!-- kanban-task-start -->\s*\n---\s*\n"
     r"(?P<meta>.*?)\n---\s*\n(?P<body>.*?)\n<!-- kanban-task-end -->"
@@ -75,7 +79,15 @@ def _task_from_metadata(
     if len(title) > 200:
         return None, SkippedRecord(filename, "заголовок длиннее 200 символов")
 
-    description = body.strip()
+    if metadata.get("flowboard_export_format") == "single-task-v1":
+        description_match = TASK_DESCRIPTION_RE.search(body)
+        if description_match is None:
+            return None, SkippedRecord(
+                filename, "в экспортном Markdown не найдено описание задачи"
+            )
+        description = description_match.group(1).strip("\r\n")
+    else:
+        description = body.strip()
     if len(description) > 5000:
         return None, SkippedRecord(filename, "описание длиннее 5000 символов")
 

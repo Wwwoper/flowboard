@@ -121,6 +121,8 @@ def build_task_zip_export(
     attachment_paths: dict[int, Path],
 ) -> bytes:
     """Package one task as a portable Markdown file with sibling attachment files."""
+    from urllib.parse import quote
+
     markdown_filename = f"task-{task['id']}.md"
     used_names = {markdown_filename.casefold()}
     export_names: list[tuple[dict[str, Any], str]] = []
@@ -129,19 +131,47 @@ def build_task_zip_export(
             (attachment, _unique_export_filename(attachment["filename"], used_names))
         )
 
+    filenames = [filename for _, filename in export_names]
     metadata: dict[str, Any] = {
         "title": task["title"],
         "status": task["status"],
         "tags": _tags(task["tags"]),
         "created_at": task["created_at"],
         "updated_at": task["updated_at"],
-        "attachments": [filename for _, filename in export_names],
+        "attachments": filenames,
+        "flowboard_export_format": "single-task-v1",
     }
     if task.get("closed_at"):
         metadata["closed_at"] = task["closed_at"]
-    markdown = (
-        frontmatter.dumps(frontmatter.Post(task["description"] or "", **metadata)).rstrip() + "\n"
-    )
+
+    # Keep description Markdown intact while separating generated document chrome.
+    # Import uses these markers to retrieve only the original description.
+    status_label = STATUS_LABELS.get(task["status"], task["status"])
+    description = str(task.get("description") or "").strip("\r\n")
+    lines = [
+        f"# {task['title']}",
+        "",
+        f"**Статус:** {status_label}",
+    ]
+    tags = _tags(task["tags"])
+    if tags:
+        rendered_tags = ", ".join("`" + tag.replace("`", "\\`") + "`" for tag in tags)
+        lines.append(f"**Теги:** {rendered_tags}")
+    lines.extend(["", "## Описание", "", "<!-- flowboard-description-start -->", ""])
+    if description:
+        lines.append(description)
+    lines.extend(["", "<!-- flowboard-description-end -->", "", "## Вложения", ""])
+    if filenames:
+        for filename in filenames:
+            label = filename.replace("\\", "\\\\").replace("[", r"\[").replace("]", r"\]")
+            lines.append(f"- [{label}]({quote(filename, safe='')})")
+    else:
+        lines.append("_Нет вложений._")
+
+    body = "\n".join(lines).rstrip("\n") + "\n"
+    markdown = frontmatter.dumps(frontmatter.Post(body, **metadata))
+    if not markdown.endswith("\n"):
+        markdown += "\n"
 
     output = io.BytesIO()
     with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:

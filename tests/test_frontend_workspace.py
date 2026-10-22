@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.5" in html
-    assert "/static/style.css?v=0.5.5" in html
+    assert "/static/app.js?v=0.5.6" in html
+    assert "/static/style.css?v=0.5.6" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -138,8 +138,8 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.5" in html
-    assert "/static/style.css?v=0.5.5" in html
+    assert "/static/app.js?v=0.5.6" in html
+    assert "/static/style.css?v=0.5.6" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -213,3 +213,32 @@ def test_task_panel_is_reading_first_and_has_compact_attachment_and_action_contr
     assert ".description-field[hidden]" in css
     assert "grid-template-columns: minmax(0, 1.12fr) minmax(300px, .88fr)" in css
     assert "@media (max-width: 900px) and (min-width: 641px)" in css
+
+
+def test_main_board_uses_compact_file_and_settings_menus(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="files-menu"' in html
+    assert 'id="settings-menu"' in html
+    assert 'id="import-button"' in html
+    assert 'id="export-md"' in html
+    assert 'id="export-zip"' in html
+    assert 'id="theme-toggle"' in html
+    assert 'id="density-toggle"' in html
+    assert 'id="shortcuts-button"' in html
+    assert "MY PROJECT" not in html
+    assert "Доска задач" not in html
+    assert "Мои задачи" in html
+    assert 'id="active-count"' in html
+    assert 'id="doing-count"' in html
+
+    css = client.get("/static/style.css").text
+    assert ".toolbar-menu-panel" in css
+    assert "@media (max-width: 640px)" in css
+    assert ".task-card-title" in css
+
+    script = client.get("/static/app.js").text
+    assert 'els.activeCount.textContent = `Активные: ${activeCount}`;' in script
+    assert 'els.doingCount.textContent = `В работе: ${doingCount}`;' in script
+    assert 'const toolbarMenus = $$(".toolbar-menu");' in script

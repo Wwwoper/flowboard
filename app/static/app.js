@@ -58,6 +58,8 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const els = {
     totalCount: $("#total-count"),
+    activeCount: $("#active-count"),
+    doingCount: $("#doing-count"),
     quickForm: $("#quick-add-form"),
     quickTitle: $("#quick-title"),
     quickTaskType: $("#quick-task-type"),
@@ -455,7 +457,11 @@
 
   function renderBoard() {
     const visibleTasks = state.tasks.filter(matchesFilters);
+    const activeCount = state.tasks.filter((task) => task.status !== "done").length;
+    const doingCount = state.tasks.filter((task) => task.status === "doing").length;
     els.totalCount.textContent = pluralTasks(state.tasks.length);
+    els.activeCount.textContent = `Активные: ${activeCount}`;
+    els.doingCount.textContent = `В работе: ${doingCount}`;
     els.filterSummary.textContent = state.search || state.tag || state.project
       ? `Показано: ${visibleTasks.length} из ${state.tasks.length}`
       : "";
@@ -486,7 +492,6 @@
       column.classList.toggle("is-empty", tasksToRender.length === 0);
     }
 
-    const doingCount = state.tasks.filter((task) => task.status === "doing").length;
     const overLimit = doingCount > state.wipLimit;
     $(".board-column[data-column='doing']").classList.toggle("wip-over-limit", overLimit);
     els.wipWarning.hidden = !overLimit;
@@ -1411,10 +1416,31 @@
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); els.attachmentInput.click(); }
   });
 
+  const toolbarMenus = $$(".toolbar-menu");
+  toolbarMenus.forEach((menu) => {
+    menu.addEventListener("toggle", () => {
+      if (menu.open) toolbarMenus.forEach((otherMenu) => {
+        if (otherMenu !== menu) otherMenu.open = false;
+      });
+    });
+    menu.addEventListener("click", (event) => {
+      if (!event.target.closest("summary")) menu.open = false;
+    });
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".toolbar-menu")) return;
+    toolbarMenus.forEach((menu) => { menu.open = false; });
+  });
+
   document.addEventListener("keydown", (event) => {
     const tag = event.target && event.target.tagName;
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
     if (event.key === "Escape") {
+      const openToolbarMenu = toolbarMenus.find((menu) => menu.open);
+      if (openToolbarMenu) {
+        openToolbarMenu.open = false;
+        return;
+      }
       if (els.shortcutsDialog.open) els.shortcutsDialog.close();
       else if (els.projectDialog.open) els.projectDialog.close();
       else if (!els.overlay.hidden) closePanel();

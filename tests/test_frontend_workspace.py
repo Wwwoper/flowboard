@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.6" in html
-    assert "/static/style.css?v=0.5.6" in html
+    assert "/static/app.js?v=0.5.7" in html
+    assert "/static/style.css?v=0.5.7" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -138,8 +138,8 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.6" in html
-    assert "/static/style.css?v=0.5.6" in html
+    assert "/static/app.js?v=0.5.7" in html
+    assert "/static/style.css?v=0.5.7" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script

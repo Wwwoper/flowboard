@@ -193,15 +193,22 @@
   function toast(message, type = "success", actionLabel = "", onAction = null) {
     $$(".toast[data-has-undo=\"true\"]", els.toastRegion).forEach((node) => node.remove());
     const node = make("div", `toast${type === "error" ? " error" : ""}`);
+    node.setAttribute("role", type === "error" ? "alert" : "status");
+    node.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
     if (actionLabel && typeof onAction === "function") node.dataset.hasUndo = "true";
     const messageNode = make("span", "toast-message", message);
     node.appendChild(messageNode);
+    let timer = null;
+    const dismiss = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      node.remove();
+    };
     if (actionLabel && typeof onAction === "function") {
       const action = make("button", "toast-action", actionLabel);
       action.type = "button";
       action.addEventListener("click", async () => {
         action.disabled = true;
-        window.clearTimeout(timer);
+        if (timer !== null) window.clearTimeout(timer);
         try {
           await onAction();
         } catch (error) {
@@ -212,8 +219,13 @@
       });
       node.appendChild(action);
     }
+    const closeButton = make("button", "toast-close", "×");
+    closeButton.type = "button";
+    closeButton.setAttribute("aria-label", "Закрыть уведомление");
+    closeButton.addEventListener("click", dismiss);
+    node.appendChild(closeButton);
     els.toastRegion.appendChild(node);
-    const timer = window.setTimeout(() => node.remove(), actionLabel ? 8500 : 4200);
+    timer = window.setTimeout(dismiss, actionLabel ? 8500 : 4200);
   }
 
   function pluralTasks(count) {
@@ -1444,6 +1456,13 @@
       if (els.shortcutsDialog.open) els.shortcutsDialog.close();
       else if (els.projectDialog.open) els.projectDialog.close();
       else if (!els.overlay.hidden) closePanel();
+      else {
+        const latestToast = els.toastRegion.lastElementChild;
+        if (latestToast) {
+          event.preventDefault();
+          latestToast.remove();
+        }
+      }
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("en") === "k") {
       event.preventDefault();

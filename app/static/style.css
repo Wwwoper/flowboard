@@ -138,6 +138,37 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .toast.error { background: #9b3e4b; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Theme-aware notifications: override legacy toast colors without relying on their position. */
+.toast-region .toast {
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--green);
+  padding: 12px 12px 12px 14px;
+}
+.toast-region .toast.error { color: var(--ink); background: var(--surface); border-left-color: var(--red); }
+.toast-region .toast-action { color: var(--accent); }
+.toast-region .toast-action:hover { color: var(--accent-dark); }
+.toast-region .toast-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -3px -3px -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toast-region .toast-close:hover { color: var(--ink); background: var(--surface-soft); }
+.toast-region .toast-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .panel-overlay { position: fixed; inset: 0; z-index: 39; background: rgba(22,30,53,.27); backdrop-filter: blur(2px); }
 .task-panel { position: fixed; z-index: 40; top: 0; right: 0; bottom: 0; width: min(820px, 100vw); display: flex; flex-direction: column; overflow: hidden; background: var(--surface); box-shadow: -18px 0 55px rgba(26,36,69,.15); padding: 18px 22px 16px; transform: translateX(103%); transition: transform .24s ease; }
 .task-panel.is-open { transform: translateX(0); }

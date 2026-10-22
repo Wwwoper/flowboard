@@ -17,7 +17,7 @@
   </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.4.0">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.0">
 </head>
 <body>
   <div class="app-shell">
@@ -66,6 +66,13 @@
           <input id="quick-title" name="title" maxlength="200" autocomplete="off" placeholder="Добавить задачу… и нажать Enter" required>
           <kbd>↵</kbd>
         </form>
+        <div id="quick-task-type" class="quick-task-type" role="group" aria-label="Тип новой задачи">
+          <button class="quick-type-option" type="button" data-task-type="" aria-pressed="true" title="Создать задачу без типа">Без типа</button>
+          <button class="quick-type-option" type="button" data-task-type="bug" aria-pressed="false" title="Ошибка (тег bug)">Bug</button>
+          <button class="quick-type-option" type="button" data-task-type="feature" aria-pressed="false" title="Новая функция (тег feature)">Feature</button>
+          <button class="quick-type-option" type="button" data-task-type="docs" aria-pressed="false" title="Документация (тег docs)">Docs</button>
+          <button class="quick-type-option" type="button" data-task-type="refactor" aria-pressed="false" title="Рефакторинг (тег refactor)">Refactor</button>
+        </div>
         <span class="quick-add-hint"><kbd>N</kbd> новая задача</span>
       </section>
 
@@ -240,6 +247,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.4.0" defer></script>
+  <script src="/static/app.js?v=0.5.0" defer></script>
 </body>
 </html>

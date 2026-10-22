@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.4.0" in html
-    assert "/static/style.css?v=0.4.0" in html
+    assert "/static/app.js?v=0.5.0" in html
+    assert "/static/style.css?v=0.5.0" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -85,3 +85,26 @@ def test_task_cards_have_scan_friendly_project_type_description_and_tag_hierarch
         '[data-theme="dark"] .task-card-excerpt',
     ):
         assert selector in css
+
+
+def test_quick_add_can_assign_optional_task_type(client):
+    html = client.get("/").text
+    assert 'id="quick-task-type"' in html
+    assert 'data-task-type="" aria-pressed="true"' in html
+    for task_type in ("bug", "feature", "docs", "refactor"):
+        assert f'data-task-type="{task_type}"' in html
+
+    script = client.get("/static/app.js").text
+    assert 'quickTaskType: ""' in script
+    assert "function setQuickTaskType(type)" in script
+    assert "createTask(title, status, taskType)" in script
+    assert 'setQuickTaskType("")' in script
+    assert (
+        'const inheritedTag = state.tag && !Object.hasOwn(TASK_TYPE_LABELS, state.tag.toLowerCase())'
+        in script
+    )
+
+    css = client.get("/static/style.css").text
+    assert ".quick-task-type" in css
+    assert '.quick-type-option[aria-pressed="true"]' in css
+    assert "@media (max-width: 640px)" in css

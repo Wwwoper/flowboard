@@ -43,6 +43,7 @@
     tag: "",
     project: readStorage("flowboard-last-project"),
     projects: readStoredProjects(),
+    quickTaskType: "",
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
     density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
     dragOrigin: null,
@@ -58,6 +59,7 @@
     totalCount: $("#total-count"),
     quickForm: $("#quick-add-form"),
     quickTitle: $("#quick-title"),
+    quickTaskType: $("#quick-task-type"),
     search: $("#search-input"),
     projectFilter: $("#project-filter"),
     addProject: $("#add-project"),
@@ -347,6 +349,15 @@
   };
   const PROJECT_ACCENTS = ["#6975e8", "#239b8a", "#bd8242", "#a16ac8", "#477fbb", "#c56579"];
 
+  function setQuickTaskType(type) {
+    const normalizedType = String(type || "").toLowerCase();
+    state.quickTaskType = Object.hasOwn(TASK_TYPE_LABELS, normalizedType) ? normalizedType : "";
+    $$("[data-task-type]", els.quickTaskType).forEach((button) => {
+      const selected = button.dataset.taskType === state.quickTaskType;
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
+
   function taskDescriptionExcerpt(description, limit = 112) {
     const plainText = String(description || "")
       .replace(/```[\s\S]*?```/g, " ")
@@ -619,8 +630,16 @@
     }
   }
 
-  async function createTask(title, status = "todo") {
-    const tags = [...new Set([state.project ? projectTag(state.project) : "", state.tag].filter(Boolean))].join(", ");
+  async function createTask(title, status = "todo", taskType = state.quickTaskType) {
+    // Keep a selected type filter from silently assigning a type to every new task.
+    const inheritedTag = state.tag && !Object.hasOwn(TASK_TYPE_LABELS, state.tag.toLowerCase())
+      ? state.tag
+      : "";
+    const tags = [...new Set([
+      state.project ? projectTag(state.project) : "",
+      inheritedTag,
+      taskType,
+    ].filter(Boolean))].join(", ");
     let task = await api("/api/tasks", { method: "POST", body: { title: title.trim(), tags } });
     if (status !== "todo") {
       task = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
@@ -955,14 +974,24 @@
     }
   }
 
+  els.quickTaskType.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-task-type]");
+    if (!button) return;
+    setQuickTaskType(button.dataset.taskType);
+    // Keep the quick-entry flow moving: choose a type, then submit with Enter.
+    els.quickTitle.focus({ preventScroll: true });
+  });
+
   els.quickForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const title = els.quickTitle.value.trim();
     if (!title) return;
     const status = els.quickForm.dataset.newStatus || "todo";
+    const taskType = state.quickTaskType;
     try {
-      const task = await createTask(title, status);
+      const task = await createTask(title, status, taskType);
       els.quickTitle.value = "";
+      setQuickTaskType("");
       els.quickTitle.focus();
       els.quickForm.dataset.newStatus = "todo";
       els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";

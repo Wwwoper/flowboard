@@ -17,7 +17,7 @@
   </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.2.0">
+  <link rel="stylesheet" href="/static/style.css?v=0.3.0">
 </head>
 <body>
   <div class="app-shell">
@@ -33,11 +33,18 @@
           <span id="theme-toggle-icon" class="theme-toggle-icon" aria-hidden="true">☾</span>
           <span id="theme-toggle-label" class="theme-toggle-label">Тёмная тема</span>
         </button>
+        <button id="density-toggle" class="button button-quiet density-toggle" type="button"
+                aria-label="Включить компактные карточки" aria-pressed="false"
+                title="Переключить плотность карточек">
+          <span aria-hidden="true">☷</span><span id="density-toggle-label">Комфортно</span>
+        </button>
+        <button id="shortcuts-button" class="button button-quiet shortcuts-button" type="button"
+                aria-label="Показать сочетания клавиш" title="Сочетания клавиш (?)">?</button>
         <input id="import-files" class="visually-hidden" type="file" accept=".md,text/markdown" multiple>
         <button id="import-button" class="button button-quiet" type="button"><span aria-hidden="true">↑</span> Импорт MD</button>
         <div class="export-menu">
           <button id="export-md" class="button button-quiet" type="button">Экспорт MD</button>
-          <button id="export-zip" class="button button-primary" type="button"><span aria-hidden="true">↓</span> Резервная копия ZIP</button>
+          <button id="export-zip" class="button button-primary" type="button"><span aria-hidden="true">↓</span> <span class="backup-label">Резервная копия ZIP</span></button>
         </div>
       </div>
     </header>
@@ -62,14 +69,35 @@
         <span class="quick-add-hint"><kbd>N</kbd> новая задача</span>
       </section>
 
+      <section id="focus-bar" class="focus-bar" aria-label="Текущая задача в фокусе" hidden>
+        <span class="focus-indicator" aria-hidden="true">◎</span>
+        <div class="focus-copy">
+          <span class="focus-eyebrow">СЕЙЧАС В ФОКУСЕ</span>
+          <strong id="focus-title"></strong>
+          <small id="focus-project"></small>
+        </div>
+        <div class="focus-actions">
+          <button id="focus-open" class="button button-small button-quiet" type="button">Открыть</button>
+          <button id="focus-done" class="button button-small button-primary" type="button">Завершить</button>
+          <button id="focus-clear" class="icon-button focus-clear" type="button" aria-label="Снять фокус" title="Снять фокус">×</button>
+        </div>
+      </section>
+
       <section class="board-toolbar" aria-label="Поиск и фильтры">
         <label class="search-box">
           <span aria-hidden="true">⌕</span>
           <span class="visually-hidden">Поиск по заголовкам</span>
           <input id="search-input" type="search" placeholder="Найти задачу…" autocomplete="off">
-          <kbd>⌘ K</kbd>
+          <kbd>⌘/Ctrl K</kbd>
         </label>
-        <label class="filter-box">
+        <label class="filter-box project-filter-box">
+          <span aria-hidden="true">▦</span>
+          <span class="visually-hidden">Представление по проекту</span>
+          <select id="project-filter" aria-label="Проект"><option value="">Все проекты</option></select>
+        </label>
+        <button id="add-project" class="button button-small button-quiet add-project-button" type="button"
+                title="Добавить проект">＋ <span class="add-project-label">Проект</span></button>
+        <label class="filter-box tag-filter-box">
           <span aria-hidden="true">⌁</span>
           <span class="visually-hidden">Фильтр по тегу</span>
           <select id="tag-filter"><option value="">Все теги</option></select>
@@ -130,6 +158,30 @@
     </main>
   </div>
 
+  <dialog id="shortcuts-dialog" class="shortcuts-dialog" aria-labelledby="shortcuts-heading">
+    <div class="shortcuts-dialog-header">
+      <div><p class="eyebrow">FLOWBOARD</p><h2 id="shortcuts-heading">Сочетания клавиш</h2></div>
+      <button id="close-shortcuts" class="icon-button" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <dl class="shortcut-list">
+      <div><dt>Новая задача</dt><dd><kbd>N</kbd></dd></div>
+      <div><dt>Поиск задач</dt><dd><kbd>/</kbd> <span>или</span> <kbd>⌘/Ctrl K</kbd></dd></div>
+      <div><dt>Переключить проект</dt><dd><kbd>⌘ ⇧ P</kbd><span>/</span><kbd>Ctrl ⇧ P</kbd></dd></div>
+      <div><dt>Закрыть панель или окно</dt><dd><kbd>Esc</kbd></dd></div>
+      <div><dt>Эта памятка</dt><dd><kbd>?</kbd></dd></div>
+    </dl>
+    <p class="shortcuts-note">Сочетания не срабатывают, когда курсор находится в поле ввода.</p>
+  </dialog>
+  <dialog id="project-dialog" class="shortcuts-dialog project-dialog" aria-labelledby="project-dialog-heading">
+    <div class="shortcuts-dialog-header">
+      <div><p class="eyebrow">НАВИГАЦИЯ</p><h2 id="project-dialog-heading">Перейти к проекту</h2></div>
+      <button id="close-project-dialog" class="icon-button" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <label class="visually-hidden" for="project-command-search">Найти проект</label>
+    <input id="project-command-search" class="text-field project-command-search" type="search" placeholder="Начните вводить название проекта…" autocomplete="off">
+    <div id="project-command-list" class="project-command-list"></div>
+    <p class="shortcuts-note">Быстрый вызов: <kbd>⌘ ⇧ P</kbd> на macOS или <kbd>Ctrl ⇧ P</kbd> на Windows/Linux.</p>
+  </dialog>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <div id="panel-overlay" class="panel-overlay" hidden></div>
   <aside id="task-panel" class="task-panel" aria-labelledby="panel-heading" aria-hidden="true">
@@ -180,13 +232,14 @@
       <div class="task-meta" id="task-meta"></div>
       <div class="panel-actions">
         <button id="save-task" class="button button-primary" type="submit">Сохранить изменения</button>
+        <button id="focus-task" class="button button-quiet" type="button">◎ В фокус</button>
         <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
         <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
       </div>
     </form>
   </aside>
 
-  <script src="/static/dragdrop.js?v=0.2.0" defer></script>
-  <script src="/static/app.js?v=0.2.0" defer></script>
+  <script src="/static/dragdrop.js?v=0.3.0" defer></script>
+  <script src="/static/app.js?v=0.3.0" defer></script>
 </body>
 </html>

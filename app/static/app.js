@@ -8,12 +8,44 @@
     waiting: "Ожидает",
     done: "Готово",
   };
+  function readStorage(key, fallback = "") {
+    try {
+      return localStorage.getItem(key) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // The app remains usable when browser storage is disabled.
+    }
+  }
+
+  function readStoredProjects() {
+    try {
+      const value = JSON.parse(localStorage.getItem("flowboard-projects") || "[]");
+      return Array.isArray(value)
+        ? [...new Set(value.filter((slug) => typeof slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))]
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
   const state = {
     tasks: [],
     selectedTask: null,
     doneExpanded: false,
     search: "",
     tag: "",
+    project: readStorage("flowboard-last-project"),
+    projects: readStoredProjects(),
+    focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
+    density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
+    dragOrigin: null,
     wipLimit: 3,
     maxFileSizeMb: 20,
     previewVisible: false,
@@ -27,8 +59,16 @@
     quickForm: $("#quick-add-form"),
     quickTitle: $("#quick-title"),
     search: $("#search-input"),
+    projectFilter: $("#project-filter"),
+    addProject: $("#add-project"),
     tagFilter: $("#tag-filter"),
     filterSummary: $("#filter-summary"),
+    focusBar: $("#focus-bar"),
+    focusTitle: $("#focus-title"),
+    focusProject: $("#focus-project"),
+    focusOpen: $("#focus-open"),
+    focusDone: $("#focus-done"),
+    focusClear: $("#focus-clear"),
     importButton: $("#import-button"),
     importFiles: $("#import-files"),
     exportMd: $("#export-md"),
@@ -47,6 +87,7 @@
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
     saveTask: $("#save-task"),
+    focusTask: $("#focus-task"),
     attachmentInput: $("#attachment-files"),
     chooseFiles: $("#choose-files"),
     attachmentDropzone: $("#attachment-dropzone"),
@@ -61,6 +102,15 @@
     themeToggleIcon: $("#theme-toggle-icon"),
     themeToggleLabel: $("#theme-toggle-label"),
     themeColor: $("meta[name=\"theme-color\"]"),
+    densityToggle: $("#density-toggle"),
+    densityToggleLabel: $("#density-toggle-label"),
+    shortcutsButton: $("#shortcuts-button"),
+    shortcutsDialog: $("#shortcuts-dialog"),
+    closeShortcuts: $("#close-shortcuts"),
+    projectDialog: $("#project-dialog"),
+    closeProjectDialog: $("#close-project-dialog"),
+    projectCommandSearch: $("#project-command-search"),
+    projectCommandList: $("#project-command-list"),
   };
 
   function applyTheme(theme, persist = false) {
@@ -91,6 +141,21 @@
     applyTheme(currentTheme === "dark" ? "light" : "dark", true);
   }
 
+  function applyDensity(density, persist = false) {
+    state.density = density === "compact" ? "compact" : "comfortable";
+    document.documentElement.dataset.density = state.density;
+    const compact = state.density === "compact";
+    els.densityToggle.setAttribute("aria-pressed", String(compact));
+    els.densityToggle.setAttribute("aria-label", compact ? "Включить комфортные карточки" : "Включить компактные карточки");
+    els.densityToggle.title = compact ? "Включить комфортную плотность карточек" : "Включить компактную плотность карточек";
+    els.densityToggleLabel.textContent = compact ? "Компактно" : "Комфортно";
+    if (persist) writeStorage("flowboard-density", state.density);
+  }
+
+  function toggleDensity() {
+    applyDensity(state.density === "compact" ? "comfortable" : "compact", true);
+  }
+
   async function api(url, options = {}) {
     const request = { ...options, cache: "no-store", headers: { ...(options.headers || {}) } };
     if (request.body && !(request.body instanceof FormData) && typeof request.body !== "string") {
@@ -108,12 +173,30 @@
     return data;
   }
 
-  function toast(message, type = "success") {
-    const node = document.createElement("div");
-    node.className = `toast${type === "error" ? " error" : ""}`;
-    node.textContent = message;
+  function toast(message, type = "success", actionLabel = "", onAction = null) {
+    $$(".toast[data-has-undo=\"true\"]", els.toastRegion).forEach((node) => node.remove());
+    const node = make("div", `toast${type === "error" ? " error" : ""}`);
+    if (actionLabel && typeof onAction === "function") node.dataset.hasUndo = "true";
+    const messageNode = make("span", "toast-message", message);
+    node.appendChild(messageNode);
+    if (actionLabel && typeof onAction === "function") {
+      const action = make("button", "toast-action", actionLabel);
+      action.type = "button";
+      action.addEventListener("click", async () => {
+        action.disabled = true;
+        window.clearTimeout(timer);
+        try {
+          await onAction();
+        } catch (error) {
+          toast(`Не удалось отменить действие: ${error.message}`, "error");
+        } finally {
+          node.remove();
+        }
+      });
+      node.appendChild(action);
+    }
     els.toastRegion.appendChild(node);
-    window.setTimeout(() => node.remove(), 4200);
+    const timer = window.setTimeout(() => node.remove(), actionLabel ? 8500 : 4200);
   }
 
   function pluralTasks(count) {
@@ -154,10 +237,98 @@
     return String(task.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
   }
 
+  function normalizeSearch(value) {
+    return String(value || "").toLocaleLowerCase("ru").replace(/ё/g, "е").trim();
+  }
+
+  function projectFromTag(tag) {
+    const match = /^project:([a-z0-9]+(?:-[a-z0-9]+)*)$/i.exec(String(tag).trim());
+    return match ? match[1].toLowerCase() : "";
+  }
+
+  function projectTag(slug) {
+    return `project:${slug}`;
+  }
+
+  function projectLabel(slug) {
+    return String(slug || "")
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toLocaleUpperCase("ru") + part.slice(1))
+      .join(" ");
+  }
+
+  function projectForTask(task) {
+    const tag = taskTags(task).find((value) => projectFromTag(value));
+    return tag ? projectFromTag(tag) : "";
+  }
+
+  function persistProjectState() {
+    writeStorage("flowboard-projects", JSON.stringify(state.projects));
+    writeStorage("flowboard-last-project", state.project);
+  }
+
+  function renderProjectCommands(query = "") {
+    const normalizedQuery = normalizeSearch(query);
+    const projects = [{ slug: "", label: "Все проекты" }, ...state.projects.map((slug) => ({ slug, label: projectLabel(slug) }))]
+      .filter((project) => !normalizedQuery || normalizeSearch(project.label).includes(normalizedQuery) || normalizeSearch(project.slug).includes(normalizedQuery));
+    els.projectCommandList.replaceChildren();
+    if (!projects.length) {
+      els.projectCommandList.appendChild(make("p", "project-command-empty", "Проектов не найдено"));
+      return;
+    }
+    projects.forEach((project) => {
+      const button = make("button", "project-command-option");
+      button.type = "button";
+      button.textContent = project.label;
+      button.setAttribute("aria-current", String(project.slug === state.project));
+      button.appendChild(make("span", "project-command-mark", project.slug === state.project ? "✓" : "↵"));
+      button.addEventListener("click", () => {
+        state.project = project.slug;
+        els.projectFilter.value = project.slug;
+        persistProjectState();
+        renderBoard();
+        els.projectDialog.close();
+        els.quickTitle.focus();
+      });
+      els.projectCommandList.appendChild(button);
+    });
+  }
+
+  function openProjectDialog() {
+    renderProjectCommands("");
+    els.projectCommandSearch.value = "";
+    els.projectDialog.showModal();
+    window.setTimeout(() => els.projectCommandSearch.focus(), 0);
+  }
+
+  function populateProjectFilter() {
+    const detected = state.tasks.flatMap(taskTags).map(projectFromTag).filter(Boolean);
+    state.projects = [...new Set([...state.projects, ...detected])].sort((a, b) => a.localeCompare(b, "ru"));
+    els.projectFilter.replaceChildren(new Option("Все проекты", ""));
+    state.projects.forEach((slug) => els.projectFilter.appendChild(new Option(projectLabel(slug), slug)));
+    if (!state.projects.includes(state.project)) state.project = "";
+    els.projectFilter.value = state.project;
+    persistProjectState();
+  }
+
+  function populateTagFilter() {
+    const existingValue = state.tag;
+    const tags = [...new Set(state.tasks.flatMap(taskTags).filter((tag) => !projectFromTag(tag)))].sort((a, b) => a.localeCompare(b, "ru"));
+    els.tagFilter.replaceChildren();
+    els.tagFilter.appendChild(new Option("Все теги", ""));
+    tags.forEach((tag) => els.tagFilter.appendChild(new Option(tag, tag)));
+    els.tagFilter.value = tags.includes(existingValue) ? existingValue : "";
+    state.tag = els.tagFilter.value;
+  }
+
   function matchesFilters(task) {
-    const search = state.search.trim().toLocaleLowerCase("ru");
-    if (search && !task.title.toLocaleLowerCase("ru").includes(search)) return false;
+    const query = normalizeSearch(state.search);
+    const terms = query ? query.split(/\s+/).filter(Boolean) : [];
+    const searchable = normalizeSearch([task.title, task.description, ...taskTags(task)].join(" "));
+    if (terms.some((term) => !searchable.includes(term))) return false;
     if (state.tag && !taskTags(task).includes(state.tag)) return false;
+    if (state.project && !taskTags(task).some((tag) => projectFromTag(tag) === state.project)) return false;
     return true;
   }
 
@@ -169,7 +340,7 @@
   }
 
   function makeTaskCard(task) {
-    const card = make("article", `task-card${task.status === "done" ? " done-card" : ""}`);
+    const card = make("article", `task-card${task.status === "done" ? " done-card" : ""}${state.focusTaskId === task.id ? " is-focused" : ""}`);
     card.dataset.taskId = String(task.id);
     card.dataset.position = String(task.position);
     card.draggable = true;
@@ -210,20 +381,12 @@
     return card;
   }
 
-  function populateTagFilter() {
-    const existingValue = state.tag;
-    const tags = [...new Set(state.tasks.flatMap(taskTags))].sort((a, b) => a.localeCompare(b, "ru"));
-    els.tagFilter.replaceChildren();
-    els.tagFilter.appendChild(new Option("Все теги", ""));
-    tags.forEach((tag) => els.tagFilter.appendChild(new Option(tag, tag)));
-    els.tagFilter.value = tags.includes(existingValue) ? existingValue : "";
-    state.tag = els.tagFilter.value;
-  }
-
   function renderBoard() {
     const visibleTasks = state.tasks.filter(matchesFilters);
     els.totalCount.textContent = pluralTasks(state.tasks.length);
-    els.filterSummary.textContent = state.search || state.tag ? `Показано: ${visibleTasks.length} из ${state.tasks.length}` : "";
+    els.filterSummary.textContent = state.search || state.tag || state.project
+      ? `Показано: ${visibleTasks.length} из ${state.tasks.length}`
+      : "";
 
     for (const status of STATUSES) {
       const column = $(`.board-column[data-column="${status}"]`);
@@ -255,10 +418,46 @@
     const overLimit = doingCount > state.wipLimit;
     $(".board-column[data-column='doing']").classList.toggle("wip-over-limit", overLimit);
     els.wipWarning.hidden = !overLimit;
+    renderFocusBar();
+  }
+
+  function renderFocusBar() {
+    const task = state.tasks.find((item) => item.id === state.focusTaskId);
+    if (!task) {
+      if (state.focusTaskId !== null) {
+        state.focusTaskId = null;
+        writeStorage("flowboard-focus-task", "");
+      }
+      els.focusBar.hidden = true;
+      els.focusTask.textContent = "◎ В фокус";
+      return;
+    }
+    els.focusBar.hidden = false;
+    els.focusTitle.textContent = task.title;
+    const project = projectForTask(task);
+    els.focusProject.textContent = project ? `${projectLabel(project)} · ${STATUS_LABELS[task.status]}` : STATUS_LABELS[task.status];
+    els.focusDone.disabled = task.status === "done";
+    els.focusDone.textContent = task.status === "done" ? "Уже готово" : "Завершить";
+    if (state.selectedTask && state.selectedTask.id === task.id) els.focusTask.textContent = "Снять с фокуса";
+  }
+
+  function setFocusedTask(taskId) {
+    state.focusTaskId = taskId || null;
+    writeStorage("flowboard-focus-task", state.focusTaskId ? String(state.focusTaskId) : "");
+    renderBoard();
+    if (state.selectedTask) {
+      els.focusTask.textContent = state.selectedTask.id === state.focusTaskId ? "Снять с фокуса" : "◎ В фокус";
+    }
+  }
+
+  function clearFocus() {
+    setFocusedTask(null);
+    toast("Фокус снят");
   }
 
   async function loadTasks() {
     state.tasks = await api("/api/tasks");
+    populateProjectFilter();
     populateTagFilter();
     renderBoard();
   }
@@ -273,6 +472,9 @@
   function closePanel() {
     els.panel.classList.remove("is-open");
     els.panel.setAttribute("aria-hidden", "true");
+    els.attachmentList.querySelectorAll(".attachment-preview").forEach((image) => {
+      if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
+    });
     els.overlay.hidden = true;
     document.body.style.overflow = "";
     state.selectedTask = null;
@@ -300,6 +502,7 @@
       els.closeTask.dataset.action = task.status === "done" ? "reopen" : "close";
       els.taskMeta.textContent = `Создана: ${formatDateTime(task.created_at)} · Изменена: ${formatDateTime(task.updated_at)}${task.closed_at ? ` · Закрыта: ${formatDateTime(task.closed_at)}` : ""}`;
       renderAttachments(task.attachments || []);
+      els.focusTask.textContent = state.focusTaskId === task.id ? "Снять с фокуса" : "◎ В фокус";
       openPanel();
       window.setTimeout(() => els.taskTitle.focus({ preventScroll: true }), 100);
     } catch (error) {
@@ -312,12 +515,35 @@
   }
 
   function renderAttachments(attachments) {
+    els.attachmentList.querySelectorAll(".attachment-preview").forEach((image) => {
+      if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
+    });
     els.attachmentList.replaceChildren();
     els.attachmentCount.textContent = String(attachments.length);
     attachments.forEach((attachment) => {
       const item = make("li", "attachment-item");
-      const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().slice(0, 4) : "FILE";
-      item.appendChild(make("span", "attachment-file-icon", extension));
+      const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().toLowerCase() : "FILE";
+      const isPreviewableImage = ["png", "jpg", "jpeg", "gif", "webp", "avif"].includes(extension);
+      if (isPreviewableImage) {
+        const preview = make("img", "attachment-preview");
+        preview.alt = `Предпросмотр: ${attachment.filename}`;
+        preview.loading = "lazy";
+        item.appendChild(preview);
+        fetch(`/api/files/${attachment.id}`, { cache: "no-store" })
+          .then((response) => {
+            if (!response.ok) throw new Error("Не удалось загрузить предпросмотр");
+            return response.blob();
+          })
+          .then((blob) => {
+            if (!preview.isConnected) return;
+            const objectUrl = URL.createObjectURL(blob);
+            preview.dataset.objectUrl = objectUrl;
+            preview.src = objectUrl;
+          })
+          .catch(() => preview.remove());
+      } else {
+        item.appendChild(make("span", "attachment-file-icon", extension.slice(0, 4) || "FILE"));
+      }
       const details = make("span", "attachment-file-details");
       const link = make("a", "", attachment.filename);
       link.href = `/api/files/${attachment.id}`;
@@ -346,10 +572,28 @@
   }
 
   async function createTask(title, status = "todo") {
-    const task = await api("/api/tasks", { method: "POST", body: { title: title.trim() } });
-    if (status !== "todo") await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
+    const tags = [...new Set([state.project ? projectTag(state.project) : "", state.tag].filter(Boolean))].join(", ");
+    let task = await api("/api/tasks", { method: "POST", body: { title: title.trim(), tags } });
+    if (status !== "todo") {
+      task = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
+    }
     await loadTasks();
     return task;
+  }
+
+  async function undoCreation(taskId) {
+    await api(`/api/tasks/${taskId}`, { method: "DELETE" });
+    await loadTasks();
+    toast("Создание задачи отменено");
+  }
+
+  async function restoreTaskState(taskId, snapshot, successMessage = "Действие отменено") {
+    await api(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      body: { status: snapshot.status, position: snapshot.position },
+    });
+    await loadTasks();
+    toast(successMessage);
   }
 
   async function handleTaskSave(event) {
@@ -385,10 +629,51 @@
       await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
       closePanel();
       await loadTasks();
-      toast(status === "done" ? "Задача закрыта" : "Задача возвращена к выполнению");
+      const previousState = { status: task.status, position: task.position };
+      toast(
+        status === "done" ? "Задача закрыта" : "Задача возвращена к выполнению",
+        "success",
+        "Отменить",
+        () => restoreTaskState(task.id, previousState),
+      );
     } catch (error) {
       toast(error.message, "error");
     }
+  }
+
+  async function snapshotAttachmentFiles(attachments) {
+    const files = [];
+    for (const attachment of attachments || []) {
+      const response = await fetch(`/api/files/${attachment.id}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Не удалось сохранить вложение «${attachment.filename}» для отмены удаления`);
+      const blob = await response.blob();
+      files.push(new File([blob], attachment.filename, { type: blob.type || "application/octet-stream" }));
+    }
+    return files;
+  }
+
+  async function restoreDeletedTask(snapshot, files, wasFocused) {
+    const created = await api("/api/tasks", {
+      method: "POST",
+      body: { title: snapshot.title, description: snapshot.description || "", tags: snapshot.tags || "" },
+    });
+    try {
+      await api(`/api/tasks/${created.id}`, {
+        method: "PATCH",
+        body: { status: snapshot.status, position: snapshot.position },
+      });
+      if (files.length) {
+        const data = new FormData();
+        files.forEach((file) => data.append("files", file, file.name));
+        await api(`/api/tasks/${created.id}/files`, { method: "POST", body: data });
+      }
+    } catch (error) {
+      await api(`/api/tasks/${created.id}`, { method: "DELETE" }).catch(() => null);
+      throw error;
+    }
+    await loadTasks();
+    if (wasFocused) setFocusedTask(created.id);
+    toast("Задача восстановлена вместе с вложениями");
   }
 
   async function handleDeleteTask() {
@@ -396,10 +681,19 @@
     if (!task) return;
     if (!window.confirm(`Удалить задачу «${task.title}» вместе со всеми вложениями?`)) return;
     try {
+      const files = await snapshotAttachmentFiles(task.attachments || []);
+      const snapshot = {
+        title: task.title,
+        description: task.description || "",
+        tags: task.tags || "",
+        status: task.status,
+        position: task.position,
+      };
+      const wasFocused = state.focusTaskId === task.id;
       await api(`/api/tasks/${task.id}`, { method: "DELETE" });
       closePanel();
       await loadTasks();
-      toast("Задача удалена");
+      toast("Задача удалена", "success", "Восстановить", () => restoreDeletedTask(snapshot, files, wasFocused));
     } catch (error) {
       toast(error.message, "error");
     }
@@ -481,21 +775,73 @@
       position = 0;
     }
     try {
-      await api(`/api/tasks/${item.dataset.taskId}`, {
+      const taskId = Number(item.dataset.taskId);
+      const previousState = state.dragOrigin || state.tasks.find((task) => task.id === taskId);
+      await api(`/api/tasks/${taskId}`, {
         method: "PATCH",
         body: { status: list.dataset.status, position },
       });
       await loadTasks();
+      if (previousState) {
+        toast("Положение задачи изменено", "success", "Отменить", () => restoreTaskState(taskId, previousState));
+      }
+      state.dragOrigin = null;
     } catch (error) {
       toast(`Не удалось переместить задачу: ${error.message}`, "error");
+      state.dragOrigin = null;
       await loadTasks();
     }
   }
 
   function initializeSortables() {
     $$(".task-list").forEach((list) => {
-      Sortable.create(list, { group: "kanban", draggable: ".task-card", animation: 160, onEnd: reorderAfterDrop });
+      Sortable.create(list, {
+        group: "kanban",
+        draggable: ".task-card",
+        animation: 160,
+        onStart: (event) => {
+          const taskId = Number(event.item?.dataset.taskId);
+          const task = state.tasks.find((item) => item.id === taskId);
+          state.dragOrigin = task ? { status: task.status, position: task.position } : null;
+        },
+        onEnd: reorderAfterDrop,
+      });
     });
+  }
+
+  function addProject() {
+    const raw = window.prompt("Ключ нового проекта (латиница, цифры и дефис), например storefront:");
+    if (raw === null) return;
+    const slug = raw.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      toast("Используй латиницу, цифры и дефисы без пробелов по краям", "error");
+      return;
+    }
+    if (!state.projects.includes(slug)) state.projects.push(slug);
+    state.projects.sort((a, b) => a.localeCompare(b, "ru"));
+    state.project = slug;
+    populateProjectFilter();
+    renderBoard();
+    els.quickTitle.focus();
+    persistProjectState();
+    toast(`Проект «${projectLabel(slug)}» выбран. Новые задачи получат тег ${projectTag(slug)}.`);
+  }
+
+  async function handleFocusDone() {
+    const task = state.tasks.find((item) => item.id === state.focusTaskId);
+    if (!task || task.status === "done") return;
+    const previousState = { status: task.status, position: task.position };
+    try {
+      await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status: "done" } });
+      setFocusedTask(null);
+      await loadTasks();
+      toast("Задача закрыта", "success", "Отменить", async () => {
+        await restoreTaskState(task.id, previousState);
+        setFocusedTask(task.id);
+      });
+    } catch (error) {
+      toast(error.message, "error");
+    }
   }
 
   async function initialize() {
@@ -516,12 +862,17 @@
     if (!title) return;
     const status = els.quickForm.dataset.newStatus || "todo";
     try {
-      await createTask(title, status);
+      const task = await createTask(title, status);
       els.quickTitle.value = "";
       els.quickTitle.focus();
       els.quickForm.dataset.newStatus = "todo";
       els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";
-      toast(status === "todo" ? "Задача добавлена" : `Задача добавлена в колонку «${STATUS_LABELS[status]}»`);
+      toast(
+        status === "todo" ? "Задача добавлена" : `Задача добавлена в колонку «${STATUS_LABELS[status]}»`,
+        "success",
+        "Отменить",
+        () => undoCreation(task.id),
+      );
     } catch (error) {
       toast(error.message, "error");
     }
@@ -531,6 +882,13 @@
     state.search = els.search.value;
     renderBoard();
   });
+  els.projectFilter.addEventListener("change", () => {
+    state.project = els.projectFilter.value;
+    persistProjectState();
+    renderBoard();
+    els.quickTitle.focus();
+  });
+  els.addProject.addEventListener("click", addProject);
   els.tagFilter.addEventListener("change", () => {
     state.tag = els.tagFilter.value;
     renderBoard();
@@ -552,6 +910,21 @@
   els.overlay.addEventListener("click", closePanel);
   els.closeTask.addEventListener("click", handleCloseTask);
   els.deleteTask.addEventListener("click", handleDeleteTask);
+  els.focusTask.addEventListener("click", () => {
+    if (!state.selectedTask) return;
+    if (state.focusTaskId === state.selectedTask.id) {
+      setFocusedTask(null);
+      toast("Фокус снят");
+    } else {
+      setFocusedTask(state.selectedTask.id);
+      toast("Задача добавлена в фокус");
+    }
+  });
+  els.focusOpen.addEventListener("click", () => {
+    if (state.focusTaskId) openTaskPanel(state.focusTaskId);
+  });
+  els.focusDone.addEventListener("click", handleFocusDone);
+  els.focusClear.addEventListener("click", clearFocus);
   els.importButton.addEventListener("click", () => els.importFiles.click());
   els.importFiles.addEventListener("change", () => importMarkdown(els.importFiles.files));
   els.exportMd.addEventListener("click", () => { window.location.href = "/api/export?format=md"; });
@@ -592,20 +965,50 @@
   document.addEventListener("keydown", (event) => {
     const tag = event.target && event.target.tagName;
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
-    if (event.key === "Escape" && !els.overlay.hidden) closePanel();
-    if (!isTyping && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLocaleLowerCase("en") === "n") {
-      event.preventDefault();
-      els.quickTitle.focus();
+    if (event.key === "Escape") {
+      if (els.shortcutsDialog.open) els.shortcutsDialog.close();
+      else if (els.projectDialog.open) els.projectDialog.close();
+      else if (!els.overlay.hidden) closePanel();
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("en") === "k") {
       event.preventDefault();
       els.search.focus();
       els.search.select();
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLocaleLowerCase("en") === "p") {
+      event.preventDefault();
+      if (!els.projectDialog.open) openProjectDialog();
+      return;
+    }
+    if (isTyping || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key.toLocaleLowerCase("en") === "n") {
+      event.preventDefault();
+      els.quickTitle.focus();
+    } else if (event.key === "/") {
+      event.preventDefault();
+      els.search.focus();
+      els.search.select();
+    } else if (event.key === "?") {
+      event.preventDefault();
+      if (!els.shortcutsDialog.open) els.shortcutsDialog.showModal();
     }
   });
 
   els.themeToggle.addEventListener("click", toggleTheme);
+  els.densityToggle.addEventListener("click", toggleDensity);
+  els.shortcutsButton.addEventListener("click", () => els.shortcutsDialog.showModal());
+  els.closeShortcuts.addEventListener("click", () => els.shortcutsDialog.close());
+  els.shortcutsDialog.addEventListener("click", (event) => {
+    if (event.target === els.shortcutsDialog) els.shortcutsDialog.close();
+  });
+  els.closeProjectDialog.addEventListener("click", () => els.projectDialog.close());
+  els.projectDialog.addEventListener("click", (event) => {
+    if (event.target === els.projectDialog) els.projectDialog.close();
+  });
+  els.projectCommandSearch.addEventListener("input", () => renderProjectCommands(els.projectCommandSearch.value));
   applyTheme(document.documentElement.dataset.theme || "light");
+  applyDensity(state.density);
 
   initializeSortables();
   initialize();

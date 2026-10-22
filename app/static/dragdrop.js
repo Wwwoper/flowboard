@@ -37,6 +37,9 @@
       this.dragged = item;
       this.origin = this.element;
       this.oldIndex = this.indexOf(item, this.element);
+      if (typeof this.options.onStart === "function") {
+        this.options.onStart({ item, from: this.element, oldIndex: this.oldIndex });
+      }
       window.__flowboardDragging = item;
       item.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";

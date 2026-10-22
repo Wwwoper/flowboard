@@ -402,3 +402,102 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .theme-toggle-label { display: none; }
   .theme-toggle-icon { font-size: 18px; line-height: 1; }
 }
+
+/* Project views and personal-workspace controls. */
+.project-filter-box select { max-width: 155px; }
+.add-project-button { flex: 0 0 auto; }
+.focus-bar {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #d8dcff;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #f3f3ff, #fbfbff);
+}
+.focus-bar[hidden] { display: none; }
+.focus-indicator { color: var(--accent); font-size: 25px; line-height: 1; }
+.focus-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 2px; }
+.focus-copy strong { overflow-wrap: anywhere; font-size: 12px; }
+.focus-copy small { color: var(--muted); font-size: 10px; }
+.focus-eyebrow { color: var(--accent-dark); font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+.focus-actions { display: flex; align-items: center; gap: 6px; }
+.focus-clear { flex: 0 0 auto; width: 29px; height: 29px; font-size: 20px; }
+.task-card.is-focused { border-color: #8b91f4; box-shadow: 0 0 0 2px rgba(91, 101, 232, .09); }
+.density-toggle, .shortcuts-button { flex: 0 0 auto; }
+.shortcuts-button { width: 36px; height: 36px; padding: 0; font-size: 15px; }
+.shortcuts-dialog {
+  width: min(440px, calc(100vw - 28px));
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 22px;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.shortcuts-dialog::backdrop { background: rgba(14, 20, 36, .48); backdrop-filter: blur(3px); }
+.shortcuts-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.shortcuts-dialog-header h2 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
+.shortcut-list { display: flex; flex-direction: column; gap: 0; margin: 22px 0 0; }
+.shortcut-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.shortcut-list > div:last-child { border-bottom: 0; }
+.shortcut-list dt { color: var(--ink-soft); font-size: 12px; }
+.shortcut-list dd { display: flex; align-items: center; gap: 5px; margin: 0; color: var(--muted); font-size: 10px; }
+.shortcuts-note { margin: 15px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.toast { pointer-events: auto; display: flex; align-items: center; gap: 15px; justify-content: space-between; }
+.toast-message { flex: 1; min-width: 0; }
+.toast-action { border: 0; padding: 4px 0; background: transparent; color: #d3d7ff; font: inherit; font-size: 11px; font-weight: 800; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
+.toast-action:hover { color: #fff; }
+.attachment-preview { display: block; width: 46px; height: 46px; flex: 0 0 46px; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-soft); }
+
+/* Compact density is optional and remains local to this browser. */
+:root[data-density="compact"] .task-list { gap: 5px; }
+:root[data-density="compact"] .task-card { padding: 8px 9px 7px; border-radius: 8px; }
+:root[data-density="compact"] .task-tags { margin-top: 6px; gap: 4px; }
+:root[data-density="compact"] .tag-pill { padding: 2px 5px; }
+:root[data-density="compact"] .task-card-footer { margin-top: 7px; padding-top: 5px; }
+:root[data-density="compact"] .column-header { min-height: 49px; }
+
+[data-theme="dark"] .focus-bar {
+  border-color: #42416b;
+  background: linear-gradient(110deg, #232541, #191f30);
+}
+[data-theme="dark"] .focus-eyebrow { color: #a4aaff; }
+[data-theme="dark"] .shortcuts-dialog { color: var(--ink); background: var(--surface); }
+[data-theme="dark"] .shortcuts-dialog-header .eyebrow { color: var(--muted); }
+[data-theme="dark"] .shortcut-list > div { border-bottom-color: var(--line); }
+[data-theme="dark"] .shortcut-list dt { color: var(--ink-soft); }
+[data-theme="dark"] .attachment-preview { border-color: var(--line); background: var(--surface-soft); }
+[data-theme="dark"] .task-card.is-focused { border-color: #727bed; box-shadow: 0 0 0 2px rgba(137, 146, 255, .14); }
+
+@media (max-width: 860px) {
+  .topbar-actions { gap: 5px; }
+  .topbar-actions .button { padding: 8px 9px; }
+  .density-toggle span:last-child { display: none; }
+  .density-toggle { width: 36px; height: 36px; padding: 0 !important; }
+}
+@media (max-width: 640px) {
+  .focus-bar { align-items: flex-start; flex-wrap: wrap; gap: 9px; padding: 10px; }
+  .focus-copy { flex-basis: calc(100% - 38px); }
+  .focus-actions { width: 100%; padding-left: 34px; }
+  .focus-actions .button { flex: 1; }
+  .project-filter-box select { max-width: 92px; }
+  .add-project-button { width: 31px; min-width: 31px; padding: 0 !important; }
+  .add-project-label, .backup-label { display: none; }
+  #export-zip { width: 36px; min-width: 36px; padding: 0 !important; }
+  .board-toolbar { gap: 5px; flex-wrap: wrap; }
+  .search-box { flex: 1 1 48%; }
+  .filter-box { flex: 0 1 auto; }
+  .tag-filter-box select { max-width: 84px; }
+  .filter-summary { display: none; }
+  .shortcuts-dialog { padding: 17px; }
+}
+
+.project-command-search { margin-top: 19px; }
+.project-command-list { display: flex; flex-direction: column; gap: 5px; max-height: min(340px, 45vh); overflow-y: auto; margin-top: 9px; }
+.project-command-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 11px; border: 1px solid transparent; border-radius: 8px; color: var(--ink-soft); background: transparent; text-align: left; font-size: 12px; }
+.project-command-option:hover, .project-command-option:focus-visible { border-color: var(--line); color: var(--ink); background: var(--surface-soft); }
+.project-command-option[aria-current="true"] { border-color: var(--accent-pale); color: var(--accent-dark); background: var(--accent-pale); }
+.project-command-empty { padding: 13px 9px; color: var(--muted); font-size: 11px; text-align: center; }
+[data-theme="dark"] .project-command-option[aria-current="true"] { border-color: #42416b; color: #b8bdff; background: #282d50; }

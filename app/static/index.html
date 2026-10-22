@@ -17,7 +17,7 @@
   </script>
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.5.2">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.3">
 </head>
 <body>
   <div class="app-shell">
@@ -214,10 +214,11 @@
           </select>
         </div>
         <div class="task-tags-field">
-          <label class="field-label" for="task-tag-input">Теги</label>
-          <div id="task-tag-list" class="tag-editor-list" aria-label="Текущие теги"></div>
-          <div class="tag-add-row">
-            <input id="task-tag-input" class="text-field" maxlength="1000" placeholder="Добавить тег…" autocomplete="off">
+          <span class="field-label">Теги</span>
+          <div id="task-tag-list" class="tag-choice-list" aria-label="Доступные теги"></div>
+          <button id="task-tag-custom-toggle" class="text-button task-tag-custom-toggle" type="button" hidden>＋ Добавить свой тег</button>
+          <div id="task-tag-create-row" class="tag-add-row" hidden>
+            <input id="task-tag-input" class="text-field" maxlength="1000" placeholder="Новый тег…" autocomplete="off" aria-label="Новый тег">
             <button id="add-task-tag" class="button button-small button-quiet" type="button" aria-label="Добавить тег" title="Добавить тег">＋</button>
           </div>
           <input id="task-tags" class="visually-hidden" maxlength="1000" aria-hidden="true" tabindex="-1">
@@ -257,6 +258,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.5.2" defer></script>
+  <script src="/static/app.js?v=0.5.3" defer></script>
 </body>
 </html>

@@ -44,6 +44,7 @@
     project: readStorage("flowboard-last-project"),
     projects: readStoredProjects(),
     quickTaskType: "",
+    taskTagInputExpanded: false,
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
     density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
     dragOrigin: null,
@@ -85,6 +86,8 @@
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
     taskTagInput: $("#task-tag-input"),
+    taskTagCreateRow: $("#task-tag-create-row"),
+    taskTagCustomToggle: $("#task-tag-custom-toggle"),
     addTaskTag: $("#add-task-tag"),
     taskDescription: $("#task-description"),
     descriptionPreview: $("#description-preview"),
@@ -555,8 +558,9 @@
       els.taskTitle.value = task.title;
       els.taskStatus.value = task.status;
       els.taskTags.value = task.tags || "";
-      renderTaskTagEditor();
+      state.taskTagInputExpanded = false;
       els.taskTagInput.value = "";
+      renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.descriptionPreview.replaceChildren();
       els.descriptionPreview.hidden = true;
@@ -586,27 +590,84 @@
       .filter(Boolean))];
   }
 
+  function tagChoiceDetails(value) {
+    const tag = String(value || "").trim();
+    const normalized = tag.toLocaleLowerCase("ru");
+    if (Object.hasOwn(TASK_TYPE_LABELS, normalized)) {
+      return { value: normalized, label: TASK_TYPE_LABELS[normalized], kind: "type" };
+    }
+    const project = projectFromTag(tag);
+    if (project) {
+      return { value: projectTag(project), label: `Проект: ${projectLabel(project)}`, kind: "project" };
+    }
+    return { value: tag, label: tag, kind: "custom" };
+  }
+
+  function availableTaskTagChoices() {
+    const choices = new Map();
+    const addChoice = (value) => {
+      const detail = tagChoiceDetails(value);
+      if (!detail.value) return;
+      const key = detail.value.toLocaleLowerCase("ru");
+      if (!choices.has(key)) choices.set(key, detail);
+    };
+
+    Object.keys(TASK_TYPE_LABELS).forEach(addChoice);
+    state.projects.forEach((slug) => addChoice(projectTag(slug)));
+    state.tasks.flatMap(taskTags).forEach(addChoice);
+    editableTaskTags().forEach(addChoice);
+
+    const kindOrder = { type: 0, project: 1, custom: 2 };
+    const typeOrder = Object.keys(TASK_TYPE_LABELS);
+    return [...choices.values()].sort((a, b) => {
+      if (kindOrder[a.kind] !== kindOrder[b.kind]) return kindOrder[a.kind] - kindOrder[b.kind];
+      if (a.kind === "type") return typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value);
+      return a.label.localeCompare(b.label, "ru");
+    });
+  }
+
   function renderTaskTagEditor() {
     const tags = editableTaskTags();
+    const selected = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
     els.taskTags.value = tags.join(", ");
     els.taskTagList.replaceChildren();
-    tags.forEach((tag, index) => {
-      const chip = make("span", "tag-chip");
-      chip.appendChild(make("span", "tag-chip-label", tag));
-      const remove = make("button", "tag-chip-remove", "×");
-      remove.type = "button";
-      remove.setAttribute("aria-label", `Удалить тег ${tag}`);
-      remove.title = `Удалить тег «${tag}»`;
-      remove.addEventListener("click", () => {
-        const current = editableTaskTags();
-        current.splice(index, 1);
-        els.taskTags.value = current.join(", ");
-        renderTaskTagEditor();
-        els.taskTagInput.focus({ preventScroll: true });
-      });
-      chip.appendChild(remove);
-      els.taskTagList.appendChild(chip);
+
+    const choices = availableTaskTagChoices();
+    const customChoicesExist = choices.some((choice) => choice.kind === "custom");
+    choices.forEach((choice) => {
+      const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
+      const option = make("button", `tag-choice tag-choice-${choice.kind}${choice.kind === "type" ? ` tag-choice-${choice.value}` : ""}`, choice.label);
+      option.type = "button";
+      option.dataset.tag = choice.value;
+      option.setAttribute("aria-pressed", String(isSelected));
+      option.setAttribute("aria-label", `${isSelected ? "Убрать" : "Добавить"} тег ${choice.label}`);
+      option.title = `${isSelected ? "Убрать" : "Добавить"} тег «${choice.label}»`;
+      option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
+      els.taskTagList.appendChild(option);
     });
+
+    // Keep the editor compact when the workspace only uses reserved tags.
+    els.taskTagCreateRow.hidden = !customChoicesExist && !state.taskTagInputExpanded;
+    els.taskTagCustomToggle.hidden = customChoicesExist || state.taskTagInputExpanded;
+  }
+
+  function toggleTaskTagChoice(value) {
+    const detail = tagChoiceDetails(value);
+    const tags = editableTaskTags();
+    const normalized = detail.value.toLocaleLowerCase("ru");
+    const existingIndex = tags.findIndex((tag) => tag.toLocaleLowerCase("ru") === normalized);
+    if (existingIndex >= 0) {
+      tags.splice(existingIndex, 1);
+    } else {
+      tags.push(detail.value);
+    }
+    const combined = tags.join(", ");
+    if (combined.length > 1000) {
+      toast("Список тегов не должен превышать 1000 символов", "error");
+      return;
+    }
+    els.taskTags.value = combined;
+    renderTaskTagEditor();
   }
 
   function addTaskTags(value = els.taskTagInput.value) {
@@ -1172,6 +1233,11 @@
   }));
 
   els.taskForm.addEventListener("submit", handleTaskSave);
+  els.taskTagCustomToggle.addEventListener("click", () => {
+    state.taskTagInputExpanded = true;
+    renderTaskTagEditor();
+    els.taskTagInput.focus({ preventScroll: true });
+  });
   els.addTaskTag.addEventListener("click", () => addTaskTags());
   els.taskTagInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {

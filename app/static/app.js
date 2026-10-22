@@ -82,6 +82,10 @@
     taskForm: $("#task-form"),
     taskId: $("#panel-task-id"),
     taskTitle: $("#task-title"),
+    taskTitleDisplay: $("#task-title-display"),
+    taskTitleDisplayText: $("#task-title-display-text"),
+    taskTitleReference: $("#panel-task-reference"),
+    taskTitleEditHint: $("#task-title-edit-hint"),
     taskStatus: $("#task-status"),
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
@@ -92,6 +96,9 @@
     taskDescription: $("#task-description"),
     descriptionPreview: $("#description-preview"),
     togglePreview: $("#toggle-preview"),
+    toggleAttachmentUpload: $("#toggle-attachment-upload"),
+    taskMoreToggle: $("#task-more-toggle"),
+    taskMoreMenu: $("#task-more-menu"),
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
     saveTask: $("#save-task"),
@@ -547,7 +554,14 @@
     state.previewVisible = false;
     els.descriptionPreview.hidden = true;
     els.taskDescription.hidden = false;
-    els.togglePreview.textContent = "Предпросмотр";
+    els.togglePreview.textContent = "Просмотр";
+    els.taskTitle.hidden = true;
+    els.taskTitleDisplay.hidden = false;
+    els.attachmentDropzone.hidden = true;
+    els.toggleAttachmentUpload.setAttribute("aria-expanded", "false");
+    els.toggleAttachmentUpload.textContent = "＋ Добавить";
+    els.taskMoreMenu.hidden = true;
+    els.taskMoreToggle.setAttribute("aria-expanded", "false");
   }
 
   async function openTaskPanel(taskId) {
@@ -556,6 +570,11 @@
       state.selectedTask = task;
       els.taskId.value = String(task.id);
       els.taskTitle.value = task.title;
+      els.taskTitleDisplayText.textContent = task.title || "Без названия";
+      els.taskTitle.hidden = true;
+      els.taskTitleDisplay.hidden = false;
+      els.taskTitleEditHint.textContent = "Нажмите, чтобы изменить ↗";
+      els.taskTitleReference.textContent = `TASK-${task.id}`;
       els.taskStatus.value = task.status;
       els.taskTags.value = task.tags || "";
       state.taskTagInputExpanded = false;
@@ -563,17 +582,23 @@
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.descriptionPreview.replaceChildren();
-      els.descriptionPreview.hidden = true;
-      els.taskDescription.hidden = false;
-      els.togglePreview.textContent = "Предпросмотр";
-      state.previewVisible = false;
+      els.descriptionPreview.hidden = false;
+      els.taskDescription.hidden = true;
+      els.togglePreview.textContent = "Редактировать";
+      state.previewVisible = true;
+      els.attachmentDropzone.hidden = true;
+      els.toggleAttachmentUpload.setAttribute("aria-expanded", "false");
+      els.toggleAttachmentUpload.textContent = "＋ Добавить";
+      els.taskMoreMenu.hidden = true;
+      els.taskMoreToggle.setAttribute("aria-expanded", "false");
       els.closeTask.textContent = task.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
       els.closeTask.dataset.action = task.status === "done" ? "reopen" : "close";
       els.taskMeta.textContent = `Создана: ${formatDateTime(task.created_at)} · Изменена: ${formatDateTime(task.updated_at)}${task.closed_at ? ` · Закрыта: ${formatDateTime(task.closed_at)}` : ""}`;
       renderAttachments(task.attachments || []);
       els.focusTask.textContent = state.focusTaskId === task.id ? "Снять с фокуса" : "◎ В фокус";
       openPanel();
-      window.setTimeout(() => els.taskTitle.focus({ preventScroll: true }), 100);
+      void requestMarkdownPreview();
+      window.setTimeout(() => els.taskTitleDisplay.focus({ preventScroll: true }), 100);
     } catch (error) {
       toast(error.message, "error");
     }
@@ -699,6 +724,9 @@
     });
     els.attachmentList.replaceChildren();
     els.attachmentCount.textContent = String(attachments.length);
+    if (!attachments.length) {
+      els.attachmentList.appendChild(make("li", "attachment-empty", "Пока нет вложений. Нажмите «Добавить», чтобы прикрепить файл."));
+    }
     attachments.forEach((attachment) => {
       const item = make("li", "attachment-item");
       const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().toLowerCase() : "FILE";
@@ -1270,16 +1298,77 @@
   els.exportMd.addEventListener("click", () => { window.location.href = "/api/export?format=md"; });
   els.exportZip.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });
   els.chooseFiles.addEventListener("click", () => els.attachmentInput.click());
+  els.toggleAttachmentUpload.addEventListener("click", () => {
+    const expanded = els.attachmentDropzone.hidden;
+    els.attachmentDropzone.hidden = !expanded;
+    els.toggleAttachmentUpload.setAttribute("aria-expanded", String(expanded));
+    els.toggleAttachmentUpload.textContent = expanded ? "Свернуть" : "＋ Добавить";
+    if (expanded) els.chooseFiles.focus({ preventScroll: true });
+  });
   els.attachmentInput.addEventListener("change", () => uploadFiles(els.attachmentInput.files));
+  els.taskMoreToggle.addEventListener("click", () => {
+    const expanded = els.taskMoreMenu.hidden;
+    els.taskMoreMenu.hidden = !expanded;
+    els.taskMoreToggle.setAttribute("aria-expanded", String(expanded));
+  });
+  [els.focusTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
+    els.taskMoreMenu.hidden = true;
+    els.taskMoreToggle.setAttribute("aria-expanded", "false");
+  }));
+  document.addEventListener("click", (event) => {
+    if (!els.taskMoreMenu.hidden && !event.target.closest(".task-more-actions")) {
+      els.taskMoreMenu.hidden = true;
+      els.taskMoreToggle.setAttribute("aria-expanded", "false");
+    }
+  });
   els.panel.addEventListener("paste", handleTaskPanelPaste);
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
+
+  els.taskTitleDisplay.addEventListener("click", () => {
+    els.taskTitleDisplay.hidden = true;
+    els.taskTitle.hidden = false;
+    els.taskTitleEditHint.textContent = "Enter — готово · Esc — отмена";
+    els.taskTitle.focus({ preventScroll: true });
+    els.taskTitle.select();
+  });
+  els.taskTitle.addEventListener("input", () => {
+    els.taskTitleDisplayText.textContent = els.taskTitle.value.trim() || "Введите название задачи";
+  });
+  els.taskTitle.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finishTitleEditing();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      els.taskTitle.value = state.selectedTask?.title || els.taskTitle.value;
+      finishTitleEditing();
+    }
+  });
+
+  function finishTitleEditing() {
+    const title = els.taskTitle.value.trim();
+    if (!title) {
+      els.taskTitle.value = "";
+      els.taskTitle.focus({ preventScroll: true });
+      toast("У задачи должно быть название", "error");
+      return;
+    }
+    els.taskTitle.value = title;
+    els.taskTitleDisplayText.textContent = title;
+    els.taskTitle.hidden = true;
+    els.taskTitleDisplay.hidden = false;
+    els.taskTitleEditHint.textContent = "Нажмите, чтобы изменить ↗";
+    els.taskTitleDisplay.focus({ preventScroll: true });
+  }
 
   els.togglePreview.addEventListener("click", async () => {
     state.previewVisible = !state.previewVisible;
     els.descriptionPreview.hidden = !state.previewVisible;
     els.taskDescription.hidden = state.previewVisible;
-    els.togglePreview.textContent = state.previewVisible ? "Редактировать" : "Предпросмотр";
+    els.togglePreview.textContent = state.previewVisible ? "Редактировать" : "Просмотр";
     if (state.previewVisible) await requestMarkdownPreview();
+    else els.taskDescription.focus({ preventScroll: true });
   });
   els.taskDescription.addEventListener("input", () => {
     if (state.previewVisible) requestMarkdownPreview();

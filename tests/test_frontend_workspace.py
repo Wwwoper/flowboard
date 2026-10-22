@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.4" in html
-    assert "/static/style.css?v=0.5.4" in html
+    assert "/static/app.js?v=0.5.5" in html
+    assert "/static/style.css?v=0.5.5" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -138,8 +138,8 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.4" in html
-    assert "/static/style.css?v=0.5.4" in html
+    assert "/static/app.js?v=0.5.5" in html
+    assert "/static/style.css?v=0.5.5" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -165,6 +165,17 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
 
 def test_task_panel_is_reading_first_and_has_compact_attachment_and_action_controls(client):
     html = client.get("/").text
+    assert "TASK DETAILS" not in html
+    assert "Детали задачи" not in html
+    assert "НАЗВАНИЕ ЗАДАЧИ" not in html
+    assert 'class="task-title-row"' in html
+    assert 'class="task-title-reference"' in html
+    assert 'aria-label="Добавить вложение"' in html
+    assert 'class="icon-button inline-edit-button"' in html
+    assert 'aria-label="Описание задачи. Нажмите Enter, чтобы редактировать."' in html
+    assert 'id="focus-task" class="button button-quiet focus-task-action"' in html
+    assert html.index('id="focus-task"') < html.index('id="task-more-menu"')
+    assert html.index('id="export-task"') > html.index('id="task-more-menu"')
     for element_id in (
         "task-title-display",
         "task-title-display-text",
@@ -175,13 +186,16 @@ def test_task_panel_is_reading_first_and_has_compact_attachment_and_action_contr
     ):
         assert f'id="{element_id}"' in html
     assert 'id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown." hidden' in html
-    assert 'id="description-preview" class="markdown-preview"' in html
+    assert 'id="description-preview" class="markdown-preview markdown-preview-editable"' in html
 
     script = client.get("/static/app.js").text
     assert 'els.taskTitleDisplayText.textContent = task.title || "Без названия"' in script
     assert 'els.taskTitleDisplay.addEventListener("click"' in script
     assert 'event.stopPropagation();' in script
     assert 'toast("У задачи должно быть название", "error")' in script
+    assert 'els.descriptionPreview.addEventListener("click"' in script
+    assert 'els.descriptionPreview.addEventListener("keydown"' in script
+    assert 'function setDescriptionEditing(editing)' in script
     assert 'els.toggleAttachmentUpload.addEventListener("click"' in script
     assert 'els.taskMoreToggle.addEventListener("click"' in script
     assert 'void requestMarkdownPreview()' in script
@@ -190,6 +204,11 @@ def test_task_panel_is_reading_first_and_has_compact_attachment_and_action_contr
     assert "width: min(1180px, calc(100vw - 34px))" in css
     assert ".task-title-display" in css
     assert ".task-more-menu[hidden]" in css
+    assert ".task-title-row" in css
+    assert ".task-title-reference" in css
+    assert ".tag-add-row { width: min(100%, 235px)" in css
+    assert ".attachment-icon-button" in css
+    assert ".markdown-preview-editable" in css
     assert ".attachment-dropzone[hidden]" in css
     assert ".description-field[hidden]" in css
     assert "grid-template-columns: minmax(0, 1.12fr) minmax(300px, .88fr)" in css

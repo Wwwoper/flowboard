@@ -85,7 +85,6 @@
     taskTitleDisplay: $("#task-title-display"),
     taskTitleDisplayText: $("#task-title-display-text"),
     taskTitleReference: $("#panel-task-reference"),
-    taskTitleEditHint: $("#task-title-edit-hint"),
     taskStatus: $("#task-status"),
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
@@ -554,12 +553,15 @@
     state.previewVisible = false;
     els.descriptionPreview.hidden = true;
     els.taskDescription.hidden = false;
-    els.togglePreview.textContent = "Просмотр";
+    els.togglePreview.textContent = "✎";
+    els.togglePreview.setAttribute("aria-label", "Редактировать описание");
+    els.togglePreview.title = "Редактировать описание";
     els.taskTitle.hidden = true;
     els.taskTitleDisplay.hidden = false;
     els.attachmentDropzone.hidden = true;
     els.toggleAttachmentUpload.setAttribute("aria-expanded", "false");
-    els.toggleAttachmentUpload.textContent = "＋ Добавить";
+    els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
+    els.toggleAttachmentUpload.title = "Добавить вложение";
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
   }
@@ -573,8 +575,7 @@
       els.taskTitleDisplayText.textContent = task.title || "Без названия";
       els.taskTitle.hidden = true;
       els.taskTitleDisplay.hidden = false;
-      els.taskTitleEditHint.textContent = "Нажмите, чтобы изменить ↗";
-      els.taskTitleReference.textContent = `TASK-${task.id}`;
+      els.taskTitleReference.textContent = `#${task.id}`;
       els.taskStatus.value = task.status;
       els.taskTags.value = task.tags || "";
       state.taskTagInputExpanded = false;
@@ -584,11 +585,14 @@
       els.descriptionPreview.replaceChildren();
       els.descriptionPreview.hidden = false;
       els.taskDescription.hidden = true;
-      els.togglePreview.textContent = "Редактировать";
+      els.togglePreview.textContent = "✎";
+      els.togglePreview.setAttribute("aria-label", "Редактировать описание");
+      els.togglePreview.title = "Редактировать описание";
       state.previewVisible = true;
       els.attachmentDropzone.hidden = true;
       els.toggleAttachmentUpload.setAttribute("aria-expanded", "false");
-      els.toggleAttachmentUpload.textContent = "＋ Добавить";
+      els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
+      els.toggleAttachmentUpload.title = "Добавить вложение";
       els.taskMoreMenu.hidden = true;
       els.taskMoreToggle.setAttribute("aria-expanded", "false");
       els.closeTask.textContent = task.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
@@ -1302,7 +1306,8 @@
     const expanded = els.attachmentDropzone.hidden;
     els.attachmentDropzone.hidden = !expanded;
     els.toggleAttachmentUpload.setAttribute("aria-expanded", String(expanded));
-    els.toggleAttachmentUpload.textContent = expanded ? "Свернуть" : "＋ Добавить";
+    els.toggleAttachmentUpload.setAttribute("aria-label", expanded ? "Скрыть загрузку файлов" : "Добавить вложение");
+    els.toggleAttachmentUpload.title = expanded ? "Скрыть загрузку файлов" : "Добавить вложение";
     if (expanded) els.chooseFiles.focus({ preventScroll: true });
   });
   els.attachmentInput.addEventListener("change", () => uploadFiles(els.attachmentInput.files));
@@ -1311,7 +1316,7 @@
     els.taskMoreMenu.hidden = !expanded;
     els.taskMoreToggle.setAttribute("aria-expanded", String(expanded));
   });
-  [els.focusTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
+  [els.exportTask, els.focusTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
   }));
@@ -1327,7 +1332,6 @@
   els.taskTitleDisplay.addEventListener("click", () => {
     els.taskTitleDisplay.hidden = true;
     els.taskTitle.hidden = false;
-    els.taskTitleEditHint.textContent = "Enter — готово · Esc — отмена";
     els.taskTitle.focus({ preventScroll: true });
     els.taskTitle.select();
   });
@@ -1358,17 +1362,32 @@
     els.taskTitleDisplayText.textContent = title;
     els.taskTitle.hidden = true;
     els.taskTitleDisplay.hidden = false;
-    els.taskTitleEditHint.textContent = "Нажмите, чтобы изменить ↗";
     els.taskTitleDisplay.focus({ preventScroll: true });
   }
 
-  els.togglePreview.addEventListener("click", async () => {
-    state.previewVisible = !state.previewVisible;
-    els.descriptionPreview.hidden = !state.previewVisible;
-    els.taskDescription.hidden = state.previewVisible;
-    els.togglePreview.textContent = state.previewVisible ? "Редактировать" : "Просмотр";
-    if (state.previewVisible) await requestMarkdownPreview();
-    else els.taskDescription.focus({ preventScroll: true });
+  function setDescriptionEditing(editing) {
+    state.previewVisible = !editing;
+    els.descriptionPreview.hidden = editing;
+    els.taskDescription.hidden = !editing;
+    els.togglePreview.textContent = editing ? "✓" : "✎";
+    els.togglePreview.setAttribute("aria-label", editing ? "Показать предпросмотр описания" : "Редактировать описание");
+    els.togglePreview.title = editing ? "Завершить редактирование" : "Редактировать описание";
+    if (editing) els.taskDescription.focus({ preventScroll: true });
+    else void requestMarkdownPreview();
+  }
+
+  els.togglePreview.addEventListener("click", () => {
+    setDescriptionEditing(state.previewVisible);
+  });
+  els.descriptionPreview.addEventListener("click", (event) => {
+    if (!state.previewVisible || event.target.closest("a, button")) return;
+    setDescriptionEditing(true);
+  });
+  els.descriptionPreview.addEventListener("keydown", (event) => {
+    if (!state.previewVisible || !["Enter", " "].includes(event.key)) return;
+    if (event.target.closest("a, button")) return;
+    event.preventDefault();
+    setDescriptionEditing(true);
   });
   els.taskDescription.addEventListener("input", () => {
     if (state.previewVisible) requestMarkdownPreview();

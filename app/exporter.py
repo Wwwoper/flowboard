@@ -106,10 +106,11 @@ def _unique_export_filename(filename: str, used_names: set[str]) -> str:
     candidate = basename
     index = 2
     while candidate.casefold() in used_names:
-        suffix = Path(basename).suffix
-        stem = basename[:-len(suffix)] if suffix else basename
+        dot_index = basename.rfind(".")
+        suffix = basename[dot_index:] if 0 < dot_index < len(basename) - 1 else ""
+        stem = basename[: -len(suffix)] if suffix else basename
         extra = f" ({index})"
-        candidate = f"{stem[:max(1, 255 - len(suffix) - len(extra))]}{extra}{suffix}"
+        candidate = f"{stem[: max(1, 255 - len(suffix) - len(extra))]}{extra}{suffix}"
         index += 1
     used_names.add(candidate.casefold())
     return candidate

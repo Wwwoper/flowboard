@@ -82,9 +82,7 @@ def _task_from_metadata(
     if metadata.get("flowboard_export_format") == "single-task-v1":
         description_match = TASK_DESCRIPTION_RE.search(body)
         if description_match is None:
-            return None, SkippedRecord(
-                filename, "в экспортном Markdown не найдено описание задачи"
-            )
+            return None, SkippedRecord(filename, "в экспортном Markdown не найдено описание задачи")
         description = description_match.group(1).strip("\r\n")
     else:
         description = body.strip()

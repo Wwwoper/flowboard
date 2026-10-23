@@ -18,7 +18,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.7">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.8">
 </head>
 <body>
   <div class="app-shell">
@@ -202,6 +202,20 @@
     <div id="project-command-list" class="project-command-list"></div>
     <p class="shortcuts-note">Быстрый вызов: <kbd>⌘ ⇧ P</kbd> на macOS или <kbd>Ctrl ⇧ P</kbd> на Windows/Linux.</p>
   </dialog>
+  <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title">
+    <div class="attachment-preview-dialog-header">
+      <h2 id="attachment-preview-title">Предпросмотр изображения</h2>
+      <div class="attachment-preview-dialog-actions">
+        <a id="attachment-preview-download" class="button button-small button-quiet" href="#" download>↓ Скачать</a>
+        <button id="attachment-preview-close" class="icon-button" type="button" aria-label="Закрыть предпросмотр" title="Закрыть">×</button>
+      </div>
+    </div>
+    <div class="attachment-preview-stage">
+      <p id="attachment-preview-loading" class="attachment-preview-message">Загрузка изображения…</p>
+      <p id="attachment-preview-error" class="attachment-preview-message" hidden></p>
+      <img id="attachment-preview-image" class="attachment-preview-image" alt="" hidden>
+    </div>
+  </dialog>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <div id="panel-overlay" class="panel-overlay" hidden></div>
   <aside id="task-panel" class="task-panel" aria-labelledby="task-title-display-text" aria-hidden="true">
@@ -287,6 +301,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.5.7" defer></script>
+  <script src="/static/app.js?v=0.5.8" defer></script>
 </body>
 </html>

@@ -52,6 +52,10 @@
     maxFileSizeMb: 20,
     previewVisible: false,
     previewRequest: 0,
+    draftSaveTimer: null,
+    draftSavePromise: null,
+    attachmentPreviewUrl: null,
+    attachmentPreviewToken: 0,
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -110,6 +114,13 @@
     attachmentDropzone: $("#attachment-dropzone"),
     attachmentList: $("#attachment-list"),
     attachmentCount: $("#attachment-count"),
+    attachmentPreviewDialog: $("#attachment-preview-dialog"),
+    attachmentPreviewTitle: $("#attachment-preview-title"),
+    attachmentPreviewImage: $("#attachment-preview-image"),
+    attachmentPreviewLoading: $("#attachment-preview-loading"),
+    attachmentPreviewError: $("#attachment-preview-error"),
+    attachmentPreviewDownload: $("#attachment-preview-download"),
+    attachmentPreviewClose: $("#attachment-preview-close"),
     maxFileMb: $("#max-file-mb"),
     taskMeta: $("#task-meta"),
     toastRegion: $("#toast-region"),
@@ -559,6 +570,8 @@
   }
 
   function closePanel() {
+    clearTaskDraftSaveTimer();
+    closeAttachmentPreview();
     els.panel.classList.remove("is-open");
     els.panel.setAttribute("aria-hidden", "true");
     els.attachmentList.querySelectorAll(".attachment-preview").forEach((image) => {
@@ -626,7 +639,104 @@
   }
 
   async function refreshSelectedTask() {
-    if (state.selectedTask) await openTaskPanel(state.selectedTask.id);
+    const taskId = state.selectedTask?.id;
+    if (!taskId) return;
+    if (!(await saveCurrentTaskDraft())) return;
+    if (state.selectedTask?.id === taskId) await openTaskPanel(taskId);
+  }
+
+  function clearTaskDraftSaveTimer() {
+    if (state.draftSaveTimer !== null) {
+      window.clearTimeout(state.draftSaveTimer);
+      state.draftSaveTimer = null;
+    }
+  }
+
+  function normalizedTaskTags(value) {
+    return String(value || "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  function currentTaskDraft(task = state.selectedTask) {
+    return {
+      title: String(els.taskTitle.value || "").trim() || task?.title || "",
+      status: els.taskStatus.value || task?.status || "todo",
+      tags: editableTaskTags().join(", "),
+      description: els.taskDescription.value,
+    };
+  }
+
+  function taskDraftMatches(draft, task) {
+    return Boolean(task)
+      && draft.title === task.title
+      && draft.status === task.status
+      && normalizedTaskTags(draft.tags) === normalizedTaskTags(task.tags)
+      && draft.description === (task.description || "");
+  }
+
+  function scheduleTaskDraftSave(delay = 180) {
+    if (!state.selectedTask) return;
+    clearTaskDraftSaveTimer();
+    state.draftSaveTimer = window.setTimeout(() => {
+      state.draftSaveTimer = null;
+      void saveCurrentTaskDraft();
+    }, delay);
+  }
+
+  async function saveCurrentTaskDraft() {
+    clearTaskDraftSaveTimer();
+    if (state.draftSavePromise) {
+      const pending = state.draftSavePromise;
+      const succeeded = await pending;
+      if (!succeeded) return false;
+      if (state.draftSavePromise === pending) state.draftSavePromise = null;
+      return saveCurrentTaskDraft();
+    }
+
+    const task = state.selectedTask;
+    if (!task) return true;
+    const draft = currentTaskDraft(task);
+    if (taskDraftMatches(draft, task)) return true;
+    const taskId = task.id;
+
+    const operation = (async () => {
+      try {
+        const updated = await api(`/api/tasks/${taskId}`, { method: "PATCH", body: draft });
+        if (state.selectedTask?.id === taskId) {
+          state.selectedTask = { ...state.selectedTask, ...updated };
+          els.taskTitleDisplayText.textContent = updated.title || "Без названия";
+          els.taskMeta.textContent = `Создана: ${formatDateTime(updated.created_at)} · Изменена: ${formatDateTime(updated.updated_at)}${updated.closed_at ? ` · Закрыта: ${formatDateTime(updated.closed_at)}` : ""}`;
+          els.closeTask.textContent = updated.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
+          els.closeTask.dataset.action = updated.status === "done" ? "reopen" : "close";
+        }
+        state.tasks = state.tasks.map((entry) => entry.id === updated.id ? { ...entry, ...updated } : entry);
+        populateProjectFilter();
+        populateTagFilter();
+        renderBoard();
+        return true;
+      } catch (error) {
+        toast(`Не удалось автоматически сохранить изменения: ${error.message}`, "error");
+        return false;
+      }
+    })();
+    state.draftSavePromise = operation;
+    const succeeded = await operation;
+    if (state.draftSavePromise === operation) state.draftSavePromise = null;
+    if (!succeeded) return false;
+
+    // If the user changed a field while the request was in flight, save the newer draft too.
+    if (state.selectedTask?.id === taskId && !taskDraftMatches(currentTaskDraft(), state.selectedTask)) {
+      return saveCurrentTaskDraft();
+    }
+    return true;
+  }
+
+  async function dismissTaskPanel() {
+    if (!(await saveCurrentTaskDraft())) return;
+    closePanel();
   }
 
   function editableTaskTags() {
@@ -714,6 +824,7 @@
     }
     els.taskTags.value = combined;
     renderTaskTagEditor();
+    scheduleTaskDraftSave();
   }
 
   function addTaskTags(value = els.taskTagInput.value) {
@@ -736,6 +847,7 @@
     els.taskTags.value = combined;
     els.taskTagInput.value = "";
     renderTaskTagEditor();
+    scheduleTaskDraftSave();
     els.taskTagInput.focus({ preventScroll: true });
   }
 
@@ -751,12 +863,24 @@
     attachments.forEach((attachment) => {
       const item = make("li", "attachment-item");
       const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().toLowerCase() : "FILE";
-      const isPreviewableImage = ["png", "jpg", "jpeg", "gif", "webp", "avif"].includes(extension);
+      const isPreviewableImage = ["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg"].includes(extension);
+      const details = make("span", "attachment-file-details");
+      const fileDate = make("small", "", `${formatBytes(attachment.size)} · ${formatDate(attachment.created_at)}`);
+
       if (isPreviewableImage) {
+        details.appendChild(make("span", "attachment-file-name", attachment.filename));
+        details.appendChild(fileDate);
+        const trigger = make("button", "attachment-preview-trigger");
+        trigger.type = "button";
+        trigger.setAttribute("aria-label", `Открыть предпросмотр изображения ${attachment.filename}`);
+        trigger.title = `Открыть предпросмотр: ${attachment.filename}`;
         const preview = make("img", "attachment-preview");
-        preview.alt = `Предпросмотр: ${attachment.filename}`;
+        preview.alt = "";
         preview.loading = "lazy";
-        item.appendChild(preview);
+        trigger.appendChild(preview);
+        trigger.appendChild(details);
+        trigger.addEventListener("click", () => { void openAttachmentPreview(attachment); });
+        item.appendChild(trigger);
         fetch(`/api/files/${attachment.id}`, { cache: "no-store" })
           .then((response) => {
             if (!response.ok) throw new Error("Не удалось загрузить предпросмотр");
@@ -768,17 +892,24 @@
             preview.dataset.objectUrl = objectUrl;
             preview.src = objectUrl;
           })
-          .catch(() => preview.remove());
+          .catch(() => { if (preview.isConnected) preview.remove(); });
+        const download = make("a", "attachment-download", "↓");
+        download.href = `/api/files/${attachment.id}`;
+        download.download = attachment.filename;
+        download.title = `Скачать ${attachment.filename}`;
+        download.setAttribute("aria-label", `Скачать ${attachment.filename}`);
+        item.appendChild(download);
       } else {
+        const link = make("a", "", attachment.filename);
+        link.href = `/api/files/${attachment.id}`;
+        link.download = attachment.filename;
+        link.title = "Скачать файл";
+        details.appendChild(link);
+        details.appendChild(fileDate);
         item.appendChild(make("span", "attachment-file-icon", extension.slice(0, 4) || "FILE"));
+        item.appendChild(details);
       }
-      const details = make("span", "attachment-file-details");
-      const link = make("a", "", attachment.filename);
-      link.href = `/api/files/${attachment.id}`;
-      link.title = "Скачать файл";
-      details.appendChild(link);
-      details.appendChild(make("small", "", `${formatBytes(attachment.size)} · ${formatDate(attachment.created_at)}`));
-      item.appendChild(details);
+
       const remove = make("button", "attachment-remove", "×");
       remove.type = "button";
       remove.setAttribute("aria-label", `Удалить вложение ${attachment.filename}`);
@@ -786,6 +917,53 @@
       item.appendChild(remove);
       els.attachmentList.appendChild(item);
     });
+  }
+
+  function releaseAttachmentPreviewUrl() {
+    if (state.attachmentPreviewUrl) {
+      URL.revokeObjectURL(state.attachmentPreviewUrl);
+      state.attachmentPreviewUrl = null;
+    }
+    els.attachmentPreviewImage.removeAttribute("src");
+  }
+
+  function closeAttachmentPreview() {
+    state.attachmentPreviewToken += 1;
+    if (els.attachmentPreviewDialog.open) els.attachmentPreviewDialog.close();
+    releaseAttachmentPreviewUrl();
+    els.attachmentPreviewImage.hidden = true;
+    els.attachmentPreviewLoading.hidden = false;
+    els.attachmentPreviewError.hidden = true;
+  }
+
+  async function openAttachmentPreview(attachment) {
+    const token = ++state.attachmentPreviewToken;
+    releaseAttachmentPreviewUrl();
+    els.attachmentPreviewTitle.textContent = attachment.filename;
+    els.attachmentPreviewDownload.href = `/api/files/${attachment.id}`;
+    els.attachmentPreviewDownload.download = attachment.filename;
+    els.attachmentPreviewDownload.setAttribute("aria-label", `Скачать ${attachment.filename}`);
+    els.attachmentPreviewImage.alt = attachment.filename;
+    els.attachmentPreviewImage.hidden = true;
+    els.attachmentPreviewLoading.hidden = false;
+    els.attachmentPreviewError.hidden = true;
+    if (!els.attachmentPreviewDialog.open) els.attachmentPreviewDialog.showModal();
+
+    try {
+      const response = await fetch(`/api/files/${attachment.id}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Не удалось загрузить изображение");
+      const blob = await response.blob();
+      if (token !== state.attachmentPreviewToken || !els.attachmentPreviewDialog.open) return;
+      state.attachmentPreviewUrl = URL.createObjectURL(blob);
+      els.attachmentPreviewImage.src = state.attachmentPreviewUrl;
+      els.attachmentPreviewImage.hidden = false;
+      els.attachmentPreviewLoading.hidden = true;
+    } catch (error) {
+      if (token !== state.attachmentPreviewToken || !els.attachmentPreviewDialog.open) return;
+      els.attachmentPreviewLoading.hidden = true;
+      els.attachmentPreviewError.textContent = `${error.message}. Можно скачать исходный файл кнопкой выше.`;
+      els.attachmentPreviewError.hidden = false;
+    }
   }
 
   async function requestMarkdownPreview() {
@@ -867,10 +1045,11 @@
   }
 
   async function handleTaskExport() {
-    const task = state.selectedTask;
-    if (!task) return;
+    if (!state.selectedTask) return;
     els.exportTask.disabled = true;
     try {
+      if (!(await saveCurrentTaskDraft())) return;
+      const task = state.selectedTask;
       const current = {
         title: els.taskTitle.value.trim(),
         status: els.taskStatus.value,
@@ -905,6 +1084,8 @@
 
   async function handleTaskSave(event) {
     event.preventDefault();
+    clearTaskDraftSaveTimer();
+    if (state.draftSavePromise && !(await saveCurrentTaskDraft())) return;
     const taskId = Number(els.taskId.value);
     if (!taskId) return;
     els.saveTask.disabled = true;
@@ -936,6 +1117,7 @@
   }
 
   async function handleCloseTask() {
+    if (!(await saveCurrentTaskDraft())) return;
     const task = state.selectedTask;
     if (!task) return;
     const status = els.closeTask.dataset.action === "reopen" ? "todo" : "done";
@@ -993,18 +1175,21 @@
   async function handleDeleteTask() {
     const task = state.selectedTask;
     if (!task) return;
-    if (!window.confirm(`Удалить задачу «${task.title}» вместе со всеми вложениями?`)) return;
+    if (!window.confirm(`Удалить задачу «${els.taskTitle.value || task.title}» вместе со всеми вложениями?`)) return;
+    if (!(await saveCurrentTaskDraft())) return;
+    const currentTask = state.selectedTask;
+    if (!currentTask) return;
     try {
-      const files = await snapshotAttachmentFiles(task.attachments || []);
+      const files = await snapshotAttachmentFiles(currentTask.attachments || []);
       const snapshot = {
-        title: task.title,
-        description: task.description || "",
-        tags: task.tags || "",
-        status: task.status,
-        position: task.position,
+        title: currentTask.title,
+        description: currentTask.description || "",
+        tags: currentTask.tags || "",
+        status: currentTask.status,
+        position: currentTask.position,
       };
-      const wasFocused = state.focusTaskId === task.id;
-      await api(`/api/tasks/${task.id}`, { method: "DELETE" });
+      const wasFocused = state.focusTaskId === currentTask.id;
+      await api(`/api/tasks/${currentTask.id}`, { method: "DELETE" });
       closePanel();
       await loadTasks();
       toast("Задача удалена", "success", "Восстановить", () => restoreDeletedTask(snapshot, files, wasFocused));
@@ -1014,14 +1199,17 @@
   }
 
   async function uploadFiles(fileList) {
-    const task = state.selectedTask;
     const files = Array.from(fileList || []);
-    if (!task || files.length === 0) return;
+    if (!state.selectedTask || files.length === 0) return;
+    const taskId = state.selectedTask.id;
+    // Upload refreshes the panel from the server, so persist the current form first.
+    if (!(await saveCurrentTaskDraft())) return;
+    if (state.selectedTask?.id !== taskId) return;
     const data = new FormData();
     files.forEach((file) => data.append("files", file, file.name));
     els.chooseFiles.disabled = true;
     try {
-      const uploaded = await api(`/api/tasks/${task.id}/files`, { method: "POST", body: data });
+      const uploaded = await api(`/api/tasks/${taskId}/files`, { method: "POST", body: data });
       await loadTasks();
       await refreshSelectedTask();
       toast(
@@ -1082,6 +1270,7 @@
 
   async function removeAttachment(attachmentId, filename) {
     if (!window.confirm(`Удалить вложение «${filename}»?`)) return;
+    if (!(await saveCurrentTaskDraft())) return;
     try {
       const response = await fetch(`/api/files/${attachmentId}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Не удалось сохранить вложение для отмены удаления");
@@ -1295,8 +1484,8 @@
     }
   });
   els.exportTask.addEventListener("click", handleTaskExport);
-  els.closePanel.addEventListener("click", closePanel);
-  els.overlay.addEventListener("click", closePanel);
+  els.closePanel.addEventListener("click", () => { void dismissTaskPanel(); });
+  els.overlay.addEventListener("click", () => { void dismissTaskPanel(); });
   els.closeTask.addEventListener("click", handleCloseTask);
   els.deleteTask.addEventListener("click", handleDeleteTask);
   els.focusTask.addEventListener("click", () => {
@@ -1344,6 +1533,28 @@
     }
   });
   els.panel.addEventListener("paste", handleTaskPanelPaste);
+  els.attachmentPreviewClose.addEventListener("click", closeAttachmentPreview);
+  els.attachmentPreviewDialog.addEventListener("click", (event) => {
+    if (event.target === els.attachmentPreviewDialog) closeAttachmentPreview();
+  });
+  els.attachmentPreviewDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeAttachmentPreview();
+  });
+  els.attachmentPreviewDialog.addEventListener("close", () => {
+    state.attachmentPreviewToken += 1;
+    releaseAttachmentPreviewUrl();
+    els.attachmentPreviewImage.hidden = true;
+    els.attachmentPreviewLoading.hidden = false;
+    els.attachmentPreviewError.hidden = true;
+  });
+  els.attachmentPreviewImage.addEventListener("error", () => {
+    if (!els.attachmentPreviewDialog.open || els.attachmentPreviewImage.hidden) return;
+    els.attachmentPreviewImage.hidden = true;
+    els.attachmentPreviewLoading.hidden = true;
+    els.attachmentPreviewError.textContent = "Браузер не смог показать этот формат. Можно скачать исходный файл кнопкой выше.";
+    els.attachmentPreviewError.hidden = false;
+  });
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
 
   els.taskTitleDisplay.addEventListener("click", () => {
@@ -1382,7 +1593,8 @@
     els.taskTitleDisplay.focus({ preventScroll: true });
   }
 
-  function setDescriptionEditing(editing) {
+  async function setDescriptionEditing(editing) {
+    if (!editing && !(await saveCurrentTaskDraft())) return;
     state.previewVisible = !editing;
     els.descriptionPreview.hidden = editing;
     els.taskDescription.hidden = !editing;
@@ -1394,21 +1606,24 @@
   }
 
   els.togglePreview.addEventListener("click", () => {
-    setDescriptionEditing(state.previewVisible);
+    void setDescriptionEditing(state.previewVisible);
   });
   els.descriptionPreview.addEventListener("click", (event) => {
     if (!state.previewVisible || event.target.closest("a, button")) return;
-    setDescriptionEditing(true);
+    void setDescriptionEditing(true);
   });
   els.descriptionPreview.addEventListener("keydown", (event) => {
     if (!state.previewVisible || !["Enter", " "].includes(event.key)) return;
     if (event.target.closest("a, button")) return;
     event.preventDefault();
-    setDescriptionEditing(true);
+    void setDescriptionEditing(true);
   });
   els.taskDescription.addEventListener("input", () => {
     if (state.previewVisible) requestMarkdownPreview();
   });
+  els.taskDescription.addEventListener("blur", () => scheduleTaskDraftSave(180));
+  els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180));
+  els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
 
   for (const eventName of ["dragenter", "dragover"]) {
     els.attachmentDropzone.addEventListener(eventName, (event) => {
@@ -1448,6 +1663,11 @@
     const tag = event.target && event.target.tagName;
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
     if (event.key === "Escape") {
+      if (els.attachmentPreviewDialog.open) {
+        event.preventDefault();
+        closeAttachmentPreview();
+        return;
+      }
       const openToolbarMenu = toolbarMenus.find((menu) => menu.open);
       if (openToolbarMenu) {
         openToolbarMenu.open = false;
@@ -1455,7 +1675,7 @@
       }
       if (els.shortcutsDialog.open) els.shortcutsDialog.close();
       else if (els.projectDialog.open) els.projectDialog.close();
-      else if (!els.overlay.hidden) closePanel();
+      else if (!els.overlay.hidden) void dismissTaskPanel();
       else {
         const latestToast = els.toastRegion.lastElementChild;
         if (latestToast) {

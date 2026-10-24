@@ -138,7 +138,6 @@
     taskMoreMenu: $("#task-more-menu"),
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
-    saveTask: $("#save-task"),
     exportTask: $("#export-task"),
     focusTask: $("#focus-task"),
     attachmentInput: $("#attachment-files"),
@@ -1366,40 +1365,6 @@
     }
   }
 
-  async function handleTaskSave(event) {
-    event.preventDefault();
-    clearTaskDraftSaveTimer();
-    if (state.draftSavePromise && !(await saveCurrentTaskDraft())) return;
-    const taskId = Number(els.taskId.value);
-    if (!taskId) return;
-    els.saveTask.disabled = true;
-    try {
-      const previous = {
-        title: state.selectedTask.title,
-        description: state.selectedTask.description || "",
-        status: state.selectedTask.status,
-        position: state.selectedTask.position,
-        tags: state.selectedTask.tags || "",
-      };
-      const updated = await api(`/api/tasks/${taskId}`, {
-        method: "PATCH",
-        body: {
-          title: els.taskTitle.value,
-          status: els.taskStatus.value,
-          tags: els.taskTags.value,
-          description: els.taskDescription.value,
-        },
-      });
-      await loadTasks();
-      await openTaskPanel(updated.id);
-      toast("Изменения сохранены", "success", "Отменить", () => restoreTaskDetails(taskId, previous));
-    } catch (error) {
-      toast(error.message, "error");
-    } finally {
-      els.saveTask.disabled = false;
-    }
-  }
-
   async function handleCloseTask() {
     if (!(await saveCurrentTaskDraft())) return;
     const task = state.selectedTask;
@@ -1761,7 +1726,7 @@
     }
   }));
 
-  els.taskForm.addEventListener("submit", handleTaskSave);
+  els.taskForm.addEventListener("submit", (event) => event.preventDefault());
   els.taskTagCustomToggle.addEventListener("click", () => {
     state.taskTagInputExpanded = true;
     renderTaskTagEditor();

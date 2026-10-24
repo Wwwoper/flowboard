@@ -1,7 +1,58 @@
-.venv
-.ruff_cache
-.pytest_cache
-.vscode
-data
-__pycache__
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Flowboard runtime data: SQLite database, attachments, and local state
+/data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Tests, coverage, and lint caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+
+# Local editors and operating-system files
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temporary/merge-recovery files
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Downloaded/generated patch artifacts (apply patches, don't commit them)
+*.patch
+*.diff
+
+# Node tooling, if introduced for frontend development
+node_modules/

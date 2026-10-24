@@ -166,8 +166,6 @@
     importThemeButton: $("#import-theme-button"),
     exportThemeButton: $("#export-theme-button"),
     resetThemeButton: $("#reset-theme-button"),
-    savedThemesSelect: $("#saved-themes-select"),
-    deleteThemeButton: $("#delete-theme-button"),
     themeImportFile: $("#theme-import-file"),
     customThemeStatus: $("#custom-theme-status"),
     densityToggle: $("#density-toggle"),
@@ -230,28 +228,12 @@
 
   function updateThemeManagerControls() {
     const manager = window.FlowboardThemeManager;
-    if (!manager) return;
-
-    const themes = manager.getThemes();
-    const activeId = manager.getActiveThemeId();
-    const selectedValue = activeId || "builtin";
-    const options = [document.createElement("option"), ...themes.map(() => document.createElement("option"))];
-    options[0].value = "builtin";
-    options[0].textContent = "Стандартная палитра Flowboard";
-    themes.forEach((theme, index) => {
-      options[index + 1].value = theme.id;
-      options[index + 1].textContent = theme.name;
-    });
-    els.savedThemesSelect.replaceChildren(...options);
-    els.savedThemesSelect.value = selectedValue;
-
-    const hasCustomTheme = selectedValue !== "builtin";
-    const themeName = manager.getCustomThemeName() || "";
+    const hasCustomTheme = Boolean(manager?.hasCustomTheme());
+    const themeName = manager?.getCustomThemeName() || "";
     els.resetThemeButton.disabled = !hasCustomTheme;
-    els.deleteThemeButton.disabled = !hasCustomTheme;
     els.customThemeStatus.textContent = hasCustomTheme
-      ? `Активная тема: ${themeName}. Сохранено тем: ${themes.length}`
-      : `Стандартная палитра Flowboard. Сохранено тем: ${themes.length}`;
+      ? `Загружена тема: ${themeName}`
+      : "Стандартная палитра Flowboard";
   }
 
   function applyDensity(density, persist = false) {
@@ -2116,9 +2098,7 @@
       const result = await window.FlowboardThemeManager.importFile(file);
       applyTheme(document.documentElement.dataset.theme || "light");
       updateThemeManagerControls();
-      toast(result.updated
-        ? `Тема «${result.name}» обновлена и сохранена`
-        : `Тема «${result.name}» добавлена в библиотеку`, "success");
+      toast(`Тема «${result.name}» загружена`, "success");
     } catch (error) {
       toast(error.message || "Не удалось импортировать тему", "error");
     } finally {
@@ -2131,31 +2111,6 @@
       toast(`Тема «${name}» экспортирована`, "success");
     } catch (error) {
       toast(error.message || "Не удалось экспортировать тему", "error");
-    }
-  });
-  els.savedThemesSelect.addEventListener("change", () => {
-    try {
-      const result = window.FlowboardThemeManager.selectTheme(els.savedThemesSelect.value);
-      applyTheme(document.documentElement.dataset.theme || "light");
-      updateThemeManagerControls();
-      toast(`Тема «${result.name}» активирована`, "success");
-    } catch (error) {
-      updateThemeManagerControls();
-      toast(error.message || "Не удалось переключить тему", "error");
-    }
-  });
-  els.deleteThemeButton.addEventListener("click", () => {
-    const themeId = els.savedThemesSelect.value;
-    if (!themeId || themeId === "builtin") return;
-    const name = window.FlowboardThemeManager.getThemeName(themeId);
-    if (!window.confirm(`Удалить тему «${name}» из библиотеки? Это действие нельзя отменить.`)) return;
-    try {
-      window.FlowboardThemeManager.deleteTheme(themeId);
-      applyTheme(document.documentElement.dataset.theme || "light");
-      updateThemeManagerControls();
-      toast(`Тема «${name}» удалена из библиотеки`, "success");
-    } catch (error) {
-      toast(error.message || "Не удалось удалить тему", "error");
     }
   });
   els.resetThemeButton.addEventListener("click", () => {

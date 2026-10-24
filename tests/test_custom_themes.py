@@ -60,11 +60,9 @@ def test_custom_theme_controls_and_script_are_served(client):
         "custom-theme-status",
     ):
         assert f'id="{element_id}"' in html
-    assert '/static/theme-manager.js?v=0.2.0' in html
-    assert '/static/app.js?v=0.5.11' in html
-    assert '/static/github-theme.css?v=0.2.1' in html
-    assert 'id="saved-themes-select"' in html
-    assert 'id="delete-theme-button"' in html
+    assert '/static/theme-manager.js?v=0.1.0' in html
+    assert '/static/app.js?v=0.5.10' in html
+    assert '/static/github-theme.css?v=0.2.0' in html
 
     response = client.get("/static/theme-manager.js")
     assert response.status_code == 200
@@ -80,11 +78,8 @@ def test_custom_theme_manager_only_accepts_known_hex_color_tokens():
     assert "Unknown" not in script
     assert "eval(" not in script
     assert "new Function(" not in script
-    assert "localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLibrary))" in script
-    assert "function getThemes()" in script
-    assert "function selectTheme(themeId)" in script
-    assert "function deleteTheme(themeId)" in script
-    assert "LEGACY_STORAGE_KEY" in script
+    assert "localStorage.setItem(STORAGE_KEY, JSON.stringify(theme))" in script
+    assert "localStorage.removeItem(STORAGE_KEY)" in script
     assert "applyCurrentPalette" in script
     assert "downloadTheme" in script
 
@@ -118,8 +113,6 @@ def test_theme_actions_are_connected_to_ui_and_theme_mode_toggle():
     assert 'els.importThemeButton.addEventListener("click"' in script
     assert 'els.exportThemeButton.addEventListener("click"' in script
     assert 'els.resetThemeButton.addEventListener("click"' in script
-    assert 'els.savedThemesSelect.addEventListener("change"' in script
-    assert 'els.deleteThemeButton.addEventListener("click"' in script
     assert 'window.FlowboardThemeManager?.applyCurrentPalette()' in script
     assert 'updateThemeManagerControls();' in script
     assert 'finally {\n      els.themeImportFile.value = "";' in script
@@ -176,40 +169,10 @@ function boot(mode = "light") {
   assert.equal(first.variables.get("--accent"), "#123abc");
   assert.equal(first.manager.hasCustomTheme(), true);
   assert.equal(first.manager.getCustomThemeName(), "Runtime Test");
-  const firstId = first.manager.getActiveThemeId();
-  assert.equal(first.manager.getThemes().length, 1);
 
-  const secondTheme = {
-    name: "Second Theme",
-    version: 1,
-    colors: {
-      light: { accent: "#112233" },
-      dark: { accent: "#334455" },
-    },
-  };
-  await first.manager.importFile({ size: 100, text: async () => JSON.stringify(secondTheme) });
-  const secondId = first.manager.getActiveThemeId();
-  assert.notEqual(firstId, secondId);
-  assert.equal(first.manager.getThemes().length, 2);
-  assert.equal(first.variables.get("--accent"), "#112233");
-
-  first.manager.selectTheme(firstId);
-  assert.equal(first.variables.get("--accent"), "#123abc");
-  first.manager.selectTheme(secondId);
   const reloaded = boot("dark");
-  assert.equal(reloaded.manager.getThemes().length, 2);
-  assert.equal(reloaded.manager.getActiveThemeId(), secondId);
-  assert.equal(reloaded.variables.get("--accent"), "#334455");
+  assert.equal(reloaded.variables.get("--accent"), "#abcdef");
   assert.equal(reloaded.variables.get("--gh-primary"), "#fedcba");
-
-  reloaded.manager.selectTheme("builtin");
-  assert.equal(reloaded.manager.hasCustomTheme(), false);
-  assert.equal(reloaded.manager.getThemes().length, 2);
-  reloaded.manager.selectTheme(firstId);
-  reloaded.manager.deleteTheme(firstId);
-  assert.equal(reloaded.manager.getThemes().length, 1);
-  assert.equal(reloaded.manager.getActiveThemeId(), "builtin");
-  assert.equal(reloaded.manager.hasCustomTheme(), false);
 
   const invalidTheme = {
     ...theme,
@@ -223,11 +186,10 @@ function boot(mode = "light") {
     first.manager.importFile({ size: 300000, text: async () => "{}" }),
     /256 КБ/,
   );
-  reloaded.manager.resetTheme();
-  assert.equal(reloaded.manager.hasCustomTheme(), false);
-  assert.equal(reloaded.manager.getThemes().length, 1);
-  assert.equal(reloaded.manager.getActiveThemeId(), "builtin");
-  assert.equal(reloaded.variables.has("--accent"), false);
+  first.manager.resetTheme();
+  assert.equal(first.manager.hasCustomTheme(), false);
+  assert.equal(store.has("flowboard-custom-theme"), false);
+  assert.equal(first.variables.has("--accent"), false);
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 '''
     result = subprocess.run(

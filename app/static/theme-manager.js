@@ -1,9 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "flowboard-theme-library";
-  const LEGACY_STORAGE_KEY = "flowboard-custom-theme";
-  const BUILTIN_THEME_ID = "builtin";
+  const STORAGE_KEY = "flowboard-custom-theme";
   const MAX_FILE_BYTES = 256 * 1024;
   const MODES = ["light", "dark"];
   const COLOR_KEYS = [
@@ -46,9 +44,7 @@
   ];
   const COLOR_KEY_SET = new Set(COLOR_KEYS);
   const HEX_COLOR = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
-  let library = readSavedLibrary();
-  let activeThemeId = library.activeId;
-  let activeTheme = library.themes.find((theme) => theme.id === activeThemeId) || null;
+  let activeTheme = readSavedTheme();
 
   function isObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -93,125 +89,13 @@
     };
   }
 
-  function createThemeId(name, themes) {
-    const base = name
-      .toLocaleLowerCase("en")
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || "theme";
-    const existingIds = new Set(themes.map((theme) => theme.id));
-    let id = base;
-    let suffix = 2;
-    while (existingIds.has(id)) id = `${base}-${suffix++}`;
-    return id;
-  }
-
-  function readSavedLibrary() {
-    let raw = null;
+  function readSavedTheme() {
     try {
-      raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? validateTheme(JSON.parse(raw)) : null;
     } catch {
-      return { themes: [], activeId: BUILTIN_THEME_ID };
+      return null;
     }
-
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        if (isObject(saved) && Array.isArray(saved.themes)) {
-          const themes = [];
-          const seenIds = new Set();
-          for (const entry of saved.themes) {
-            try {
-              if (!isObject(entry) || typeof entry.id !== "string"
-                  || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(entry.id)
-                  || seenIds.has(entry.id)) continue;
-              const theme = validateTheme(entry);
-              themes.push({ id: entry.id, ...theme });
-              seenIds.add(entry.id);
-            } catch {
-              // Ignore invalid saved entries without losing the rest of the library.
-            }
-          }
-          const requestedId = typeof saved.activeId === "string" ? saved.activeId : BUILTIN_THEME_ID;
-          const activeId = requestedId === BUILTIN_THEME_ID
-            || themes.some((theme) => theme.id === requestedId)
-            ? requestedId
-            : BUILTIN_THEME_ID;
-          return { themes, activeId };
-        }
-      } catch {
-        // Try migrating the previous single-theme storage format below.
-      }
-    }
-
-    try {
-      const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (legacyRaw) {
-        const theme = validateTheme(JSON.parse(legacyRaw));
-        const migratedTheme = { id: createThemeId(theme.name, []), ...theme };
-        const migrated = { themes: [migratedTheme], activeId: migratedTheme.id };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-        } catch {
-          // The in-memory migration still works if storage is unavailable.
-        }
-        return migrated;
-      }
-    } catch {
-      // No valid legacy theme is available.
-    }
-
-    return { themes: [], activeId: BUILTIN_THEME_ID };
-  }
-
-  function persistLibrary(nextLibrary) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLibrary));
-    } catch {
-      throw new Error("Не удалось сохранить библиотеку тем в браузере. Проверьте доступное место в хранилище.");
-    }
-  }
-
-  function getThemes() {
-    return library.themes.map(({ id, name }) => ({ id, name }));
-  }
-
-  function getActiveThemeId() {
-    return activeThemeId;
-  }
-
-  function getThemeName(themeId) {
-    if (themeId === BUILTIN_THEME_ID) return "Стандартная палитра Flowboard";
-    return library.themes.find((theme) => theme.id === themeId)?.name || "";
-  }
-
-  function selectTheme(themeId) {
-    if (themeId !== BUILTIN_THEME_ID && !library.themes.some((theme) => theme.id === themeId)) {
-      throw new Error("Выбранная тема не найдена в библиотеке.");
-    }
-    const nextLibrary = { themes: library.themes, activeId: themeId };
-    persistLibrary(nextLibrary);
-    library = nextLibrary;
-    activeThemeId = themeId;
-    activeTheme = library.themes.find((theme) => theme.id === activeThemeId) || null;
-    applyCurrentPalette();
-    return { id: activeThemeId, name: getThemeName(activeThemeId) };
-  }
-
-  function deleteTheme(themeId) {
-    const theme = library.themes.find((entry) => entry.id === themeId);
-    if (!theme) throw new Error("Выбранная пользовательская тема не найдена.");
-    const nextLibrary = {
-      themes: library.themes.filter((entry) => entry.id !== themeId),
-      activeId: activeThemeId === themeId ? BUILTIN_THEME_ID : activeThemeId,
-    };
-    persistLibrary(nextLibrary);
-    library = nextLibrary;
-    activeThemeId = nextLibrary.activeId;
-    activeTheme = library.themes.find((entry) => entry.id === activeThemeId) || null;
-    applyCurrentPalette();
-    return { id: themeId, name: theme.name };
   }
 
   function clearPaletteOverrides() {
@@ -245,22 +129,15 @@
     }
     const theme = validateTheme(candidate);
 
-    const matchingIndex = library.themes.findIndex(
-      (entry) => entry.name.toLocaleLowerCase("en") === theme.name.toLocaleLowerCase("en"),
-    );
-    const id = matchingIndex >= 0 ? library.themes[matchingIndex].id : createThemeId(theme.name, library.themes);
-    const savedTheme = { id, ...theme };
-    const nextThemes = [...library.themes];
-    if (matchingIndex >= 0) nextThemes[matchingIndex] = savedTheme;
-    else nextThemes.push(savedTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(theme));
+    } catch {
+      throw new Error("Не удалось сохранить тему в браузере. Проверьте доступность локального хранилища.");
+    }
 
-    const nextLibrary = { themes: nextThemes, activeId: id };
-    persistLibrary(nextLibrary);
-    library = nextLibrary;
-    activeThemeId = id;
-    activeTheme = savedTheme;
+    activeTheme = theme;
     applyCurrentPalette();
-    return { id, name: theme.name, updated: matchingIndex >= 0 };
+    return { name: theme.name };
   }
 
   function readBuiltInPalette(mode) {
@@ -311,7 +188,13 @@
   }
 
   function resetTheme() {
-    return selectTheme(BUILTIN_THEME_ID);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      throw new Error("Не удалось удалить сохранённую тему из браузера.");
+    }
+    activeTheme = null;
+    applyCurrentPalette();
   }
 
   function hasCustomTheme() {
@@ -327,15 +210,10 @@
 
   window.FlowboardThemeManager = {
     applyCurrentPalette,
-    deleteTheme,
     downloadTheme,
-    getActiveThemeId,
     getCustomThemeName,
-    getThemeName,
-    getThemes,
     hasCustomTheme,
     importFile,
     resetTheme,
-    selectTheme,
   };
 })();

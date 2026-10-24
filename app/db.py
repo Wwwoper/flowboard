@@ -18,10 +18,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     tags TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    closed_at TEXT NULL
+    closed_at TEXT NULL,
+    archived_at TEXT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_status_position ON tasks(status, position, id);
 CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON tasks(updated_at);
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS attachments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +57,21 @@ def initialize_database(db_path: str | Path | None = None) -> None:
     connection = connect(db_path)
     try:
         connection.executescript(SCHEMA)
+        # Existing databases predate task archiving. Add the nullable column in-place
+        # instead of rebuilding the table, preserving task IDs and attachment links.
+        task_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(tasks)").fetchall()
+        }
+        if "archived_at" not in task_columns:
+            connection.execute("ALTER TABLE tasks ADD COLUMN archived_at TEXT NULL")
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at)"
+        )
+        connection.executemany(
+            "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
+            [("archive_enabled", "true"), ("archive_after_days", "30")],
+        )
+        connection.commit()
     finally:
         connection.close()
 

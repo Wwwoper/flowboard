@@ -52,6 +52,16 @@ class AttachmentRead(BaseModel):
     created_at: str
 
 
+class ArchiveSettingsRead(BaseModel):
+    archive_enabled: bool
+    archive_after_days: Literal[7, 30, 60, 90]
+
+
+class ArchiveSettingsPatch(StrictModel):
+    archive_enabled: bool | None = None
+    archive_after_days: Literal[7, 30, 60, 90] | None = None
+
+
 class TaskSummary(BaseModel):
     id: int
     title: str
@@ -62,6 +72,7 @@ class TaskSummary(BaseModel):
     created_at: str
     updated_at: str
     closed_at: str | None
+    archived_at: str | None = None
     attachments_count: int = 0
 
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import re
 import shutil
 import sqlite3
 import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
 
@@ -16,11 +18,13 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.db import get_db, initialize_database
+from app.db import connect, get_db, initialize_database
 from app.exporter import build_markdown_export, build_zip_export, export_filename
 from app.importer import ParsedTask, parse_markdown_file, utc_now
 from app.markdown import render_safe_markdown
 from app.models import (
+    ArchiveSettingsPatch,
+    ArchiveSettingsRead,
     AttachmentRead,
     ImportResult,
     ImportSkipped,
@@ -35,11 +39,102 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 ATTACHMENT_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,10}$")
 
 
+ARCHIVE_SETTING_DEFAULTS = {"archive_enabled": "true", "archive_after_days": "30"}
+ARCHIVE_INTERVAL_SECONDS = 60 * 60
+
+
+def _archive_settings(connection: sqlite3.Connection) -> dict[str, Any]:
+    rows = {
+        row["key"]: row["value"]
+        for row in connection.execute(
+            "SELECT key, value FROM app_settings WHERE key IN (?, ?)",
+            ("archive_enabled", "archive_after_days"),
+        ).fetchall()
+    }
+    enabled = rows.get("archive_enabled", ARCHIVE_SETTING_DEFAULTS["archive_enabled"]) == "true"
+    try:
+        after_days = int(rows.get("archive_after_days", ARCHIVE_SETTING_DEFAULTS["archive_after_days"]))
+    except ValueError:
+        after_days = 30
+    if after_days not in {7, 30, 60, 90}:
+        after_days = 30
+    return {"archive_enabled": enabled, "archive_after_days": after_days}
+
+
+def _parse_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _archive_due_completed_tasks(
+    connection: sqlite3.Connection, *, now: datetime | None = None
+) -> int:
+    """Move completed tasks to the archive after the configured inactivity period."""
+    preferences = _archive_settings(connection)
+    if not preferences["archive_enabled"]:
+        return 0
+    current_time = now or datetime.now(UTC)
+    cutoff = current_time - timedelta(days=preferences["archive_after_days"])
+    candidates = connection.execute(
+        """
+        SELECT id, closed_at, updated_at FROM tasks
+        WHERE status = 'done' AND archived_at IS NULL AND closed_at IS NOT NULL
+        """
+    ).fetchall()
+    due_ids = []
+    for task in candidates:
+        closed_at = _parse_timestamp(task["closed_at"])
+        updated_at = _parse_timestamp(task["updated_at"])
+        activity = max((value for value in (closed_at, updated_at) if value is not None), default=None)
+        if activity is not None and activity <= cutoff:
+            due_ids.append(int(task["id"]))
+    if not due_ids:
+        return 0
+    archived_at = current_time.isoformat(timespec="seconds").replace("+00:00", "Z")
+    connection.executemany(
+        "UPDATE tasks SET archived_at = ? WHERE id = ? AND archived_at IS NULL AND status = 'done'",
+        [(archived_at, task_id) for task_id in due_ids],
+    )
+    connection.commit()
+    return len(due_ids)
+
+
+async def _archive_scheduler() -> None:
+    """Periodically archive eligible tasks even if the board remains open."""
+    while True:
+        await asyncio.sleep(ARCHIVE_INTERVAL_SECONDS)
+        connection = connect()
+        try:
+            _archive_due_completed_tasks(connection)
+        finally:
+            connection.close()
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
     settings.attachments_dir.mkdir(parents=True, exist_ok=True)
-    yield
+    connection = connect()
+    try:
+        _archive_due_completed_tasks(connection)
+    finally:
+        connection.close()
+    scheduler = asyncio.create_task(_archive_scheduler())
+    try:
+        yield
+    finally:
+        scheduler.cancel()
+        try:
+            await scheduler
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -60,16 +155,27 @@ async def disable_api_response_cache(request, call_next):
     return response
 
 
-def _task_rows(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+def _task_rows(
+    connection: sqlite3.Connection, *, archived: bool | None = None
+) -> list[dict[str, Any]]:
+    where_clause = "WHERE t.archived_at IS NOT NULL" if archived is True else (
+        "WHERE t.archived_at IS NULL" if archived is False else ""
+    )
+    order_clause = (
+        "ORDER BY t.archived_at DESC, t.id DESC"
+        if archived is True
+        else """ORDER BY CASE t.status
+            WHEN 'todo' THEN 0 WHEN 'doing' THEN 1 WHEN 'waiting' THEN 2 ELSE 3 END,
+            t.position, t.id"""
+    )
     rows = connection.execute(
-        """
+        f"""
         SELECT t.*, COUNT(a.id) AS attachments_count
         FROM tasks AS t
         LEFT JOIN attachments AS a ON a.task_id = t.id
+        {where_clause}
         GROUP BY t.id
-        ORDER BY CASE t.status
-            WHEN 'todo' THEN 0 WHEN 'doing' THEN 1 WHEN 'waiting' THEN 2 ELSE 3 END,
-            t.position, t.id
+        {order_clause}
         """
     ).fetchall()
     return [dict(row) for row in rows]
@@ -163,7 +269,83 @@ def index() -> FileResponse:
 
 @app.get("/api/tasks", response_model=list[TaskSummary])
 def list_tasks(connection: sqlite3.Connection = Depends(get_db)) -> list[TaskSummary]:
-    return [_task_summary(task) for task in _task_rows(connection)]
+    _archive_due_completed_tasks(connection)
+    return [_task_summary(task) for task in _task_rows(connection, archived=False)]
+
+
+@app.get("/api/archive/tasks", response_model=list[TaskSummary])
+def list_archived_tasks(connection: sqlite3.Connection = Depends(get_db)) -> list[TaskSummary]:
+    _archive_due_completed_tasks(connection)
+    return [_task_summary(task) for task in _task_rows(connection, archived=True)]
+
+
+@app.get("/api/archive/settings", response_model=ArchiveSettingsRead)
+def get_archive_settings(connection: sqlite3.Connection = Depends(get_db)) -> ArchiveSettingsRead:
+    return ArchiveSettingsRead(**_archive_settings(connection))
+
+
+@app.patch("/api/archive/settings", response_model=ArchiveSettingsRead)
+def update_archive_settings(
+    payload: ArchiveSettingsPatch, connection: sqlite3.Connection = Depends(get_db)
+) -> ArchiveSettingsRead:
+    changes = payload.model_dump(exclude_unset=True)
+    for key, value in changes.items():
+        if value is None:
+            raise HTTPException(status_code=400, detail=f"Настройка {key} не может быть null")
+        stored_value = str(value).lower() if isinstance(value, bool) else str(value)
+        connection.execute(
+            "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, stored_value),
+        )
+    connection.commit()
+    _archive_due_completed_tasks(connection)
+    return ArchiveSettingsRead(**_archive_settings(connection))
+
+
+@app.post("/api/archive/completed")
+def archive_all_completed(connection: sqlite3.Connection = Depends(get_db)) -> dict[str, int]:
+    archived_at = utc_now()
+    cursor = connection.execute(
+        "UPDATE tasks SET archived_at = ? WHERE status = 'done' AND archived_at IS NULL",
+        (archived_at,),
+    )
+    connection.commit()
+    return {"archived": cursor.rowcount}
+
+
+@app.post("/api/archive/tasks/{task_id}", response_model=TaskSummary)
+def archive_task(task_id: int, connection: sqlite3.Connection = Depends(get_db)) -> TaskSummary:
+    task = _require_task(connection, task_id)
+    if task["status"] != "done":
+        raise HTTPException(status_code=409, detail="Архивировать можно только завершённые задачи")
+    if task["archived_at"]:
+        return _task_summary(task)
+    connection.execute(
+        "UPDATE tasks SET archived_at = ? WHERE id = ? AND archived_at IS NULL",
+        (utc_now(), task_id),
+    )
+    connection.commit()
+    return _task_summary(_require_task(connection, task_id))
+
+
+@app.post("/api/archive/tasks/{task_id}/restore", response_model=TaskSummary)
+def restore_archived_task(
+    task_id: int, connection: sqlite3.Connection = Depends(get_db)
+) -> TaskSummary:
+    task = _require_task(connection, task_id)
+    if not task["archived_at"]:
+        raise HTTPException(status_code=409, detail="Задача не находится в архиве")
+    row = connection.execute(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM tasks "
+        "WHERE status = 'done' AND archived_at IS NULL"
+    ).fetchone()
+    connection.execute(
+        "UPDATE tasks SET archived_at = NULL, position = ? WHERE id = ?",
+        (float(row[0]), task_id),
+    )
+    connection.commit()
+    return _task_summary(_require_task(connection, task_id))
 
 
 @app.post("/api/tasks", response_model=TaskSummary, status_code=201)
@@ -247,6 +429,8 @@ def patch_task(
         closed_at = now
     elif current["status"] == "done" and new_status != "done":
         closed_at = None
+        if current.get("archived_at"):
+            assignments["archived_at"] = None
 
     update_fields = [f"{field} = ?" for field in assignments]
     values = list(assignments.values())

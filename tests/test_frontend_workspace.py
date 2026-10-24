@@ -17,8 +17,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.8" in html
-    assert "/static/style.css?v=0.5.8" in html
+    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/style.css?v=0.5.9" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -138,8 +138,8 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.8" in html
-    assert "/static/style.css?v=0.5.8" in html
+    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/style.css?v=0.5.9" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -242,3 +242,39 @@ def test_main_board_uses_compact_file_and_settings_menus(client):
     assert 'els.activeCount.textContent = `Активные: ${activeCount}`;' in script
     assert 'els.doingCount.textContent = `В работе: ${doingCount}`;' in script
     assert 'const toolbarMenus = $$(".toolbar-menu");' in script
+
+
+def test_archive_and_per_column_filters_are_available_without_adding_a_board_column(client):
+    html = client.get("/").text
+    assert 'id="archive-dialog"' in html
+    assert 'id="open-archive"' in html
+    assert 'id="archive-auto-enabled"' in html
+    assert 'id="archive-after-days"' in html
+    assert 'id="archive-search"' in html
+    assert 'id="archive-project-filter"' in html
+    assert 'id="archive-tag-filter"' in html
+    assert html.count('data-column-options-toggle=') == 4
+    assert html.count('data-column-filter=') == 4
+    assert html.count('data-column-sort=') == 4
+    assert 'data-archive-completed' in html
+    assert 'id="archive-task"' in html
+    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/style.css?v=0.5.9" in html
+
+    script = client.get("/static/app.js").text
+    for fragment in (
+        "function readColumnPreferences()",
+        "function populateColumnFilters()",
+        "function sortColumnTasks(tasks, mode)",
+        'writeStorage("flowboard-column-preferences"',
+        'api("/api/archive/tasks")',
+        'api("/api/archive/settings")',
+        'api("/api/archive/completed", { method: "POST" })',
+        'api(`/api/archive/tasks/${taskId}/restore`, { method: "POST" })',
+    ):
+        assert fragment in script
+
+    css = client.get("/static/style.css").text
+    assert ".column-options-popover" in css
+    assert ".archive-dialog" in css
+    assert ".archive-item" in css

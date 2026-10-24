@@ -35,6 +35,34 @@
     }
   }
 
+  const DEFAULT_COLUMN_PREFERENCES = {
+    todo: { tag: "", sort: "created_desc" },
+    doing: { tag: "", sort: "updated_desc" },
+    waiting: { tag: "", sort: "updated_asc" },
+    done: { tag: "", sort: "closed_desc" },
+  };
+  const COLUMN_SORT_MODES = new Set([
+    "manual", "created_desc", "created_asc", "updated_desc", "updated_asc",
+    "closed_desc", "type", "title_asc",
+  ]);
+
+  function readColumnPreferences() {
+    let stored = {};
+    try {
+      const parsed = JSON.parse(readStorage("flowboard-column-preferences", "{}"));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stored = parsed;
+    } catch {
+      // Invalid local preferences are ignored; safe defaults keep the board usable.
+    }
+    return Object.fromEntries(STATUSES.map((status) => {
+      const value = stored[status] && typeof stored[status] === "object" ? stored[status] : {};
+      return [status, {
+        tag: typeof value.tag === "string" ? value.tag : DEFAULT_COLUMN_PREFERENCES[status].tag,
+        sort: COLUMN_SORT_MODES.has(value.sort) ? value.sort : DEFAULT_COLUMN_PREFERENCES[status].sort,
+      }];
+    }));
+  }
+
   const state = {
     tasks: [],
     selectedTask: null,
@@ -57,6 +85,10 @@
     attachmentPreviewUrl: null,
     attachmentPreviewToken: 0,
   };
+  state.columnPreferences = readColumnPreferences();
+  state.archivedTasks = [];
+  state.archiveSettings = { archive_enabled: true, archive_after_days: 30 };
+  state.archiveFilters = { search: "", project: "", tag: "", period: "" };
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -140,6 +172,23 @@
     projectCommandSearch: $("#project-command-search"),
     projectCommandList: $("#project-command-list"),
   };
+  Object.assign(els, {
+    archiveOpen: $("#open-archive"),
+    archiveDialog: $("#archive-dialog"),
+    archiveClose: $("#close-archive"),
+    archiveAutoEnabled: $("#archive-auto-enabled"),
+    archiveAfterDays: $("#archive-after-days"),
+    archiveSearch: $("#archive-search"),
+    archiveProjectFilter: $("#archive-project-filter"),
+    archiveTagFilter: $("#archive-tag-filter"),
+    archivePeriodFilter: $("#archive-period-filter"),
+    archiveCompleteNow: $("#archive-completed-now"),
+    archiveCount: $("#archive-count"),
+    archiveList: $("#archive-list"),
+    archiveEmpty: $("#archive-empty"),
+    archiveTask: $("#archive-task"),
+    columnOptionsToggles: $$("[data-column-options-toggle]"),
+  });
 
   function applyTheme(theme, persist = false) {
     const normalizedTheme = theme === "dark" ? "dark" : "light";
@@ -478,6 +527,69 @@
     return card;
   }
 
+  function columnTagLabel(tag) {
+    const normalized = String(tag || "").toLowerCase();
+    return Object.hasOwn(TASK_TYPE_LABELS, normalized) ? `Тип: ${TASK_TYPE_LABELS[normalized]}` : tag;
+  }
+
+  function persistColumnPreferences() {
+    writeStorage("flowboard-column-preferences", JSON.stringify(state.columnPreferences));
+  }
+
+  function populateColumnFilters() {
+    const tags = [...new Set(state.tasks.flatMap(taskTags).filter((tag) => !projectFromTag(tag)))]
+      .sort((a, b) => a.localeCompare(b, "ru"));
+    STATUSES.forEach((status) => {
+      const select = $(`[data-column-filter="${status}"]`);
+      if (!select) return;
+      const current = state.columnPreferences[status].tag;
+      select.replaceChildren(new Option("Все теги и типы", ""));
+      tags.forEach((tag) => select.appendChild(new Option(columnTagLabel(tag), tag)));
+      state.columnPreferences[status].tag = tags.includes(current) ? current : "";
+      select.value = state.columnPreferences[status].tag;
+      const sorter = $(`[data-column-sort="${status}"]`);
+      if (sorter) sorter.value = state.columnPreferences[status].sort;
+      const toggle = $(`[data-column-options-toggle="${status}"]`);
+      if (toggle) toggle.classList.toggle("has-column-filter", Boolean(state.columnPreferences[status].tag));
+    });
+    persistColumnPreferences();
+  }
+
+  function compareDateValues(left, right, key) {
+    const leftTime = Date.parse(left[key] || "") || 0;
+    const rightTime = Date.parse(right[key] || "") || 0;
+    return leftTime - rightTime;
+  }
+
+  function taskTypePriority(task) {
+    const tags = taskTags(task).map((tag) => tag.toLowerCase());
+    const order = ["bug", "feature", "docs", "refactor"];
+    const index = order.findIndex((type) => tags.includes(type));
+    return index < 0 ? order.length : index;
+  }
+
+  function sortColumnTasks(tasks, mode) {
+    const sorted = [...tasks];
+    const byPosition = (a, b) => Number(a.position) - Number(b.position) || Number(a.id) - Number(b.id);
+    sorted.sort((a, b) => {
+      if (mode === "manual") return byPosition(a, b);
+      if (mode === "created_desc") return -compareDateValues(a, b, "created_at") || Number(b.id) - Number(a.id);
+      if (mode === "created_asc") return compareDateValues(a, b, "created_at") || Number(a.id) - Number(b.id);
+      if (mode === "updated_desc") return -compareDateValues(a, b, "updated_at") || Number(b.id) - Number(a.id);
+      if (mode === "updated_asc") return compareDateValues(a, b, "updated_at") || Number(a.id) - Number(b.id);
+      if (mode === "closed_desc") return -compareDateValues(
+        { closed_at: a.closed_at || a.updated_at },
+        { closed_at: b.closed_at || b.updated_at },
+        "closed_at",
+      ) || Number(b.id) - Number(a.id);
+      if (mode === "type") return taskTypePriority(a) - taskTypePriority(b)
+        || a.title.localeCompare(b.title, "ru");
+      if (mode === "title_asc") return a.title.localeCompare(b.title, "ru");
+      return byPosition(a, b);
+    });
+    return sorted;
+  }
+
   function renderBoard() {
     const visibleTasks = state.tasks.filter(matchesFilters);
     const activeCount = state.tasks.filter((task) => task.status !== "done").length;
@@ -492,18 +604,20 @@
     for (const status of STATUSES) {
       const column = $(`.board-column[data-column="${status}"]`);
       const list = $(`.task-list[data-status="${status}"]`);
-      const statusTasks = visibleTasks.filter((task) => task.status === status);
+      let statusTasks = visibleTasks.filter((task) => task.status === status);
+      const preference = state.columnPreferences[status];
+      if (preference.tag) statusTasks = statusTasks.filter((task) => taskTags(task).includes(preference.tag));
+      statusTasks = sortColumnTasks(statusTasks, preference.sort);
       $(`#count-${status}`).textContent = String(statusTasks.length);
+      list.dataset.sortMode = preference.sort;
       list.replaceChildren();
 
       let tasksToRender = statusTasks;
       if (status === "done" && !state.doneExpanded) {
-        const mostRecent = [...statusTasks]
-          .sort((a, b) => String(b.closed_at || b.updated_at).localeCompare(String(a.closed_at || a.updated_at)))
-          .slice(0, 5);
-        tasksToRender = mostRecent.sort((a, b) => Number(a.position) - Number(b.position));
+        tasksToRender = statusTasks.slice(0, 5);
         els.toggleDone.hidden = statusTasks.length <= 5;
-        els.toggleDone.textContent = `Показать все (${statusTasks.length})`;
+        const remaining = statusTasks.length - tasksToRender.length;
+        els.toggleDone.textContent = `Показать ещё ${remaining}`;
         els.toggleDone.setAttribute("aria-expanded", "false");
       } else if (status === "done") {
         els.toggleDone.hidden = statusTasks.length <= 5;
@@ -513,6 +627,7 @@
 
       tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));
       column.classList.toggle("is-empty", tasksToRender.length === 0);
+      column.classList.toggle("has-column-filter", Boolean(preference.tag));
     }
 
     const overLimit = doingCount > state.wipLimit;
@@ -559,7 +674,174 @@
     state.tasks = await api("/api/tasks");
     populateProjectFilter();
     populateTagFilter();
+    populateColumnFilters();
     renderBoard();
+  }
+
+  function populateArchiveFilters() {
+    const projects = [...new Set(state.archivedTasks.flatMap(taskTags).map(projectFromTag).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "ru"));
+    const tags = [...new Set(state.archivedTasks.flatMap(taskTags).filter((tag) => !projectFromTag(tag)))]
+      .sort((a, b) => a.localeCompare(b, "ru"));
+    const selectedProject = state.archiveFilters.project;
+    const selectedTag = state.archiveFilters.tag;
+    els.archiveProjectFilter.replaceChildren(new Option("Все проекты", ""));
+    projects.forEach((slug) => els.archiveProjectFilter.appendChild(new Option(projectLabel(slug), slug)));
+    els.archiveTagFilter.replaceChildren(new Option("Все теги", ""));
+    tags.forEach((tag) => els.archiveTagFilter.appendChild(new Option(columnTagLabel(tag), tag)));
+    state.archiveFilters.project = projects.includes(selectedProject) ? selectedProject : "";
+    state.archiveFilters.tag = tags.includes(selectedTag) ? selectedTag : "";
+    els.archiveProjectFilter.value = state.archiveFilters.project;
+    els.archiveTagFilter.value = state.archiveFilters.tag;
+  }
+
+  function renderArchive() {
+    const query = normalizeSearch(state.archiveFilters.search);
+    const terms = query ? query.split(/\s+/).filter(Boolean) : [];
+    const filtered = state.archivedTasks.filter((task) => {
+      const tags = taskTags(task);
+      const searchable = normalizeSearch([task.title, task.description, ...tags].join(" "));
+      if (terms.some((term) => !searchable.includes(term))) return false;
+      if (state.archiveFilters.project && !tags.some((tag) => projectFromTag(tag) === state.archiveFilters.project)) return false;
+      if (state.archiveFilters.tag && !tags.includes(state.archiveFilters.tag)) return false;
+      if (state.archiveFilters.period) {
+        const archivedAt = Date.parse(task.archived_at || "");
+        const cutoff = Date.now() - Number(state.archiveFilters.period) * 24 * 60 * 60 * 1000;
+        if (!archivedAt || archivedAt < cutoff) return false;
+      }
+      return true;
+    });
+    els.archiveList.replaceChildren();
+    els.archiveCount.textContent = state.archivedTasks.length === filtered.length
+      ? `${pluralTasks(filtered.length)} в архиве`
+      : `Показано ${filtered.length} из ${state.archivedTasks.length}`;
+    els.archiveEmpty.hidden = filtered.length > 0;
+    els.archiveEmpty.textContent = state.archivedTasks.length
+      ? "По этим условиям задачи не найдены. Измените поиск или фильтры."
+      : "В архиве пока нет задач.";
+
+    filtered.forEach((task) => {
+      const item = make("article", "archive-item");
+      const copy = make("div", "archive-item-copy");
+      const title = make("button", "archive-task-title", task.title);
+      title.type = "button";
+      title.addEventListener("click", () => {
+        els.archiveDialog.close();
+        void openTaskPanel(task.id);
+      });
+      copy.appendChild(title);
+      const metadata = make("div", "archive-item-tags");
+      const project = projectForTask(task);
+      if (project) {
+        const chip = make("span", "archive-chip archive-project-chip", projectLabel(project));
+        chip.style.setProperty("--project-accent", projectAccent(project));
+        metadata.appendChild(chip);
+      }
+      const taskType = taskTags(task).find((tag) => Object.hasOwn(TASK_TYPE_LABELS, tag.toLowerCase()));
+      if (taskType) metadata.appendChild(make("span", `archive-chip task-type-${taskType.toLowerCase()}`, TASK_TYPE_LABELS[taskType.toLowerCase()]));
+      const otherTags = taskTags(task).filter((tag) => !projectFromTag(tag) && tag !== taskType).slice(0, 3);
+      otherTags.forEach((tag) => metadata.appendChild(make("span", "archive-chip", tag)));
+      if (metadata.childElementCount) copy.appendChild(metadata);
+      const dates = make("p", "archive-item-dates", `Завершена: ${formatDateTime(task.closed_at)} · В архиве: ${formatDateTime(task.archived_at)}`);
+      copy.appendChild(dates);
+      if (task.description) copy.appendChild(make("p", "archive-item-excerpt", taskDescriptionExcerpt(task.description, 180)));
+      item.appendChild(copy);
+      const restore = make("button", "button button-small button-quiet archive-restore", "↶ Восстановить");
+      restore.type = "button";
+      restore.addEventListener("click", () => { void restoreArchivedTask(task.id); });
+      item.appendChild(restore);
+      els.archiveList.appendChild(item);
+    });
+  }
+
+  async function loadArchiveSettings() {
+    state.archiveSettings = await api("/api/archive/settings");
+    els.archiveAutoEnabled.checked = state.archiveSettings.archive_enabled;
+    els.archiveAfterDays.value = String(state.archiveSettings.archive_after_days);
+    els.archiveAfterDays.disabled = !state.archiveSettings.archive_enabled;
+  }
+
+  async function loadArchivedTasks() {
+    state.archivedTasks = await api("/api/archive/tasks");
+    populateArchiveFilters();
+    renderArchive();
+  }
+
+  async function openArchive() {
+    if (!els.archiveDialog.open) els.archiveDialog.showModal();
+    els.archiveCount.textContent = "Загрузка архива…";
+    try {
+      await Promise.all([loadArchiveSettings(), loadArchivedTasks()]);
+      // Loading the archive can auto-archive overdue tasks; keep the board in sync.
+      await loadTasks();
+    } catch (error) {
+      toast(`Не удалось загрузить архив: ${error.message}`, "error");
+      els.archiveCount.textContent = "Не удалось загрузить архив";
+    }
+  }
+
+  async function saveArchiveSettings() {
+    const requested = {
+      archive_enabled: els.archiveAutoEnabled.checked,
+      archive_after_days: Number(els.archiveAfterDays.value),
+    };
+    try {
+      state.archiveSettings = await api("/api/archive/settings", { method: "PATCH", body: requested });
+      els.archiveAfterDays.disabled = !state.archiveSettings.archive_enabled;
+      await loadTasks();
+      await loadArchivedTasks();
+      toast(state.archiveSettings.archive_enabled
+        ? `Автоархивирование включено: через ${state.archiveSettings.archive_after_days} дней без изменений`
+        : "Автоархивирование отключено");
+    } catch (error) {
+      toast(`Не удалось сохранить настройки архива: ${error.message}`, "error");
+      els.archiveAutoEnabled.checked = state.archiveSettings.archive_enabled;
+      els.archiveAfterDays.value = String(state.archiveSettings.archive_after_days);
+      els.archiveAfterDays.disabled = !state.archiveSettings.archive_enabled;
+    }
+  }
+
+  async function archiveCompletedTasks() {
+    const confirmed = window.confirm("Переместить все задачи из колонки «Готово» в архив? Их можно будет восстановить позже.");
+    if (!confirmed) return;
+    try {
+      const result = await api("/api/archive/completed", { method: "POST" });
+      await loadTasks();
+      if (els.archiveDialog.open) await loadArchivedTasks();
+      toast(result.archived
+        ? `В архив перемещено: ${pluralTasks(result.archived)}`
+        : "В колонке «Готово» нет задач для архивирования");
+    } catch (error) {
+      toast(`Не удалось архивировать задачи: ${error.message}`, "error");
+    }
+  }
+
+  async function archiveSingleTask(taskId) {
+    try {
+      if (typeof saveCurrentTaskDraft === "function" && !(await saveCurrentTaskDraft())) return;
+      await api(`/api/archive/tasks/${taskId}`, { method: "POST" });
+      if (state.selectedTask?.id === taskId) closePanel();
+      await loadTasks();
+      if (els.archiveDialog.open) await loadArchivedTasks();
+      toast("Задача перемещена в архив", "success", "Восстановить", async () => {
+        await api(`/api/archive/tasks/${taskId}/restore`, { method: "POST" });
+        await loadTasks();
+        if (els.archiveDialog.open) await loadArchivedTasks();
+      });
+    } catch (error) {
+      toast(`Не удалось архивировать задачу: ${error.message}`, "error");
+    }
+  }
+
+  async function restoreArchivedTask(taskId) {
+    try {
+      await api(`/api/archive/tasks/${taskId}/restore`, { method: "POST" });
+      await loadTasks();
+      await loadArchivedTasks();
+      toast("Задача восстановлена на доске");
+    } catch (error) {
+      toast(`Не удалось восстановить задачу: ${error.message}`, "error");
+    }
   }
 
   function openPanel() {
@@ -594,6 +876,7 @@
     els.toggleAttachmentUpload.title = "Добавить вложение";
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
+    els.archiveTask.hidden = true;
   }
 
   async function openTaskPanel(taskId) {
@@ -627,6 +910,7 @@
       els.taskMoreToggle.setAttribute("aria-expanded", "false");
       els.closeTask.textContent = task.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
       els.closeTask.dataset.action = task.status === "done" ? "reopen" : "close";
+      els.archiveTask.hidden = task.status !== "done" || Boolean(task.archived_at);
       els.taskMeta.textContent = `Создана: ${formatDateTime(task.created_at)} · Изменена: ${formatDateTime(task.updated_at)}${task.closed_at ? ` · Закрыта: ${formatDateTime(task.closed_at)}` : ""}`;
       renderAttachments(task.attachments || []);
       els.focusTask.textContent = state.focusTaskId === task.id ? "Снять с фокуса" : "◎ В фокус";
@@ -1315,6 +1599,12 @@
       await loadTasks();
       return;
     }
+    const sameColumn = event.from === event.to;
+    if (sameColumn && state.columnPreferences[list.dataset.status].sort !== "manual") {
+      await loadTasks();
+      toast("Чтобы менять порядок перетаскиванием, выберите «Ручной порядок» в настройках колонки.");
+      return;
+    }
     const previous = item.previousElementSibling && item.previousElementSibling.classList.contains("task-card") ? item.previousElementSibling : null;
     const next = item.nextElementSibling && item.nextElementSibling.classList.contains("task-card") ? item.nextElementSibling : null;
     const prevPosition = previous ? Number(previous.dataset.position) : null;
@@ -1332,10 +1622,11 @@
     try {
       const taskId = Number(item.dataset.taskId);
       const previousState = state.dragOrigin || state.tasks.find((task) => task.id === taskId);
-      await api(`/api/tasks/${taskId}`, {
-        method: "PATCH",
-        body: { status: list.dataset.status, position },
-      });
+      const changes = { status: list.dataset.status };
+      if (sameColumn || state.columnPreferences[list.dataset.status].sort === "manual") {
+        changes.position = position;
+      }
+      await api(`/api/tasks/${taskId}`, { method: "PATCH", body: changes });
       await loadTasks();
       if (previousState) {
         toast("Положение задачи изменено", "success", "Отменить", () => restoreTaskState(taskId, previousState));
@@ -1522,7 +1813,7 @@
     els.taskMoreMenu.hidden = !expanded;
     els.taskMoreToggle.setAttribute("aria-expanded", String(expanded));
   });
-  [els.exportTask, els.focusTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
+  [els.exportTask, els.focusTask, els.archiveTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
   }));
@@ -1556,6 +1847,87 @@
     els.attachmentPreviewError.hidden = false;
   });
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
+
+  els.columnOptionsToggles.forEach((button) => button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const status = button.dataset.columnOptionsToggle;
+    const panel = $(`[data-column-options-panel="${status}"]`);
+    const shouldOpen = panel.hidden;
+    $$('[data-column-options-panel]').forEach((otherPanel) => {
+      otherPanel.hidden = true;
+      const otherStatus = otherPanel.dataset.columnOptionsPanel;
+      const otherToggle = $(`[data-column-options-toggle="${otherStatus}"]`);
+      if (otherToggle) otherToggle.setAttribute("aria-expanded", "false");
+    });
+    panel.hidden = !shouldOpen;
+    button.setAttribute("aria-expanded", String(shouldOpen));
+  }));
+
+  $$('[data-column-filter]').forEach((select) => select.addEventListener("change", () => {
+    state.columnPreferences[select.dataset.columnFilter].tag = select.value;
+    persistColumnPreferences();
+    renderBoard();
+    const toggle = $(`[data-column-options-toggle="${select.dataset.columnFilter}"]`);
+    if (toggle) toggle.classList.toggle("has-column-filter", Boolean(select.value));
+  }));
+
+  $$('[data-column-sort]').forEach((select) => select.addEventListener("change", () => {
+    const status = select.dataset.columnSort;
+    state.columnPreferences[status].sort = COLUMN_SORT_MODES.has(select.value)
+      ? select.value
+      : DEFAULT_COLUMN_PREFERENCES[status].sort;
+    persistColumnPreferences();
+    renderBoard();
+  }));
+
+  $$('[data-column-reset]').forEach((button) => button.addEventListener("click", () => {
+    const status = button.dataset.columnReset;
+    state.columnPreferences[status] = { ...DEFAULT_COLUMN_PREFERENCES[status] };
+    persistColumnPreferences();
+    populateColumnFilters();
+    renderBoard();
+  }));
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".column-options")) return;
+    $$('[data-column-options-panel]').forEach((panel) => {
+      panel.hidden = true;
+      const toggle = $(`[data-column-options-toggle="${panel.dataset.columnOptionsPanel}"]`);
+      if (toggle) toggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  $$('[data-archive-completed]').forEach((button) => button.addEventListener("click", () => {
+    void archiveCompletedTasks();
+  }));
+  els.archiveOpen.addEventListener("click", () => { void openArchive(); });
+  els.archiveClose.addEventListener("click", () => els.archiveDialog.close());
+  els.archiveDialog.addEventListener("click", (event) => {
+    if (event.target === els.archiveDialog) els.archiveDialog.close();
+  });
+  els.archiveAutoEnabled.addEventListener("change", () => { void saveArchiveSettings(); });
+  els.archiveAfterDays.addEventListener("change", () => { void saveArchiveSettings(); });
+  els.archiveSearch.addEventListener("input", () => {
+    state.archiveFilters.search = els.archiveSearch.value;
+    renderArchive();
+  });
+  els.archiveProjectFilter.addEventListener("change", () => {
+    state.archiveFilters.project = els.archiveProjectFilter.value;
+    renderArchive();
+  });
+  els.archiveTagFilter.addEventListener("change", () => {
+    state.archiveFilters.tag = els.archiveTagFilter.value;
+    renderArchive();
+  });
+  els.archivePeriodFilter.addEventListener("change", () => {
+    state.archiveFilters.period = els.archivePeriodFilter.value;
+    renderArchive();
+  });
+  els.archiveCompleteNow.addEventListener("click", () => { void archiveCompletedTasks(); });
+  els.archiveTask.addEventListener("click", () => {
+    const taskId = state.selectedTask?.id;
+    if (taskId) void archiveSingleTask(taskId);
+  });
 
   els.taskTitleDisplay.addEventListener("click", () => {
     els.taskTitleDisplay.hidden = true;

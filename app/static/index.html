@@ -18,7 +18,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.8">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.9">
 </head>
 <body>
   <div class="app-shell">
@@ -53,6 +53,10 @@
             </button>
             <button id="shortcuts-button" class="button button-quiet toolbar-menu-item shortcuts-button" type="button"
                     aria-label="Показать сочетания клавиш" title="Сочетания клавиш (?)">⌘? Сочетания клавиш</button>
+            <div class="toolbar-menu-divider" aria-hidden="true"></div>
+            <button id="open-archive" class="button button-quiet toolbar-menu-item" type="button">
+              <span aria-hidden="true">▣</span> Архив задач
+            </button>
           </div>
         </details>
       </div>
@@ -133,6 +137,28 @@
             <span class="column-count" id="count-todo">0</span>
             <button class="column-add" data-add-status="todo" type="button" title="Добавить задачу">＋</button>
           </header>
+          <div class="column-options" data-column-options="todo">
+            <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
+                    aria-label="Фильтр и сортировка колонки: todo" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+            <div class="column-options-popover" data-column-options-panel="todo" hidden>
+              <label><span>Фильтр по тегу / типу</span>
+                <select data-column-filter="todo" aria-label="Фильтр по тегу и типу"></select>
+              </label>
+              <label><span>Сортировка</span>
+                <select data-column-sort="todo" aria-label="Сортировка задач">
+                  <option value="manual">Ручной порядок</option>
+                  <option value="created_desc">Сначала новые</option>
+                  <option value="created_asc">Сначала старые</option>
+                  <option value="updated_desc">Недавно изменены</option>
+                  <option value="updated_asc">Давно не менялись</option>
+                  <option value="closed_desc">Последние завершённые</option>
+                  <option value="type">По типу задачи</option>
+                  <option value="title_asc">По названию</option>
+                </select>
+              </label>
+              <button class="column-options-reset" type="button" data-column-reset="todo">Сбросить настройки</button>
+            </div>
+          </div>
           <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
           <p class="column-empty">Пока пусто. Добавьте первую задачу.</p>
         </section>
@@ -144,6 +170,28 @@
             <span class="column-count" id="count-doing">0</span>
             <button class="column-add" data-add-status="doing" type="button" title="Добавить задачу">＋</button>
           </header>
+          <div class="column-options" data-column-options="doing">
+            <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
+                    aria-label="Фильтр и сортировка колонки: doing" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+            <div class="column-options-popover" data-column-options-panel="doing" hidden>
+              <label><span>Фильтр по тегу / типу</span>
+                <select data-column-filter="doing" aria-label="Фильтр по тегу и типу"></select>
+              </label>
+              <label><span>Сортировка</span>
+                <select data-column-sort="doing" aria-label="Сортировка задач">
+                  <option value="manual">Ручной порядок</option>
+                  <option value="created_desc">Сначала новые</option>
+                  <option value="created_asc">Сначала старые</option>
+                  <option value="updated_desc">Недавно изменены</option>
+                  <option value="updated_asc">Давно не менялись</option>
+                  <option value="closed_desc">Последние завершённые</option>
+                  <option value="type">По типу задачи</option>
+                  <option value="title_asc">По названию</option>
+                </select>
+              </label>
+              <button class="column-options-reset" type="button" data-column-reset="doing">Сбросить настройки</button>
+            </div>
+          </div>
           <div class="wip-warning" id="wip-warning" hidden>Мягкий лимит: стоит сфокусироваться на текущих задачах</div>
           <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
           <p class="column-empty">Здесь появятся задачи, над которыми вы работаете.</p>
@@ -156,6 +204,28 @@
             <span class="column-count" id="count-waiting">0</span>
             <button class="column-add" data-add-status="waiting" type="button" title="Добавить задачу">＋</button>
           </header>
+          <div class="column-options" data-column-options="waiting">
+            <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
+                    aria-label="Фильтр и сортировка колонки: waiting" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+            <div class="column-options-popover" data-column-options-panel="waiting" hidden>
+              <label><span>Фильтр по тегу / типу</span>
+                <select data-column-filter="waiting" aria-label="Фильтр по тегу и типу"></select>
+              </label>
+              <label><span>Сортировка</span>
+                <select data-column-sort="waiting" aria-label="Сортировка задач">
+                  <option value="manual">Ручной порядок</option>
+                  <option value="created_desc">Сначала новые</option>
+                  <option value="created_asc">Сначала старые</option>
+                  <option value="updated_desc">Недавно изменены</option>
+                  <option value="updated_asc">Давно не менялись</option>
+                  <option value="closed_desc">Последние завершённые</option>
+                  <option value="type">По типу задачи</option>
+                  <option value="title_asc">По названию</option>
+                </select>
+              </label>
+              <button class="column-options-reset" type="button" data-column-reset="waiting">Сбросить настройки</button>
+            </div>
+          </div>
           <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
           <p class="column-empty">Здесь появятся заблокированные или ожидающие задачи.</p>
         </section>
@@ -165,8 +235,31 @@
             <span class="column-marker marker-done"></span>
             <h2>Готово</h2>
             <span class="column-count" id="count-done">0</span>
-            <button id="toggle-done" class="done-toggle" type="button" aria-expanded="false">Показать все</button>
+            <button id="toggle-done" class="done-toggle" type="button" aria-expanded="false">Показать ещё</button>
           </header>
+          <div class="column-options" data-column-options="done">
+            <button class="column-options-toggle" type="button" data-column-options-toggle="done"
+                    aria-label="Фильтр и сортировка колонки: done" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+            <div class="column-options-popover" data-column-options-panel="done" hidden>
+              <label><span>Фильтр по тегу / типу</span>
+                <select data-column-filter="done" aria-label="Фильтр по тегу и типу"></select>
+              </label>
+              <label><span>Сортировка</span>
+                <select data-column-sort="done" aria-label="Сортировка задач">
+                  <option value="manual">Ручной порядок</option>
+                  <option value="created_desc">Сначала новые</option>
+                  <option value="created_asc">Сначала старые</option>
+                  <option value="updated_desc">Недавно изменены</option>
+                  <option value="updated_asc">Давно не менялись</option>
+                  <option value="closed_desc">Последние завершённые</option>
+                  <option value="type">По типу задачи</option>
+                  <option value="title_asc">По названию</option>
+                </select>
+              </label>
+              <button class="column-archive-completed" type="button" data-archive-completed>Архивировать завершённые</button>
+              <button class="column-options-reset" type="button" data-column-reset="done">Сбросить настройки</button>
+            </div>
+          </div>
           <div class="task-list" data-status="done" aria-label="Завершённые задачи"></div>
           <p class="column-empty">Пока нет завершённых задач.</p>
         </section>
@@ -216,6 +309,48 @@
       <img id="attachment-preview-image" class="attachment-preview-image" alt="" hidden>
     </div>
   </dialog>
+  <dialog id="archive-dialog" class="archive-dialog" aria-labelledby="archive-heading">
+    <div class="archive-dialog-header">
+      <div><p class="eyebrow">ХРАНЕНИЕ</p><h2 id="archive-heading">Архив задач</h2></div>
+      <button id="close-archive" class="icon-button" type="button" aria-label="Закрыть архив">×</button>
+    </div>
+    <section class="archive-settings" aria-label="Настройки автоархивирования">
+      <label class="archive-auto-toggle"><input id="archive-auto-enabled" type="checkbox"> Автоматически архивировать завершённые задачи</label>
+      <label class="archive-days-setting"><span>После</span>
+        <select id="archive-after-days">
+          <option value="7">7 дней</option><option value="30">30 дней</option>
+          <option value="60">60 дней</option><option value="90">90 дней</option>
+        </select>
+        <span>без изменений</span>
+      </label>
+      <p>Учитываются только задачи в колонке «Готово». Архив не удаляет задачи и их вложения.</p>
+    </section>
+    <div class="archive-toolbar">
+      <label class="search-box archive-search-box"><span aria-hidden="true">⌕</span>
+        <span class="visually-hidden">Поиск в архиве</span>
+        <input id="archive-search" type="search" placeholder="Найти в архиве…" autocomplete="off">
+      </label>
+      <label class="filter-box"><span class="visually-hidden">Фильтр архива по проекту</span>
+        <select id="archive-project-filter" aria-label="Проект в архиве"><option value="">Все проекты</option></select>
+      </label>
+      <label class="filter-box"><span class="visually-hidden">Фильтр архива по тегу</span>
+        <select id="archive-tag-filter" aria-label="Тег в архиве"><option value="">Все теги</option></select>
+      </label>
+      <label class="filter-box archive-period-filter"><span class="visually-hidden">Период архивирования</span>
+        <select id="archive-period-filter" aria-label="Период архивирования">
+          <option value="">За всё время</option>
+          <option value="7">За 7 дней</option>
+          <option value="30">За 30 дней</option>
+          <option value="90">За 90 дней</option>
+        </select>
+      </label>
+      <button id="archive-completed-now" class="button button-small button-quiet" type="button">Архивировать все «Готово»</button>
+    </div>
+    <p id="archive-count" class="archive-count" aria-live="polite">Загрузка архива…</p>
+    <div id="archive-list" class="archive-list"></div>
+    <p id="archive-empty" class="archive-empty" hidden>В архиве пока нет задач.</p>
+  </dialog>
+
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <div id="panel-overlay" class="panel-overlay" hidden></div>
   <aside id="task-panel" class="task-panel" aria-labelledby="task-title-display-text" aria-hidden="true">
@@ -292,6 +427,7 @@
           <button id="task-more-toggle" class="button button-quiet" type="button" aria-expanded="false" aria-controls="task-more-menu" aria-label="Другие действия">···</button>
           <div id="task-more-menu" class="task-more-menu" hidden>
             <button id="export-task" class="button button-quiet" type="button" title="Экспорт задачи в ZIP вместе с вложениями">↓ Экспорт ZIP</button>
+            <button id="archive-task" class="button button-quiet" type="button" hidden>▣ Архивировать задачу</button>
             <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
             <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
           </div>
@@ -301,6 +437,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.0" defer></script>
-  <script src="/static/app.js?v=0.5.8" defer></script>
+  <script src="/static/app.js?v=0.5.9" defer></script>
 </body>
 </html>

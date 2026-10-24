@@ -1000,3 +1000,91 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .filter-summary { display: none; }
   .task-card-title { font-size: 13px; }
 }
+
+/* Per-column filters are compact popovers and do not permanently consume board space. */
+.toolbar-menu-divider { height: 1px; margin: 5px 2px; background: var(--line); }
+.board-column { position: relative; }
+.column-options { position: absolute; top: 10px; right: 39px; z-index: 12; }
+.column-options-toggle {
+  display: grid; place-items: center; width: 25px; height: 25px; padding: 0;
+  border: 1px solid transparent; border-radius: 7px; color: var(--muted);
+  background: transparent; font-size: 15px; line-height: 1;
+}
+.column-options-toggle:hover, .column-options-toggle[aria-expanded="true"],
+.column-options-toggle.has-column-filter {
+  color: var(--accent); border-color: var(--line); background: var(--surface);
+}
+.column-options-popover {
+  position: absolute; top: 31px; right: 0; z-index: 20;
+  display: flex; flex-direction: column; gap: 10px; width: min(250px, calc(100vw - 36px));
+  padding: 12px; border: 1px solid var(--line); border-radius: 11px;
+  color: var(--ink); background: var(--surface); box-shadow: 0 14px 34px rgba(26, 36, 69, .16);
+}
+.column-options-popover[hidden] { display: none; }
+.column-options-popover label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.column-options-popover select {
+  width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid var(--line-strong);
+  border-radius: 7px; color: var(--ink); background: var(--surface); font-size: 11px;
+}
+.column-options-reset, .column-archive-completed {
+  padding: 7px 0; border: 0; border-top: 1px solid var(--line); color: var(--accent);
+  background: transparent; font-size: 10px; text-align: left;
+}
+.column-archive-completed { color: var(--red); }
+
+/* Archived work is available on demand, never as a fifth board column. */
+.archive-dialog {
+  width: min(940px, calc(100vw - 28px)); max-width: none; max-height: calc(100dvh - 28px);
+  margin: auto; padding: 20px; overflow: hidden; border: 1px solid var(--line);
+  border-radius: 16px; color: var(--ink); background: var(--surface); box-shadow: var(--shadow);
+}
+.archive-dialog:not([open]) { display: none; }
+.archive-dialog::backdrop { background: rgba(10, 15, 28, .52); backdrop-filter: blur(4px); }
+.archive-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.archive-dialog-header h2 { margin: 0; font-size: 23px; letter-spacing: -.55px; }
+.archive-dialog-header .eyebrow { margin-bottom: 5px; }
+.archive-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.archive-auto-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.archive-auto-toggle input { accent-color: var(--accent); }
+.archive-days-setting { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+.archive-days-setting select { padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--ink); background: var(--surface); font-size: 11px; }
+.archive-days-setting select:disabled { opacity: .55; }
+.archive-settings p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 10px; }
+.archive-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 13px; }
+.archive-search-box { flex: 1 1 220px; width: auto; min-width: 150px; }
+.archive-toolbar .filter-box { max-width: 180px; }
+.archive-toolbar .filter-box select { max-width: 155px; min-width: 90px; }
+.archive-count { margin: 13px 0 7px; color: var(--muted); font-size: 10px; }
+.archive-list { display: flex; flex-direction: column; gap: 7px; max-height: min(48vh, 470px); overflow: auto; padding: 1px 3px 2px 1px; }
+.archive-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.archive-item-copy { min-width: 0; flex: 1; }
+.archive-task-title { display: block; max-width: 100%; padding: 0; border: 0; color: var(--ink); background: transparent; font-size: 12px; font-weight: 750; text-align: left; overflow-wrap: anywhere; }
+.archive-task-title:hover { color: var(--accent); }
+.archive-item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.archive-chip { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 5px; color: var(--ink-soft); background: var(--surface-soft); font-size: 9px; line-height: 1.4; }
+.archive-project-chip { border-left: 2px solid var(--project-accent, var(--line-strong)); }
+.archive-item-dates { margin: 6px 0 0; color: var(--muted); font-size: 9px; }
+.archive-item-excerpt { margin: 5px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.archive-restore { flex: 0 0 auto; }
+.archive-empty { padding: 22px 10px; color: var(--muted); font-size: 12px; text-align: center; }
+.archive-empty[hidden] { display: none; }
+
+[data-theme="dark"] .column-options-popover { box-shadow: 0 16px 38px rgba(0, 0, 0, .38); }
+[data-theme="dark"] .archive-item { background: var(--surface); }
+[data-theme="dark"] .archive-chip { background: var(--surface-soft); color: var(--ink-soft); }
+
+@media (max-width: 640px) {
+  .column-options { right: 35px; top: 8px; }
+  .column-options-popover { right: -33px; }
+  .archive-dialog { width: calc(100vw - 14px); max-height: calc(100dvh - 14px); padding: 12px; border-radius: 12px; }
+  .archive-dialog-header h2 { font-size: 20px; }
+  .archive-toolbar { align-items: stretch; }
+  .archive-search-box { flex-basis: 100%; }
+  .archive-toolbar .filter-box { flex: 1 1 40%; max-width: none; }
+  .archive-toolbar .filter-box select { max-width: 100%; width: 100%; min-width: 0; }
+  .archive-period-filter { flex: 1 1 100% !important; }
+  .archive-toolbar #archive-completed-now { flex: 1 1 100%; }
+  .archive-list { max-height: 42vh; }
+  .archive-item { align-items: flex-start; padding: 9px; }
+  .archive-item .archive-restore { padding: 6px 7px; font-size: 10px; }
+}

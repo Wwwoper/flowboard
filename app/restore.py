@@ -87,9 +87,9 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                         """
                         INSERT INTO tasks (
                             id, title, description, status, position, tags,
-                            created_at, updated_at, closed_at
+                            created_at, updated_at, closed_at, archived_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             task["id"],
@@ -101,6 +101,7 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                             task["created_at"],
                             task["updated_at"],
                             task.get("closed_at"),
+                            task.get("archived_at"),
                         ),
                     )
                     for attachment in task.get("attachments", []):

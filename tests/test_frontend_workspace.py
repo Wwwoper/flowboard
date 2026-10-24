@@ -17,7 +17,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/app.js?v=0.5.10" in html
     assert "/static/style.css?v=0.5.9" in html
 
 
@@ -138,7 +138,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/app.js?v=0.5.10" in html
     assert "/static/style.css?v=0.5.9" in html
 
     script = client.get("/static/app.js").text
@@ -258,7 +258,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.9" in html
+    assert "/static/app.js?v=0.5.10" in html
     assert "/static/style.css?v=0.5.9" in html
 
     script = client.get("/static/app.js").text

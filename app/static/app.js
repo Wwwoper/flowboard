@@ -163,6 +163,11 @@
     themeToggleIcon: $("#theme-toggle-icon"),
     themeToggleLabel: $("#theme-toggle-label"),
     themeColor: $("meta[name=\"theme-color\"]"),
+    importThemeButton: $("#import-theme-button"),
+    exportThemeButton: $("#export-theme-button"),
+    resetThemeButton: $("#reset-theme-button"),
+    themeImportFile: $("#theme-import-file"),
+    customThemeStatus: $("#custom-theme-status"),
     densityToggle: $("#density-toggle"),
     densityToggleLabel: $("#density-toggle-label"),
     shortcutsButton: $("#shortcuts-button"),
@@ -195,6 +200,7 @@
     const normalizedTheme = theme === "dark" ? "dark" : "light";
     const isDark = normalizedTheme === "dark";
     document.documentElement.dataset.theme = normalizedTheme;
+    window.FlowboardThemeManager?.applyCurrentPalette();
     els.themeToggle.setAttribute("aria-pressed", String(isDark));
     els.themeToggle.setAttribute(
       "aria-label",
@@ -203,7 +209,8 @@
     els.themeToggle.title = `Переключить на ${isDark ? "светлую" : "тёмную"} тему`;
     els.themeToggleIcon.textContent = isDark ? "☀" : "☾";
     els.themeToggleLabel.textContent = isDark ? "Светлая тема" : "Тёмная тема";
-    els.themeColor.setAttribute("content", isDark ? "#0c101a" : "#f4f6fb");
+    const pageColor = getComputedStyle(document.documentElement).getPropertyValue("--page").trim();
+    els.themeColor.setAttribute("content", pageColor || (isDark ? "#0c101a" : "#f4f6fb"));
 
     if (persist) {
       try {
@@ -217,6 +224,16 @@
   function toggleTheme() {
     const currentTheme = document.documentElement.dataset.theme;
     applyTheme(currentTheme === "dark" ? "light" : "dark", true);
+  }
+
+  function updateThemeManagerControls() {
+    const manager = window.FlowboardThemeManager;
+    const hasCustomTheme = Boolean(manager?.hasCustomTheme());
+    const themeName = manager?.getCustomThemeName() || "";
+    els.resetThemeButton.disabled = !hasCustomTheme;
+    els.customThemeStatus.textContent = hasCustomTheme
+      ? `Загружена тема: ${themeName}`
+      : "Стандартная палитра Flowboard";
   }
 
   function applyDensity(density, persist = false) {
@@ -2073,6 +2090,39 @@
 
   els.themeToggle.addEventListener("click", toggleTheme);
   els.densityToggle.addEventListener("click", toggleDensity);
+  els.importThemeButton.addEventListener("click", () => els.themeImportFile.click());
+  els.themeImportFile.addEventListener("change", async () => {
+    const file = els.themeImportFile.files?.[0];
+    if (!file) return;
+    try {
+      const result = await window.FlowboardThemeManager.importFile(file);
+      applyTheme(document.documentElement.dataset.theme || "light");
+      updateThemeManagerControls();
+      toast(`Тема «${result.name}» загружена`, "success");
+    } catch (error) {
+      toast(error.message || "Не удалось импортировать тему", "error");
+    } finally {
+      els.themeImportFile.value = "";
+    }
+  });
+  els.exportThemeButton.addEventListener("click", () => {
+    try {
+      const name = window.FlowboardThemeManager.downloadTheme();
+      toast(`Тема «${name}» экспортирована`, "success");
+    } catch (error) {
+      toast(error.message || "Не удалось экспортировать тему", "error");
+    }
+  });
+  els.resetThemeButton.addEventListener("click", () => {
+    try {
+      window.FlowboardThemeManager.resetTheme();
+      applyTheme(document.documentElement.dataset.theme || "light");
+      updateThemeManagerControls();
+      toast("Возвращена стандартная палитра Flowboard", "success");
+    } catch (error) {
+      toast(error.message || "Не удалось сбросить тему", "error");
+    }
+  });
   els.shortcutsButton.addEventListener("click", () => els.shortcutsDialog.showModal());
   els.closeShortcuts.addEventListener("click", () => els.shortcutsDialog.close());
   els.shortcutsDialog.addEventListener("click", (event) => {
@@ -2084,6 +2134,7 @@
   });
   els.projectCommandSearch.addEventListener("input", () => renderProjectCommands(els.projectCommandSearch.value));
   applyTheme(document.documentElement.dataset.theme || "light");
+  updateThemeManagerControls();
   applyDensity(state.density);
 
   initializeSortables();

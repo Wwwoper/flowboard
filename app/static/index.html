@@ -364,6 +364,16 @@
           <label class="visually-hidden" for="task-title">Заголовок</label>
           <input id="task-title" class="text-field title-field" maxlength="200" required hidden>
           <span id="panel-task-reference" class="task-title-reference" aria-label="Номер задачи"></span>
+          <button id="focus-task" class="icon-button task-header-action focus-task-action" type="button" aria-label="Добавить задачу в фокус" title="Добавить в фокус" aria-pressed="false">◎</button>
+          <div class="task-more-actions">
+            <button id="task-more-toggle" class="icon-button task-header-action" type="button" aria-expanded="false" aria-controls="task-more-menu" aria-label="Другие действия" title="Другие действия">···</button>
+            <div id="task-more-menu" class="task-more-menu" hidden>
+              <button id="export-task" class="button button-quiet" type="button" title="Экспорт задачи в ZIP вместе с вложениями">↓ Экспорт ZIP</button>
+              <button id="archive-task" class="button button-quiet" type="button" hidden>▣ Архивировать задачу</button>
+              <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
+              <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
+            </div>
+          </div>
           <button id="close-panel" class="icon-button task-panel-close" type="button" aria-label="Закрыть панель" title="Закрыть">×</button>
         </div>
       </div>
@@ -420,17 +430,9 @@
       </section>
 
       <div class="task-meta" id="task-meta"></div>
-      <div class="panel-actions">
-        <button id="focus-task" class="button button-quiet focus-task-action" type="button">◎ В фокус</button>
-        <div class="task-more-actions">
-          <button id="task-more-toggle" class="button button-quiet" type="button" aria-expanded="false" aria-controls="task-more-menu" aria-label="Другие действия">···</button>
-          <div id="task-more-menu" class="task-more-menu" hidden>
-            <button id="export-task" class="button button-quiet" type="button" title="Экспорт задачи в ZIP вместе с вложениями">↓ Экспорт ZIP</button>
-            <button id="archive-task" class="button button-quiet" type="button" hidden>▣ Архивировать задачу</button>
-            <button id="close-task" class="button button-quiet" type="button">✓ Закрыть задачу</button>
-            <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
-          </div>
-        </div>
+      <div class="task-autosave-status" id="task-autosave-status" data-state="saved" role="status" aria-live="polite">
+        <span class="task-autosave-indicator" aria-hidden="true"></span>
+        <span id="task-autosave-status-text">Все изменения сохранены</span>
       </div>
     </form>
   </aside>

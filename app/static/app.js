@@ -136,6 +136,8 @@
     toggleAttachmentUpload: $("#toggle-attachment-upload"),
     taskMoreToggle: $("#task-more-toggle"),
     taskMoreMenu: $("#task-more-menu"),
+    taskAutosaveStatus: $("#task-autosave-status"),
+    taskAutosaveStatusText: $("#task-autosave-status-text"),
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
     exportTask: $("#export-task"),
@@ -635,6 +637,13 @@
     renderFocusBar();
   }
 
+  function updateTaskFocusButton() {
+    const isFocused = Boolean(state.selectedTask && state.selectedTask.id === state.focusTaskId);
+    els.focusTask.setAttribute("aria-pressed", String(isFocused));
+    els.focusTask.setAttribute("aria-label", isFocused ? "Снять задачу с фокуса" : "Добавить задачу в фокус");
+    els.focusTask.title = isFocused ? "Снять с фокуса" : "Добавить в фокус";
+  }
+
   function renderFocusBar() {
     const task = state.tasks.find((item) => item.id === state.focusTaskId);
     if (!task) {
@@ -643,7 +652,7 @@
         writeStorage("flowboard-focus-task", "");
       }
       els.focusBar.hidden = true;
-      els.focusTask.textContent = "◎ В фокус";
+      updateTaskFocusButton();
       return;
     }
     els.focusBar.hidden = false;
@@ -652,7 +661,7 @@
     els.focusProject.textContent = project ? `${projectLabel(project)} · ${STATUS_LABELS[task.status]}` : STATUS_LABELS[task.status];
     els.focusDone.disabled = task.status === "done";
     els.focusDone.textContent = task.status === "done" ? "Уже готово" : "Завершить";
-    if (state.selectedTask && state.selectedTask.id === task.id) els.focusTask.textContent = "Снять с фокуса";
+    if (state.selectedTask && state.selectedTask.id === task.id) updateTaskFocusButton();
   }
 
   function setFocusedTask(taskId) {
@@ -660,7 +669,7 @@
     writeStorage("flowboard-focus-task", state.focusTaskId ? String(state.focusTaskId) : "");
     renderBoard();
     if (state.selectedTask) {
-      els.focusTask.textContent = state.selectedTask.id === state.focusTaskId ? "Снять с фокуса" : "◎ В фокус";
+      updateTaskFocusButton();
     }
   }
 
@@ -912,7 +921,8 @@
       els.archiveTask.hidden = task.status !== "done" || Boolean(task.archived_at);
       els.taskMeta.textContent = `Создана: ${formatDateTime(task.created_at)} · Изменена: ${formatDateTime(task.updated_at)}${task.closed_at ? ` · Закрыта: ${formatDateTime(task.closed_at)}` : ""}`;
       renderAttachments(task.attachments || []);
-      els.focusTask.textContent = state.focusTaskId === task.id ? "Снять с фокуса" : "◎ В фокус";
+      updateTaskFocusButton();
+      setTaskAutosaveStatus("saved", "Все изменения сохранены");
       openPanel();
       void requestMarkdownPreview();
       window.setTimeout(() => els.taskTitleDisplay.focus({ preventScroll: true }), 100);
@@ -960,8 +970,14 @@
       && draft.description === (task.description || "");
   }
 
+  function setTaskAutosaveStatus(status, message) {
+    els.taskAutosaveStatus.dataset.state = status;
+    els.taskAutosaveStatusText.textContent = message;
+  }
+
   function scheduleTaskDraftSave(delay = 180) {
     if (!state.selectedTask) return;
+    setTaskAutosaveStatus("pending", "Есть несохранённые изменения");
     clearTaskDraftSaveTimer();
     state.draftSaveTimer = window.setTimeout(() => {
       state.draftSaveTimer = null;
@@ -982,7 +998,11 @@
     const task = state.selectedTask;
     if (!task) return true;
     const draft = currentTaskDraft(task);
-    if (taskDraftMatches(draft, task)) return true;
+    if (taskDraftMatches(draft, task)) {
+      setTaskAutosaveStatus("saved", "Все изменения сохранены");
+      return true;
+    }
+    setTaskAutosaveStatus("saving", "Сохраняем изменения…");
     const taskId = task.id;
 
     const operation = (async () => {
@@ -1008,12 +1028,17 @@
     state.draftSavePromise = operation;
     const succeeded = await operation;
     if (state.draftSavePromise === operation) state.draftSavePromise = null;
-    if (!succeeded) return false;
+    if (!succeeded) {
+      if (state.selectedTask?.id === taskId) setTaskAutosaveStatus("error", "Не удалось сохранить изменения");
+      return false;
+    }
 
     // If the user changed a field while the request was in flight, save the newer draft too.
     if (state.selectedTask?.id === taskId && !taskDraftMatches(currentTaskDraft(), state.selectedTask)) {
+      setTaskAutosaveStatus("pending", "Есть несохранённые изменения");
       return saveCurrentTaskDraft();
     }
+    if (state.selectedTask?.id === taskId) setTaskAutosaveStatus("saved", "Все изменения сохранены");
     return true;
   }
 

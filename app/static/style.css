@@ -1088,3 +1088,55 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .archive-item { align-items: flex-start; padding: 9px; }
   .archive-item .archive-restore { padding: 6px 7px; font-size: 10px; }
 }
+
+/* Task panel: compact header actions, clearer spacing, and autosave feedback. */
+.task-panel { padding-top: 32px; }
+.task-title-row { grid-template-columns: minmax(0, 1fr) auto auto auto auto; gap: 8px; }
+.task-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 19px;
+  line-height: 1;
+}
+.task-header-action:hover { color: var(--ink); border-color: var(--line-strong); background: var(--surface); }
+.task-header-action[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-pale); }
+.task-more-actions { align-self: start; }
+.task-more-menu { top: calc(100% + 7px); bottom: auto; }
+.task-autosave-status {
+  grid-column: 1 / -1;
+  grid-row: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.task-autosave-indicator { display: inline-block; width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.task-autosave-status[data-state="saved"] { color: var(--green); }
+.task-autosave-status[data-state="pending"] { color: var(--orange); }
+.task-autosave-status[data-state="saving"] { color: var(--accent); }
+.task-autosave-status[data-state="error"] { color: var(--red); }
+@media (max-width: 900px) and (min-width: 641px) {
+  .task-panel { padding-top: 28px; }
+  .task-autosave-status { grid-column: 1; grid-row: 6; }
+}
+@media (max-height: 720px) and (min-width: 901px) {
+  .task-panel { padding-top: 20px; }
+}
+@media (max-width: 640px) {
+  .task-panel { padding-top: 24px; }
+  .task-title-row { grid-template-columns: minmax(0, 1fr) auto auto auto auto; gap: 5px; }
+  .task-header-action, .task-panel-close { width: 32px; min-width: 32px; height: 32px; }
+  .task-autosave-status { order: 2; }
+}

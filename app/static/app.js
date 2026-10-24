@@ -2048,7 +2048,7 @@
       });
     });
     menu.addEventListener("click", (event) => {
-      if (!event.target.closest("summary")) menu.open = false;
+      if (!event.target.closest("summary, select, input, textarea, label")) menu.open = false;
     });
   });
   document.addEventListener("click", (event) => {

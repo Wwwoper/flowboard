@@ -227,7 +227,7 @@ function boot(mode = "light") {
   assert.equal(reloaded.manager.hasCustomTheme(), false);
   assert.equal(reloaded.manager.getThemes().length, 1);
   assert.equal(reloaded.manager.getActiveThemeId(), "builtin");
-  assert.equal(first.variables.has("--accent"), false);
+  assert.equal(reloaded.variables.has("--accent"), false);
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 '''
     result = subprocess.run(

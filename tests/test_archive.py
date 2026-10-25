@@ -3,8 +3,8 @@ from __future__ import annotations
 import sqlite3
 from datetime import UTC, datetime, timedelta
 
-from app.db import connect, initialize_database
 from app.config import settings
+from app.db import connect, initialize_database
 
 
 def _create_done_task(client, title: str = "Completed task") -> dict:

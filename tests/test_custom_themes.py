@@ -4,7 +4,6 @@ import json
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 THEME_MANAGER = ROOT / "app" / "static" / "theme-manager.js"
 GITHUB_THEME = ROOT / "app" / "static" / "github-theme.css"

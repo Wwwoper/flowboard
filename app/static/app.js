@@ -653,12 +653,13 @@
       if (status === "done" && !state.doneExpanded) {
         tasksToRender = statusTasks.slice(0, 5);
         els.toggleDone.hidden = statusTasks.length <= 5;
-        const remaining = statusTasks.length - tasksToRender.length;
-        els.toggleDone.textContent = `Показать ещё ${remaining}`;
+        els.toggleDone.setAttribute("aria-label", "Показать остальные завершённые задачи");
+        els.toggleDone.title = "Показать остальные завершённые задачи";
         els.toggleDone.setAttribute("aria-expanded", "false");
       } else if (status === "done") {
         els.toggleDone.hidden = statusTasks.length <= 5;
-        els.toggleDone.textContent = "Свернуть";
+        els.toggleDone.setAttribute("aria-label", "Свернуть список завершённых задач");
+        els.toggleDone.title = "Свернуть список завершённых задач";
         els.toggleDone.setAttribute("aria-expanded", "true");
       }
 

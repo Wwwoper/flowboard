@@ -122,7 +122,29 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .attachment-mini { display: inline-flex; align-items: center; gap: 3px; }
 .done-card { opacity: .85; }
 .done-card .task-card-title { color: #667089; }
-.done-toggle { margin-left: auto; border: 0; padding: 5px 1px; color: #6470d8; font-size: 10px; font-weight: 700; background: transparent; white-space: nowrap; }
+.done-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  line-height: 1;
+}
+.done-toggle svg { display: block; transition: transform .15s ease; }
+.done-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.done-toggle:hover,
+.done-toggle:focus-visible,
+.done-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
 .column-empty { display: none; margin: 0; padding: 18px 10px 25px; text-align: center; color: #a0a8b9; font-size: 10px; line-height: 1.6; }
 .board-column.is-empty .column-empty { display: block; }
 .board-column-done { background: rgba(247,250,249,.88); }
@@ -395,7 +417,14 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 }
 [data-theme="dark"] .task-card-footer { color: #8c98b0; border-top-color: #283245; }
 [data-theme="dark"] .done-card .task-card-title { color: #aab5ca; }
-[data-theme="dark"] .done-toggle { color: #a2aaff; }
+[data-theme="dark"] .done-toggle { color: var(--muted); }
+[data-theme="dark"] .done-toggle:hover,
+[data-theme="dark"] .done-toggle:focus-visible,
+[data-theme="dark"] .done-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
 [data-theme="dark"] .column-empty { color: #7f8ca5; }
 [data-theme="dark"] .board-column-done { background: #111a1c; }
 [data-theme="dark"] .board-column-done .task-card { border-color: #293d3a; }

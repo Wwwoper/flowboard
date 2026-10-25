@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.11">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.12">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
 </head>
 <body>
@@ -255,7 +255,7 @@
             <span class="column-marker marker-done"></span>
             <h2>Готово</h2>
             <span class="column-count" id="count-done">0</span>
-            <button id="toggle-done" class="done-toggle" type="button" aria-expanded="false">Показать ещё</button>
+            <button id="toggle-done" class="done-toggle" type="button" aria-label="Показать остальные завершённые задачи" title="Показать остальные завершённые задачи" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></button>
           </header>
           <div class="column-options" data-column-options="done">
             <button class="column-options-toggle" type="button" data-column-options-toggle="done"
@@ -463,6 +463,6 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.1" defer></script>
-  <script src="/static/app.js?v=0.5.14" defer></script>
+  <script src="/static/app.js?v=0.5.15" defer></script>
 </body>
 </html>

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 THEME_MANAGER = ROOT / "app" / "static" / "theme-manager.js"
 GITHUB_THEME = ROOT / "app" / "static" / "github-theme.css"
-THEME_EXAMPLE = ROOT / "docs" / "themes" / "purple-night.json"
+THEME_EXAMPLE = ROOT / "docs" / "themes" / "moonshade-flowboard.json"
 
 COLOR_KEYS = {
     "page",
@@ -61,7 +61,7 @@ def test_custom_theme_controls_and_script_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert '/static/theme-manager.js?v=0.2.0' in html
-    assert '/static/app.js?v=0.5.12' in html
+    assert '/static/app.js?v=0.5.13' in html
     assert '/static/github-theme.css?v=0.2.1' in html
     assert 'id="saved-themes-select"' in html
     assert 'id="delete-theme-button"' in html
@@ -101,7 +101,7 @@ def test_all_customizable_tokens_have_light_and_dark_defaults():
 def test_example_custom_theme_uses_supported_schema():
     theme = json.loads(THEME_EXAMPLE.read_text())
     assert theme["version"] == 1
-    assert theme["name"] == "Purple Night"
+    assert theme["name"] == "Moonshade"
     assert set(theme["colors"]) == {"light", "dark"}
     assert theme["colors"]["light"]
     assert theme["colors"]["dark"]
@@ -200,7 +200,7 @@ function boot(mode = "light") {
   assert.equal(reloaded.manager.getThemes().length, 2);
   assert.equal(reloaded.manager.getActiveThemeId(), secondId);
   assert.equal(reloaded.variables.get("--accent"), "#334455");
-  assert.equal(reloaded.variables.get("--gh-primary"), "#fedcba");
+  assert.equal(reloaded.variables.has("--gh-primary"), false);
 
   reloaded.manager.selectTheme("builtin");
   assert.equal(reloaded.manager.hasCustomTheme(), false);

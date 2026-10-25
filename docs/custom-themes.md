@@ -14,22 +14,22 @@ Flowboard поддерживает импорт и экспорт цветовы
 6. Выберите **Стандартная палитра Flowboard**, чтобы вернуться к встроенному оформлению, не удаляя сохранённые темы.
 7. Нажмите **Удалить выбранную тему**, чтобы удалить только её из библиотеки. Остальные темы сохранятся.
 
-Пример темы: [`themes/purple-night.json`](themes/purple-night.json). Его можно импортировать прямо в приложение.
+Пример темы: [`themes/moonshade-flowboard.json`](themes/moonshade-flowboard.json). Его можно импортировать прямо в приложение.
 
 ## Формат файла
 
 ```json
 {
-  "name": "Purple Night",
+  "name": "Moonshade",
   "version": 1,
   "colors": {
     "light": {
-      "accent": "#7157d9",
-      "gh-primary": "#7157d9"
+      "accent": "#7654ba",
+      "gh-primary": "#7654ba"
     },
     "dark": {
-      "accent": "#c0a7ff",
-      "gh-primary": "#8061d8"
+      "accent": "#b9a0f5",
+      "gh-primary": "#8061c2"
     }
   }
 }

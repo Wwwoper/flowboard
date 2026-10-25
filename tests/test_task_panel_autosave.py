@@ -6,7 +6,7 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert 'id="task-form"' in html
     assert 'id="save-task"' not in html
     assert 'id="focus-task"' in html
-    assert 'class="task-header-action focus-task-action"' in html
+    assert 'class="icon-button task-header-action focus-task-action"' in html
     assert 'id="task-more-toggle" class="icon-button task-header-action"' in html
     assert 'id="task-autosave-status"' in html
     assert 'class="panel-actions"' not in html

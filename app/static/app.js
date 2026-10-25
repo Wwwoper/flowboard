@@ -1039,6 +1039,13 @@
     }
     setTaskAutosaveStatus("saving", "Сохраняем изменения…");
     const taskId = task.id;
+    const previousDetails = {
+      title: task.title,
+      description: task.description || "",
+      tags: task.tags || "",
+      status: task.status,
+      position: task.position,
+    };
 
     const operation = (async () => {
       try {
@@ -1071,9 +1078,12 @@
     // If the user changed a field while the request was in flight, save the newer draft too.
     if (state.selectedTask?.id === taskId && !taskDraftMatches(currentTaskDraft(), state.selectedTask)) {
       setTaskAutosaveStatus("pending", "Есть несохранённые изменения");
-      return saveCurrentTaskDraft();
+      const saved = await saveCurrentTaskDraft();
+      toast("Изменения сохранены", "success", "Отменить", () => restoreTaskDetails(taskId, previousDetails));
+      return saved;
     }
     if (state.selectedTask?.id === taskId) setTaskAutosaveStatus("saved", "Все изменения сохранены");
+    toast("Изменения сохранены", "success", "Отменить", () => restoreTaskDetails(taskId, previousDetails));
     return true;
   }
 

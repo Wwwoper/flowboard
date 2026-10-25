@@ -131,6 +131,7 @@
     taskTagCustomToggle: $("#task-tag-custom-toggle"),
     addTaskTag: $("#add-task-tag"),
     taskDescription: $("#task-description"),
+    copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
     togglePreview: $("#toggle-preview"),
     toggleAttachmentUpload: $("#toggle-attachment-upload"),
@@ -2012,6 +2013,20 @@
     else void requestMarkdownPreview();
   }
 
+  async function copyTaskDescription() {
+    if (!navigator.clipboard?.writeText) {
+      toast("Копирование недоступно в этом браузере", "error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(els.taskDescription.value);
+      toast("Описание скопировано");
+    } catch {
+      toast("Не удалось скопировать описание. Проверьте разрешение браузера и защищённое соединение.", "error");
+    }
+  }
+
+  els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
   els.togglePreview.addEventListener("click", () => {
     void setDescriptionEditing(state.previewVisible);
   });

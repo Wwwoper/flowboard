@@ -247,6 +247,15 @@ def _get_attachment_path(task_id: int, stored_name: str) -> Path:
     return path
 
 
+def _remove_empty_attachment_dir(task_id: int) -> None:
+    directory = settings.attachments_dir / str(task_id)
+    try:
+        directory.rmdir()
+    except OSError:
+        # The directory is non-empty or the filesystem refused the cleanup.
+        pass
+
+
 def _clean_filename(raw_filename: str | None) -> str:
     raw = (raw_filename or "file").replace("\x00", "")
     # Browsers normally send a basename; also strip paths supplied by non-browser clients.
@@ -479,8 +488,8 @@ async def upload_attachments(
         for _, filename, content in prepared:
             stored_name = f"{uuid.uuid4().hex}{_stored_extension(filename)}"
             path = directory / stored_name
-            path.write_bytes(content)
             saved_paths.append(path)
+            path.write_bytes(content)
             cursor = connection.execute(
                 """
                 INSERT INTO attachments (task_id, filename, stored_name, size, created_at)
@@ -494,7 +503,12 @@ async def upload_attachments(
     except Exception:
         connection.rollback()
         for path in saved_paths:
-            path.unlink(missing_ok=True)
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                # Keep rolling back other files; the original upload error is re-raised.
+                pass
+        _remove_empty_attachment_dir(task_id)
         raise
 
     if inserted_ids:
@@ -539,6 +553,7 @@ def delete_attachment(
     connection.execute("UPDATE tasks SET updated_at = ? WHERE id = ?", (utc_now(), row["task_id"]))
     connection.commit()
     path.unlink(missing_ok=True)
+    _remove_empty_attachment_dir(int(row["task_id"]))
     return Response(status_code=204)
 
 

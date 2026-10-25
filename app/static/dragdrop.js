@@ -36,6 +36,9 @@
       }
       this.dragged = item;
       this.origin = this.element;
+      // The drop event is handled by the destination list's adapter instance.
+      // Keep the source list outside either instance so cross-column drops retain it.
+      window.__flowboardDragOrigin = this.element;
       this.oldIndex = this.indexOf(item, this.element);
       if (typeof this.options.onStart === "function") {
         this.options.onStart({ item, from: this.element, oldIndex: this.oldIndex });
@@ -77,7 +80,8 @@
       if (!targetList) return;
       event.preventDefault();
       const item = window.__flowboardDragging;
-      const from = this.origin;
+      // The drop event bubbles through the destination list, not the source list.
+      const from = window.__flowboardDragOrigin || this.origin;
       const to = targetList;
       const newIndex = this.indexOf(item, to);
       const oldIndex = this.oldIndex;
@@ -93,6 +97,7 @@
     clearDragState() {
       if (window.__flowboardDragging) window.__flowboardDragging.classList.remove("dragging");
       window.__flowboardDragging = null;
+      window.__flowboardDragOrigin = null;
       document.querySelectorAll(".board-column.is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
       this.dragged = null;
       this.origin = null;

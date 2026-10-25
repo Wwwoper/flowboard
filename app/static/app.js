@@ -93,9 +93,6 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const els = {
-    totalCount: $("#total-count"),
-    activeCount: $("#active-count"),
-    doingCount: $("#doing-count"),
     quickForm: $("#quick-add-form"),
     quickTitle: $("#quick-title"),
     quickTaskType: $("#quick-task-type"),
@@ -103,7 +100,6 @@
     projectFilter: $("#project-filter"),
     addProject: $("#add-project"),
     tagFilter: $("#tag-filter"),
-    filterSummary: $("#filter-summary"),
     focusBar: $("#focus-bar"),
     focusTitle: $("#focus-title"),
     focusProject: $("#focus-project"),
@@ -629,14 +625,7 @@
 
   function renderBoard() {
     const visibleTasks = state.tasks.filter(matchesFilters);
-    const activeCount = state.tasks.filter((task) => task.status !== "done").length;
     const doingCount = state.tasks.filter((task) => task.status === "doing").length;
-    els.totalCount.textContent = pluralTasks(state.tasks.length);
-    els.activeCount.textContent = `Активные: ${activeCount}`;
-    els.doingCount.textContent = `В работе: ${doingCount}`;
-    els.filterSummary.textContent = state.search || state.tag || state.project
-      ? `Показано: ${visibleTasks.length} из ${state.tasks.length}`
-      : "";
 
     for (const status of STATUSES) {
       const column = $(`.board-column[data-column="${status}"]`);

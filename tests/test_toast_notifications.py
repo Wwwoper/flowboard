@@ -1,7 +1,7 @@
 def test_toast_notifications_follow_theme_and_can_be_dismissed(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "/static/app.js?v=0.5.15" in response.text
+    assert "/static/app.js?v=0.5.16" in response.text
     assert "/static/style.css?v=0.5.12" in response.text
 
     script = client.get("/static/app.js").text

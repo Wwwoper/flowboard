@@ -17,7 +17,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.15" in html
+    assert "/static/app.js?v=0.5.16" in html
     assert "/static/style.css?v=0.5.12" in html
 
 
@@ -138,7 +138,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.15" in html
+    assert "/static/app.js?v=0.5.16" in html
     assert "/static/style.css?v=0.5.12" in html
 
     script = client.get("/static/app.js").text
@@ -230,8 +230,10 @@ def test_main_board_uses_compact_file_and_settings_menus(client):
     assert "MY PROJECT" not in html
     assert "Доска задач" not in html
     assert "Мои задачи" in html
-    assert 'id="active-count"' in html
-    assert 'id="doing-count"' in html
+    assert 'id="total-count"' not in html
+    assert 'id="active-count"' not in html
+    assert 'id="doing-count"' not in html
+    assert 'id="filter-summary"' not in html
 
     css = client.get("/static/style.css").text
     assert ".toolbar-menu-panel" in css
@@ -239,8 +241,12 @@ def test_main_board_uses_compact_file_and_settings_menus(client):
     assert ".task-card-title" in css
 
     script = client.get("/static/app.js").text
-    assert 'els.activeCount.textContent = `Активные: ${activeCount}`;' in script
-    assert 'els.doingCount.textContent = `В работе: ${doingCount}`;' in script
+    assert 'els.totalCount.textContent' not in script
+    assert 'els.activeCount.textContent' not in script
+    assert 'els.doingCount.textContent' not in script
+    assert 'els.filterSummary.textContent' not in script
+    assert 'const doingCount = state.tasks.filter((task) => task.status === "doing").length;' in script
+    assert 'const overLimit = doingCount > state.wipLimit;' in script
     assert 'const toolbarMenus = $$(".toolbar-menu");' in script
 
 
@@ -258,7 +264,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.15" in html
+    assert "/static/app.js?v=0.5.16" in html
     assert "/static/style.css?v=0.5.12" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html

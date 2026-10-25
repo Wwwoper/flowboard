@@ -31,6 +31,15 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     assert 'id="copy-description"' in html
     assert 'aria-label="Копировать описание"' in html
     assert 'title="Копировать описание"' in html
+    assert '<div class="description-actions">' in html
+    action_group = html.split('<div class="description-actions">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    assert 'id="copy-description"' in action_group
+    assert 'id="toggle-preview"' in action_group
+
+    style = client.get("/static/style.css").text
+    assert ".description-actions { display: flex; align-items: center;" in style
 
     script = client.get("/static/app.js").text
     assert 'copyDescription: $("#copy-description")' in script

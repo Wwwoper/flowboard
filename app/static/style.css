@@ -748,6 +748,8 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .tag-add-row .button { min-width: 34px; min-height: 34px; }
 .description-heading { align-items: center; }
 .description-heading > div { min-width: 0; }
+.description-actions { display: flex; align-items: center; flex: 0 0 auto; gap: 4px; }
+.description-actions .inline-edit-button { margin: -2px 0 0; }
 .section-helper { display: none; }
 .inline-edit-button { display: inline-grid; place-items: center; width: 31px; height: 31px; padding: 0; margin: -2px 0 0 6px; color: var(--muted); background: transparent; border-color: transparent; font-size: 15px; opacity: .56; }
 .inline-edit-button:hover, .inline-edit-button:focus-visible { color: var(--accent); border-color: var(--line); background: var(--surface-soft); opacity: 1; }

@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.9">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.10">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.1">
 </head>
 <body>
@@ -426,10 +426,12 @@
             <label class="field-label" for="task-description">Описание</label>
             <span class="section-helper">Текст с форматированием Markdown</span>
           </div>
-          <button id="copy-description" class="icon-button inline-edit-button" type="button" aria-label="Копировать описание" title="Копировать описание">
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
-          </button>
-          <button id="toggle-preview" class="icon-button inline-edit-button" type="button" aria-label="Редактировать описание" title="Редактировать описание">✎</button>
+          <div class="description-actions">
+            <button id="copy-description" class="icon-button inline-edit-button" type="button" aria-label="Копировать описание" title="Копировать описание">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <button id="toggle-preview" class="icon-button inline-edit-button" type="button" aria-label="Редактировать описание" title="Редактировать описание">✎</button>
+          </div>
         </div>
         <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown." hidden></textarea>
         <div id="description-preview" class="markdown-preview markdown-preview-editable" tabindex="0" aria-label="Описание задачи. Нажмите Enter, чтобы редактировать."></div>

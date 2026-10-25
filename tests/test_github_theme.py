@@ -5,7 +5,7 @@ def test_github_theme_stylesheet_is_loaded(client):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert 'href="/static/github-theme.css?v=0.2.1"' in response.text
+    assert 'href="/static/github-theme.css?v=0.2.2"' in response.text
 
 
 def test_github_theme_stylesheet_defines_light_and_dark_palettes(client):

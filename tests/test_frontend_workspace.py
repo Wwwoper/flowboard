@@ -18,7 +18,7 @@ def test_project_workspace_controls_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.14" in html
-    assert "/static/style.css?v=0.5.10" in html
+    assert "/static/style.css?v=0.5.11" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -139,7 +139,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.14" in html
-    assert "/static/style.css?v=0.5.10" in html
+    assert "/static/style.css?v=0.5.11" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -259,7 +259,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
     assert "/static/app.js?v=0.5.14" in html
-    assert "/static/style.css?v=0.5.10" in html
+    assert "/static/style.css?v=0.5.11" in html
 
     script = client.get("/static/app.js").text
     for fragment in (
@@ -278,3 +278,28 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert ".column-options-popover" in css
     assert ".archive-dialog" in css
     assert ".archive-item" in css
+
+
+def test_input_focus_does_not_highlight_form_frames(client):
+    html = client.get("/").text
+    assert "/static/style.css?v=0.5.11" in html
+    assert '/static/github-theme.css?v=0.2.2' in html
+
+    style = client.get("/static/style.css").text
+    theme = client.get("/static/github-theme.css").text
+
+    for stylesheet in (style, theme):
+        assert "button:focus-visible" in stylesheet
+        assert "input:focus-visible" not in stylesheet
+        assert "select:focus-visible" not in stylesheet
+        assert "textarea:focus-visible" not in stylesheet
+
+    for selector in (".quick-add:focus-within", ".text-field:focus {"):
+        assert selector not in style
+    for selector in (
+        ".quick-add:focus-within",
+        ".search-box:focus-within",
+        ".filter-box:focus-within",
+        ".text-field:focus {",
+    ):
+        assert selector not in theme

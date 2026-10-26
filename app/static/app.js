@@ -217,8 +217,7 @@
       `Переключить на ${isDark ? "светлую" : "тёмную"} тему`,
     );
     els.themeToggle.title = `Переключить на ${isDark ? "светлую" : "тёмную"} тему`;
-    els.themeToggleIcon.textContent = isDark ? "☀" : "☾";
-    els.themeToggleLabel.textContent = isDark ? "Светлая тема" : "Тёмная тема";
+    els.themeToggleLabel.textContent = `Тема: ${isDark ? "Тёмная" : "Светлая"}`;
     const pageColor = getComputedStyle(document.documentElement).getPropertyValue("--page").trim();
     els.themeColor.setAttribute("content", pageColor || (isDark ? "#0c101a" : "#f4f6fb"));
 
@@ -258,8 +257,8 @@
     els.resetThemeButton.disabled = !hasCustomTheme;
     els.deleteThemeButton.disabled = !hasCustomTheme;
     els.customThemeStatus.textContent = hasCustomTheme
-      ? `Активная тема: ${themeName}. Сохранено тем: ${themes.length}`
-      : `Стандартная палитра Flowboard. Сохранено тем: ${themes.length}`;
+      ? `Активна пользовательская тема. Сохранено тем: ${themes.length}`
+      : `Активна встроенная тема. Сохранено тем: ${themes.length}`;
   }
 
   function applyDensity(density, persist = false) {
@@ -269,7 +268,7 @@
     els.densityToggle.setAttribute("aria-pressed", String(compact));
     els.densityToggle.setAttribute("aria-label", compact ? "Включить комфортные карточки" : "Включить компактные карточки");
     els.densityToggle.title = compact ? "Включить комфортную плотность карточек" : "Включить компактную плотность карточек";
-    els.densityToggleLabel.textContent = compact ? "Компактно" : "Комфортно";
+    els.densityToggleLabel.textContent = compact ? "Плотность: компактная" : "Плотность: комфортная";
     if (persist) writeStorage("flowboard-density", state.density);
   }
 

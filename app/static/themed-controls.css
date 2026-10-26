@@ -645,3 +645,124 @@
   .board-toolbar > .tag-filter-box { padding-inline: 7px; gap: 6px; }
   .board-toolbar .search-shortcut-keycap { padding-inline: 5px; }
 }
+
+/* File and settings dropdowns use consistent iconography and grouped sections. */
+.toolbar-menu-trigger {
+  box-sizing: border-box;
+}
+.toolbar-menu-trigger::after {
+  content: "";
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  margin: -3px 1px 0 2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.toolbar-menu-trigger > .toolbar-menu-icon,
+.toolbar-menu-item-icon {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.toolbar-menu-trigger > .toolbar-menu-icon { width: 17px; height: 17px; flex-basis: 17px; }
+.toolbar-menu-panel {
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(76vh, 720px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  gap: 0;
+  padding: 10px;
+}
+#files-menu .toolbar-menu-panel { width: min(250px, calc(100vw - 24px)); }
+#settings-menu .toolbar-menu-panel { width: min(330px, calc(100vw - 24px)); }
+.toolbar-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+.toolbar-menu-section:first-child { padding-top: 1px; }
+.toolbar-menu-section:last-child { padding-bottom: 1px; border-bottom: 0; }
+.toolbar-menu-section-title {
+  margin: 0;
+  padding: 0 10px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: .015em;
+}
+.toolbar-menu-panel .toolbar-menu-item.button {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 36px;
+  height: auto;
+  padding: 8px 10px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-weight: 550;
+}
+.toolbar-menu-item.button > span { min-width: 0; }
+.toolbar-menu-panel .theme-toggle { padding: 8px 10px !important; }
+.toolbar-menu-panel .theme-toggle-label,
+.toolbar-menu-panel .density-toggle > span { display: inline; }
+.theme-manager-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
+.theme-manager-actions .toolbar-menu-item.button { padding-inline: 8px; }
+.theme-manager-label {
+  display: block;
+  margin: 4px 10px 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.toolbar-menu-panel .theme-manager-select {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 30px 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.theme-manager-help,
+.theme-manager-status {
+  margin: 1px 10px 3px;
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.theme-manager-status { color: var(--ink-soft); }
+.toolbar-menu-item.button-danger-quiet:not(:disabled) { color: #b44f59; }
+.toolbar-menu-item.button-danger-quiet:not(:disabled):hover { color: #a33c48; background: #fff2f3; border-color: #f0d4d8; }
+[data-theme="dark"] .toolbar-menu-item.button-danger-quiet:not(:disabled) { color: #f19ba2; }
+[data-theme="dark"] .toolbar-menu-item.button-danger-quiet:not(:disabled):hover { color: #ffc1c6; background: #321e2a; border-color: #55303d; }
+.toolbar-menu-item.button:disabled { cursor: not-allowed; }
+.toolbar-menu-item.button:focus-visible,
+.toolbar-menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 420px) {
+  #settings-menu .toolbar-menu-panel { width: min(330px, calc(100vw - 16px)); }
+  .theme-manager-actions { grid-template-columns: minmax(0, 1fr); }
+}

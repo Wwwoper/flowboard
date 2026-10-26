@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.14">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.4">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.5">
 </head>
 <body>
   <div class="app-shell">
@@ -34,50 +34,55 @@
         <input id="import-files" class="visually-hidden" type="file" accept=".md,text/markdown" multiple>
         <input id="theme-import-file" class="visually-hidden" type="file" accept=".json,application/json">
         <details class="toolbar-menu" id="files-menu">
-          <summary class="toolbar-menu-trigger"><span aria-hidden="true">▤</span> Файлы</summary>
+          <summary class="toolbar-menu-trigger"><svg class="toolbar-menu-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h3.4l1.8 2H15A1.5 1.5 0 0 1 16.5 8.5v6A1.5 1.5 0 0 1 15 16H5A1.5 1.5 0 0 1 3.5 14.5Z"></path></svg><span>Файлы</span></summary>
           <div class="toolbar-menu-panel" role="group" aria-label="Файловые операции">
-            <button id="import-button" class="button button-quiet toolbar-menu-item" type="button"><span aria-hidden="true">↑</span> Импорт Markdown</button>
-            <button id="export-md" class="button button-quiet toolbar-menu-item" type="button"><span aria-hidden="true">↓</span> Экспорт Markdown</button>
-            <button id="export-zip" class="button button-quiet toolbar-menu-item" type="button"><span aria-hidden="true">▣</span> Резервная копия ZIP</button>
+            <button id="import-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13V3m0 0 3 3m-3-3L7 6M4 12v4h12v-4"></path></svg><span>Импорт Markdown</span></button>
+            <button id="export-md" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v10m0 0 3-3m-3 3-3-3M4 14v2h12v-2"></path></svg><span>Экспорт Markdown</span></button>
+            <button id="export-zip" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4.5 3.5h11v13h-11zM8 3.5v3h4v-3M8 10h4M8 13h4"></path></svg><span>Резервная копия ZIP</span></button>
           </div>
         </details>
         <details class="toolbar-menu" id="settings-menu">
-          <summary class="toolbar-menu-trigger"><span aria-hidden="true">☷</span> Настройки</summary>
+          <summary class="toolbar-menu-trigger"><svg class="toolbar-menu-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.5 5h13M3.5 10h13M3.5 15h13"></path><circle cx="7" cy="5" r="1.6"></circle><circle cx="12.5" cy="10" r="1.6"></circle><circle cx="8.5" cy="15" r="1.6"></circle></svg><span>Настройки</span></summary>
           <div class="toolbar-menu-panel" role="group" aria-label="Настройки интерфейса">
-            <button id="theme-toggle" class="button button-quiet toolbar-menu-item theme-toggle" type="button"
-                    aria-label="Переключить на тёмную тему" aria-pressed="false"
-                    title="Переключить на тёмную тему">
-              <span id="theme-toggle-icon" class="theme-toggle-icon" aria-hidden="true">☾</span>
-              <span id="theme-toggle-label" class="theme-toggle-label">Тёмная тема</span>
-            </button>
-            <button id="density-toggle" class="button button-quiet toolbar-menu-item density-toggle" type="button"
-                    aria-label="Включить компактные карточки" aria-pressed="false"
-                    title="Переключить плотность карточек">
-              <span aria-hidden="true">▤</span><span id="density-toggle-label">Комфортно</span>
-            </button>
-            <button id="import-theme-button" class="button button-quiet toolbar-menu-item" type="button">
-              <span aria-hidden="true">↑</span> Импорт темы JSON
-            </button>
-            <button id="export-theme-button" class="button button-quiet toolbar-menu-item" type="button">
-              <span aria-hidden="true">↓</span> Экспорт темы JSON
-            </button>
-            <label class="theme-manager-label" for="saved-themes-select">Сохранённые темы</label>
-            <select id="saved-themes-select" class="text-field theme-manager-select" aria-label="Выбрать сохранённую тему">
-              <option value="builtin">Стандартная палитра Flowboard</option>
-            </select>
-            <button id="delete-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled>
-              <span aria-hidden="true">×</span> Удалить выбранную тему
-            </button>
-            <button id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled>
-              <span aria-hidden="true">↺</span> Стандартная палитра Flowboard
-            </button>
-            <p id="custom-theme-status" class="theme-manager-status" role="status">Стандартная палитра Flowboard</p>
-            <button id="shortcuts-button" class="button button-quiet toolbar-menu-item shortcuts-button" type="button"
-                    aria-label="Показать сочетания клавиш" title="Сочетания клавиш (?)">⌘? Сочетания клавиш</button>
-            <div class="toolbar-menu-divider" aria-hidden="true"></div>
-            <button id="open-archive" class="button button-quiet toolbar-menu-item" type="button">
-              <span aria-hidden="true">▣</span> Архив задач
-            </button>
+            <section class="toolbar-menu-section" aria-labelledby="settings-appearance-heading">
+              <h3 id="settings-appearance-heading" class="toolbar-menu-section-title">Внешний вид</h3>
+              <button id="theme-toggle" class="button button-quiet toolbar-menu-item theme-toggle" type="button"
+                      aria-label="Переключить тему" aria-pressed="false" title="Переключить тему">
+                <svg id="theme-toggle-icon" class="toolbar-menu-item-icon theme-toggle-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.5"></circle><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7"></path></svg>
+                <span id="theme-toggle-label" class="theme-toggle-label">Тема: Светлая</span>
+              </button>
+              <button id="density-toggle" class="button button-quiet toolbar-menu-item density-toggle" type="button"
+                      aria-label="Переключить плотность карточек" aria-pressed="false" title="Переключить плотность карточек">
+                <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="12" height="4" rx="1"></rect><rect x="4" y="12" width="12" height="4" rx="1"></rect></svg><span id="density-toggle-label">Плотность: комфортная</span>
+              </button>
+            </section>
+            <section class="toolbar-menu-section" aria-labelledby="settings-themes-heading">
+              <h3 id="settings-themes-heading" class="toolbar-menu-section-title">Управление темами</h3>
+              <div class="theme-manager-actions">
+                <button id="import-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13V3m0 0 3 3m-3-3L7 6M4 12v4h12v-4"></path></svg><span>Импорт темы</span></button>
+                <button id="export-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v10m0 0 3-3m-3 3-3-3M4 14v2h12v-2"></path></svg><span>Экспорт темы</span></button>
+              </div>
+              <label class="theme-manager-label" for="saved-themes-select">Текущая тема</label>
+              <select id="saved-themes-select" class="text-field theme-manager-select" aria-label="Выбрать сохранённую тему">
+                <option value="builtin">Стандартная палитра Flowboard</option>
+              </select>
+              <button id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-reset-help" title="Восстановить стандартную тему">
+                <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 8a6.5 6.5 0 1 1 1.5 6.5M4 3.5V8h4.5"></path></svg><span>Восстановить стандартную тему</span>
+              </button>
+              <p id="theme-reset-help" class="theme-manager-help">Доступно, когда выбрана пользовательская тема.</p>
+              <button id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-delete-help" title="Удалить выбранную пользовательскую тему">
+                <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4.5 6h11M8 6V4h4v2M6 6l.8 10h6.4L14 6M8.5 8.5v5M11.5 8.5v5"></path></svg><span>Удалить выбранную тему</span>
+              </button>
+              <p id="theme-delete-help" class="theme-manager-help">Встроенную тему удалить нельзя; удаление доступно только для пользовательских тем.</p>
+              <p id="custom-theme-status" class="theme-manager-status" role="status">Активна встроенная тема. Сохранено тем: 0</p>
+            </section>
+            <section class="toolbar-menu-section" aria-labelledby="settings-other-heading">
+              <h3 id="settings-other-heading" class="toolbar-menu-section-title">Прочее</h3>
+              <button id="shortcuts-button" class="button button-quiet toolbar-menu-item shortcuts-button" type="button" aria-label="Показать сочетания клавиш" title="Сочетания клавиш (?)">
+                <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="2.5" y="4.5" width="15" height="11" rx="1.5"></rect><path d="M5.5 8h1M9.5 8h1M13.5 8h1M5.5 11h9M8 13.5h4"></path></svg><span>Сочетания клавиш</span>
+              </button>
+              <button id="open-archive" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14v3H3zM4.5 8v8h11V8M8 11h4"></path></svg><span>Архив задач</span></button>
+            </section>
           </div>
         </details>
       </div>
@@ -465,6 +470,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.1" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.19" defer></script>
+  <script src="/static/app.js?v=0.5.20" defer></script>
 </body>
 </html>

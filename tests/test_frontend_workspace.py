@@ -42,7 +42,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.19" in html
+    assert "/static/app.js?v=0.5.20" in html
     assert "/static/style.css?v=0.5.14" in html
 
 
@@ -172,7 +172,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.19" in html
+    assert "/static/app.js?v=0.5.20" in html
     assert "/static/style.css?v=0.5.14" in html
 
     script = client.get("/static/app.js").text
@@ -298,7 +298,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.19" in html
+    assert "/static/app.js?v=0.5.20" in html
     assert "/static/style.css?v=0.5.14" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
@@ -353,3 +353,27 @@ def test_input_focus_does_not_highlight_form_frames(client):
         ".text-field:focus {",
     ):
         assert selector not in theme
+
+
+def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
+    html = client.get("/").text
+    assert "/static/themed-controls.css?v=0.1.5" in html
+    for fragment in (
+        'id="settings-appearance-heading" class="toolbar-menu-section-title">Внешний вид</h3>',
+        'id="settings-themes-heading" class="toolbar-menu-section-title">Управление темами</h3>',
+        'id="settings-other-heading" class="toolbar-menu-section-title">Прочее</h3>',
+        'id="theme-delete-help"',
+        'id="theme-reset-help"',
+        'id="theme-toggle-icon" class="toolbar-menu-item-icon theme-toggle-icon"',
+        'id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-reset-help" title="Восстановить стандартную тему"',
+        'id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item"',
+    ):
+        assert fragment in html
+
+    controls = client.get("/static/themed-controls.css").text
+    assert ".theme-manager-select" in controls
+    assert "text-overflow: ellipsis" in controls
+    assert ".toolbar-menu-section" in controls
+
+    script = client.get("/static/app.js").text
+    assert 'Активна встроенная тема. Сохранено тем: ${themes.length}' in script

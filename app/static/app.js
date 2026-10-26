@@ -2016,6 +2016,21 @@
     else void requestMarkdownPreview();
   }
 
+  let copyFeedbackTimer = null;
+
+  function showDescriptionCopiedFeedback() {
+    if (copyFeedbackTimer !== null) window.clearTimeout(copyFeedbackTimer);
+    els.copyDescription.classList.add("is-copied");
+    els.copyDescription.setAttribute("aria-label", "Описание скопировано");
+    els.copyDescription.title = "Описание скопировано";
+    copyFeedbackTimer = window.setTimeout(() => {
+      els.copyDescription.classList.remove("is-copied");
+      els.copyDescription.setAttribute("aria-label", "Копировать описание");
+      els.copyDescription.title = "Копировать описание";
+      copyFeedbackTimer = null;
+    }, 1200);
+  }
+
   async function copyTaskDescription() {
     if (!navigator.clipboard?.writeText) {
       toast("Копирование недоступно в этом браузере", "error");
@@ -2023,7 +2038,7 @@
     }
     try {
       await navigator.clipboard.writeText(els.taskDescription.value);
-      toast("Описание скопировано");
+      showDescriptionCopiedFeedback();
     } catch {
       toast("Не удалось скопировать описание. Проверьте разрешение браузера и защищённое соединение.", "error");
     }

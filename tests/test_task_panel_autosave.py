@@ -50,7 +50,10 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
         'els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });'
         in script
     )
-    assert 'toast("Описание скопировано")' in script
+    assert "function showDescriptionCopiedFeedback()" in script
+    assert 'els.copyDescription.classList.add("is-copied")' in script
+    assert 'els.copyDescription.title = "Описание скопировано"' in script
+    assert "}, 1200);" in script
     assert 'toast("Не удалось скопировать описание.' in script
 
 

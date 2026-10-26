@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.14">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.5">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.6">
 </head>
 <body>
   <div class="app-shell">
@@ -314,6 +314,24 @@
     <div id="project-command-list" class="project-command-list"></div>
     <p class="shortcuts-note">Быстрый вызов: <kbd>⌘ ⇧ P</kbd> на macOS или <kbd>Ctrl ⇧ P</kbd> на Windows/Linux.</p>
   </dialog>
+  <dialog id="create-project-dialog" class="app-modal create-project-dialog" aria-labelledby="create-project-heading" aria-describedby="create-project-help" aria-modal="true">
+    <form id="create-project-form" class="create-project-form" novalidate>
+      <div class="shortcuts-dialog-header">
+        <div><p class="eyebrow">НОВЫЙ ПРОЕКТ</p><h2 id="create-project-heading">Создать проект</h2></div>
+        <button id="close-create-project" class="icon-button" type="button" aria-label="Закрыть окно создания проекта" title="Закрыть">×</button>
+      </div>
+      <div class="create-project-field">
+        <label for="create-project-key">Ключ проекта</label>
+        <input id="create-project-key" class="text-field" name="project-key" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="create-project-help create-project-error" aria-invalid="false">
+        <p id="create-project-help" class="create-project-help">Используйте латинские буквы, цифры и дефис. Например: storefront. Буквы будут приведены к нижнему регистру, пробелы — к дефисам.</p>
+        <p id="create-project-error" class="create-project-error" role="alert" aria-live="polite" hidden></p>
+      </div>
+      <div class="create-project-actions">
+        <button id="cancel-create-project" class="button button-quiet" type="button">Отмена</button>
+        <button id="submit-create-project" class="button button-primary" type="submit">Создать проект</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title">
     <div class="attachment-preview-dialog-header">
       <h2 id="attachment-preview-title">Предпросмотр изображения</h2>
@@ -470,6 +488,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.1" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.20" defer></script>
+  <script src="/static/app.js?v=0.5.21" defer></script>
 </body>
 </html>

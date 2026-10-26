@@ -766,3 +766,69 @@
   #settings-menu .toolbar-menu-panel { width: min(330px, calc(100vw - 16px)); }
   .theme-manager-actions { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Shared, theme-aware base for modal dialogs. */
+.app-modal {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.app-modal::backdrop {
+  background: color-mix(in srgb, var(--page) 55%, var(--line-strong) 45%);
+  opacity: .78;
+  backdrop-filter: blur(3px);
+}
+.create-project-dialog {
+  width: min(440px, calc(100vw - 28px));
+  padding: 22px;
+  border-radius: 15px;
+}
+.create-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.create-project-dialog .shortcuts-dialog-header { gap: 14px; }
+.create-project-dialog .shortcuts-dialog-header h2 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -.4px;
+}
+.create-project-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.create-project-field > label { color: var(--ink-soft); font-size: 12px; font-weight: 650; }
+.create-project-field .text-field { width: 100%; box-sizing: border-box; }
+.create-project-help { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.create-project-error {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 42%, var(--line));
+  border-radius: 8px;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, var(--surface));
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.create-project-error[hidden] { display: none; }
+.create-project-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.create-project-actions .button { min-width: 108px; min-height: 36px; }
+@media (max-width: 480px) {
+  .create-project-dialog { width: calc(100vw - 20px); padding: 16px; }
+  .create-project-actions { gap: 6px; }
+  .create-project-actions .button { flex: 1 1 0; min-width: 0; }
+}

@@ -1704,9 +1704,90 @@
     });
   }
 
+  const createProjectDialog = $("#create-project-dialog");
+  const createProjectForm = $("#create-project-form");
+  const createProjectKey = $("#create-project-key");
+  const createProjectError = $("#create-project-error");
+  const createProjectClose = $("#close-create-project");
+  const createProjectCancel = $("#cancel-create-project");
+  const createProjectSubmit = $("#submit-create-project");
+  let createProjectBusy = false;
+  let focusQuickTitleAfterCreateProject = false;
+
+  function setCreateProjectError(message) {
+    createProjectError.textContent = message;
+    createProjectError.hidden = !message;
+    createProjectKey.setAttribute("aria-invalid", String(Boolean(message)));
+  }
+
+  function setCreateProjectBusy(busy) {
+    createProjectBusy = busy;
+    createProjectForm.setAttribute("aria-busy", String(busy));
+    createProjectKey.disabled = busy;
+    createProjectClose.disabled = busy;
+    createProjectCancel.disabled = busy;
+    createProjectSubmit.disabled = busy;
+    createProjectSubmit.textContent = busy ? "Создание…" : "Создать проект";
+  }
+
+  function openCreateProjectDialog() {
+    if (createProjectBusy || createProjectDialog.open) return;
+    focusQuickTitleAfterCreateProject = false;
+    createProjectForm.reset();
+    setCreateProjectError("");
+    setCreateProjectBusy(false);
+    createProjectDialog.showModal();
+    createProjectKey.focus({ preventScroll: true });
+  }
+
+  function closeCreateProjectDialog() {
+    if (createProjectBusy || !createProjectDialog.open) return;
+    createProjectDialog.close();
+  }
+
+  async function createProjectFromDialog(event) {
+    event.preventDefault();
+    if (createProjectBusy) return;
+
+    const slug = createProjectKey.value.trim().toLowerCase().replace(/\s+/g, "-");
+    createProjectKey.value = slug;
+    setCreateProjectError("");
+
+    if (!slug) {
+      setCreateProjectError("Введите ключ проекта.");
+      createProjectKey.focus({ preventScroll: true });
+      return;
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      setCreateProjectError("Используйте латинские буквы и цифры, разделяя части ключа одиночным дефисом. Ключ не должен начинаться или заканчиваться дефисом.");
+      createProjectKey.focus({ preventScroll: true });
+      return;
+    }
+    if (state.projects.includes(slug)) {
+      setCreateProjectError("Проект с таким ключом уже существует.");
+      createProjectKey.focus({ preventScroll: true });
+      return;
+    }
+
+    setCreateProjectBusy(true);
+    try {
+      // Let the progress state render before the existing local creation flow runs.
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      addProject();
+      focusQuickTitleAfterCreateProject = true;
+      setCreateProjectBusy(false);
+      createProjectDialog.close();
+    } catch {
+      setCreateProjectError("Не удалось создать проект. Проверьте введённые данные и попробуйте ещё раз.");
+    } finally {
+      setCreateProjectBusy(false);
+      if (createProjectDialog.open && createProjectError.textContent) {
+        createProjectKey.focus({ preventScroll: true });
+      }
+    }
+  }
   function addProject() {
-    const raw = window.prompt("Ключ нового проекта (латиница, цифры и дефис), например storefront:");
-    if (raw === null) return;
+    const raw = createProjectKey.value;
     const slug = raw.trim().toLowerCase().replace(/\s+/g, "-");
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       toast("Используй латиницу, цифры и дефисы без пробелов по краям", "error");
@@ -1793,7 +1874,24 @@
     renderBoard();
     els.quickTitle.focus();
   });
-  els.addProject.addEventListener("click", addProject);
+  els.addProject.addEventListener("click", openCreateProjectDialog);
+  createProjectForm.addEventListener("submit", createProjectFromDialog);
+  createProjectCancel.addEventListener("click", closeCreateProjectDialog);
+  createProjectClose.addEventListener("click", closeCreateProjectDialog);
+  createProjectKey.addEventListener("input", () => setCreateProjectError(""));
+  createProjectDialog.addEventListener("cancel", (event) => {
+    if (createProjectBusy) event.preventDefault();
+  });
+  createProjectDialog.addEventListener("close", () => {
+    createProjectForm.reset();
+    setCreateProjectError("");
+    if (focusQuickTitleAfterCreateProject) {
+      focusQuickTitleAfterCreateProject = false;
+      els.quickTitle.focus({ preventScroll: true });
+    } else {
+      els.addProject.focus({ preventScroll: true });
+    }
+  });
   els.tagFilter.addEventListener("change", () => {
     state.tag = els.tagFilter.value;
     renderBoard();
@@ -2137,6 +2235,7 @@
     const tag = event.target && event.target.tagName;
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
     if (event.key === "Escape") {
+      if (createProjectDialog.open) return;
       if (els.attachmentPreviewDialog.open) {
         event.preventDefault();
         closeAttachmentPreview();

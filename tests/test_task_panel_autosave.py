@@ -60,3 +60,9 @@ def test_task_description_checklists_toggle_without_entering_edit_mode(client):
     assert 'els.descriptionPreview.addEventListener("change"' in script
     assert 'input[data-task-checkbox], a, button' in script
     assert "scheduleTaskDraftSave(0)" in script
+
+
+def test_task_checkboxes_use_active_theme_colors(client):
+    style = client.get("/static/style.css").text
+    assert ".markdown-preview input[data-task-checkbox]" in style
+    assert "accent-color: var(--accent);" in style

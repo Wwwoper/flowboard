@@ -102,6 +102,18 @@ def test_safe_markdown_preview_renders_interactive_checklists_safely(client):
     assert "<script>" not in html
 
 
+def test_duplicate_checklist_labels_keep_distinct_source_line_indexes(client):
+    response = client.post(
+        "/api/preview-markdown",
+        json={"text": "- [ ] Same label\n\n## Another list\n- [ ] Same label"},
+    )
+    assert response.status_code == 200
+    html = response.json()["html"]
+    assert 'data-task-checkbox="0"' in html
+    assert 'data-task-checkbox="3"' in html
+    assert html.count("Same label") == 2
+
+
 def test_task_api_responses_disable_browser_caching(client):
     created = create_task(client, "Fresh task")
 

@@ -680,6 +680,14 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .markdown-preview pre { overflow-x: auto; white-space: pre-wrap; background: var(--surface); padding: 10px; border-radius: 7px; }
 .markdown-preview code { background: var(--surface); padding: 1px 4px; border-radius: 4px; }
 .markdown-preview img { max-width: 100%; }
+.markdown-preview input[data-task-checkbox] {
+  width: 1em;
+  height: 1em;
+  margin: 0 0.45em 0 0;
+  accent-color: var(--accent);
+  vertical-align: -0.12em;
+  cursor: pointer;
+}
 .attachment-section { grid-column: 2; grid-row: 3; margin: 0; }
 .attachment-heading { justify-content: space-between; margin: 0 0 9px; }
 .attachment-heading-title { display: flex; align-items: center; gap: 9px; }

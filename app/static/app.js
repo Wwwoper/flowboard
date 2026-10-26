@@ -2358,6 +2358,216 @@
   updateThemeManagerControls();
   applyDensity(state.density);
 
+  function readStoredArchivedProjects() {
+    try {
+      const value = JSON.parse(readStorage("flowboard-archived-projects", "[]"));
+      return Array.isArray(value)
+        ? [...new Set(value.filter((slug) => typeof slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))]
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  let archivedProjectSlugs = readStoredArchivedProjects();
+
+  // Keep archived projects in the saved project registry so their history is preserved,
+  // but exclude them from the project selector and the keyboard project switcher.
+  const persistProjectStateBeforeArchive = persistProjectState;
+  persistProjectState = function persistProjectStateWithArchive() {
+    persistProjectStateBeforeArchive();
+    writeStorage("flowboard-archived-projects", JSON.stringify(archivedProjectSlugs));
+  };
+
+  populateProjectFilter = function populateProjectFilterWithArchive() {
+    const archived = new Set(archivedProjectSlugs);
+    const detected = state.tasks.flatMap(taskTags).map(projectFromTag).filter((slug) => slug && !archived.has(slug));
+    state.projects = [...new Set([...state.projects, ...detected])].sort((a, b) => a.localeCompare(b, "ru"));
+    els.projectFilter.replaceChildren(new Option("Все проекты", ""));
+    state.projects
+      .filter((slug) => !archived.has(slug))
+      .forEach((slug) => els.projectFilter.appendChild(new Option(projectLabel(slug), slug)));
+    if (!state.projects.includes(state.project) || archived.has(state.project)) state.project = "";
+    els.projectFilter.value = state.project;
+    persistProjectState();
+  };
+
+  renderProjectCommands = function renderActiveProjectCommands(query = "") {
+    const normalizedQuery = normalizeSearch(query);
+    const archived = new Set(archivedProjectSlugs);
+    const projects = [
+      { slug: "", label: "Все проекты" },
+      ...state.projects.filter((slug) => !archived.has(slug)).map((slug) => ({ slug, label: projectLabel(slug) })),
+    ].filter((project) => !normalizedQuery
+      || normalizeSearch(project.label).includes(normalizedQuery)
+      || normalizeSearch(project.slug).includes(normalizedQuery));
+    els.projectCommandList.replaceChildren();
+    if (!projects.length) {
+      els.projectCommandList.appendChild(make("p", "project-command-empty", "Проектов не найдено"));
+      return;
+    }
+    projects.forEach((project) => {
+      const button = make("button", "project-command-option");
+      button.type = "button";
+      button.textContent = project.label;
+      button.setAttribute("aria-current", String(project.slug === state.project));
+      button.appendChild(make("span", "project-command-mark", project.slug === state.project ? "✓" : "↵"));
+      button.addEventListener("click", () => {
+        state.project = project.slug;
+        els.projectFilter.value = project.slug;
+        persistProjectState();
+        renderBoard();
+        els.projectDialog.close();
+        els.quickTitle.focus();
+      });
+      els.projectCommandList.appendChild(button);
+    });
+  };
+
+  const projectManagerStyles = document.createElement("style");
+  projectManagerStyles.textContent = `
+    .manage-projects-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; min-width: 0; padding-inline: 10px; white-space: nowrap; }
+    .manage-projects-dialog { width: min(620px, calc(100vw - 28px)); max-height: min(82vh, 760px); overflow: auto; }
+    .manage-projects-help { margin: 12px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .project-manager-section { margin-top: 16px; }
+    .project-manager-section + .project-manager-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .project-manager-section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .project-manager-section-heading h3 { margin: 0; color: var(--ink); font-size: 14px; font-weight: 650; }
+    .project-manager-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .project-manager-list { display: grid; gap: 7px; }
+    .project-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft, var(--surface)); }
+    .project-manager-copy { display: grid; gap: 3px; min-width: 0; }
+    .project-manager-name { overflow-wrap: anywhere; color: var(--ink); font-size: 13px; font-weight: 600; }
+    .project-manager-key { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .project-manager-action { flex: 0 0 auto; min-height: 32px; padding: 0 10px; font-size: 12px; }
+    .project-manager-action.is-archive { color: var(--red, var(--muted)); }
+    .project-manager-empty { margin: 0; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .project-manager-empty[hidden] { display: none; }
+    @media (max-width: 480px) {
+      .manage-projects-button { padding-inline: 9px; }
+      .manage-projects-button .manage-projects-label { display: none; }
+      .manage-projects-dialog { width: calc(100vw - 20px); padding: 16px; }
+      .project-manager-item { align-items: flex-start; gap: 8px; padding: 9px; }
+      .project-manager-action { padding-inline: 7px; }
+    }
+  `;
+  document.head.appendChild(projectManagerStyles);
+
+  const manageProjectsButton = make("button", "button button-small button-quiet manage-projects-button");
+  manageProjectsButton.type = "button";
+  manageProjectsButton.setAttribute("aria-label", "Управление проектами");
+  manageProjectsButton.title = "Управление проектами";
+  manageProjectsButton.append(make("span", "manage-projects-icon", "▦"), make("span", "manage-projects-label", "Управление"));
+  els.addProject.insertAdjacentElement("afterend", manageProjectsButton);
+
+  const manageProjectsDialog = document.createElement("dialog");
+  manageProjectsDialog.id = "manage-projects-dialog";
+  manageProjectsDialog.className = "shortcuts-dialog manage-projects-dialog";
+  manageProjectsDialog.setAttribute("aria-labelledby", "manage-projects-heading");
+  manageProjectsDialog.setAttribute("aria-describedby", "manage-projects-help");
+
+  const manageProjectsHeader = make("div", "shortcuts-dialog-header");
+  const manageProjectsTitleBlock = make("div");
+  manageProjectsTitleBlock.append(
+    make("p", "eyebrow", "ПРОЕКТЫ"),
+    make("h2", "", "Управление проектами"),
+  );
+  manageProjectsTitleBlock.lastElementChild.id = "manage-projects-heading";
+  const closeManageProjectsButton = make("button", "icon-button", "×");
+  closeManageProjectsButton.type = "button";
+  closeManageProjectsButton.setAttribute("aria-label", "Закрыть управление проектами");
+  closeManageProjectsButton.title = "Закрыть";
+  manageProjectsHeader.append(manageProjectsTitleBlock, closeManageProjectsButton);
+  manageProjectsDialog.append(manageProjectsHeader);
+  manageProjectsDialog.append(make("p", "manage-projects-help", "Архив скрывает проект из обычного списка, не удаляя задачи и теги. Архивный проект можно восстановить в любое время."));
+
+  function createProjectManagerSection(id, title, emptyText) {
+    const section = make("section", "project-manager-section");
+    section.setAttribute("aria-labelledby", `${id}-heading`);
+    const heading = make("div", "project-manager-section-heading");
+    const titleNode = make("h3", "", title);
+    titleNode.id = `${id}-heading`;
+    const count = make("span", "project-manager-count", "0");
+    const list = make("div", "project-manager-list");
+    list.setAttribute("role", "list");
+    const empty = make("p", "project-manager-empty", emptyText);
+    section.append(heading, list, empty);
+    heading.append(titleNode, count);
+    manageProjectsDialog.append(section);
+    return { count, list, empty };
+  }
+
+  const activeProjectSection = createProjectManagerSection("active-projects", "Активные", "Активных проектов пока нет.");
+  const archivedProjectSection = createProjectManagerSection("archived-projects", "Архивные", "В архиве пока нет проектов.");
+  document.body.append(manageProjectsDialog);
+
+  function renderProjectManagerList(section, projects, actionLabel, actionClass, onAction) {
+    section.list.replaceChildren();
+    section.empty.hidden = projects.length > 0;
+    projects.forEach((slug) => {
+      const item = make("div", "project-manager-item");
+      item.setAttribute("role", "listitem");
+      const copy = make("div", "project-manager-copy");
+      copy.append(make("span", "project-manager-name", projectLabel(slug)), make("code", "project-manager-key", slug));
+      const action = make("button", `button button-small button-quiet project-manager-action ${actionClass}`, actionLabel);
+      action.type = "button";
+      action.addEventListener("click", () => onAction(slug));
+      item.append(copy, action);
+      section.list.append(item);
+    });
+    section.count.textContent = String(projects.length);
+  }
+
+  function renderProjectManager() {
+    const archived = new Set(archivedProjectSlugs);
+    const activeProjects = [...new Set(state.projects)].filter((slug) => !archived.has(slug))
+      .sort((a, b) => a.localeCompare(b, "ru"));
+    const archivedProjects = [...archived].sort((a, b) => a.localeCompare(b, "ru"));
+    renderProjectManagerList(activeProjectSection, activeProjects, "В архив", "is-archive", archiveProject);
+    renderProjectManagerList(archivedProjectSection, archivedProjects, "Восстановить", "is-restore", restoreProject);
+  }
+
+  function openManageProjectsDialog() {
+    if (manageProjectsDialog.open) return;
+    renderProjectManager();
+    manageProjectsDialog.showModal();
+    closeManageProjectsButton.focus({ preventScroll: true });
+  }
+
+  function archiveProject(slug) {
+    if (!state.projects.includes(slug) || archivedProjectSlugs.includes(slug)) return;
+    archivedProjectSlugs = [...new Set([...archivedProjectSlugs, slug])].sort((a, b) => a.localeCompare(b, "ru"));
+    if (state.project === slug) state.project = "";
+    populateProjectFilter();
+    renderBoard();
+    renderProjectManager();
+    toast(`Проект «${projectLabel(slug)}» перемещён в архив`);
+  }
+
+  function restoreProject(slug) {
+    if (!archivedProjectSlugs.includes(slug)) return;
+    archivedProjectSlugs = archivedProjectSlugs.filter((project) => project !== slug);
+    state.projects = [...new Set([...state.projects, slug])].sort((a, b) => a.localeCompare(b, "ru"));
+    populateProjectFilter();
+    renderBoard();
+    renderProjectManager();
+    toast(`Проект «${projectLabel(slug)}» восстановлен`);
+  }
+
+  manageProjectsButton.addEventListener("click", openManageProjectsDialog);
+  closeManageProjectsButton.addEventListener("click", () => manageProjectsDialog.close());
+  manageProjectsDialog.addEventListener("click", (event) => {
+    if (event.target === manageProjectsDialog) manageProjectsDialog.close();
+  });
+  manageProjectsDialog.addEventListener("close", () => manageProjectsButton.focus({ preventScroll: true }));
+  manageProjectsDialog.addEventListener("keydown", (event) => {
+    // Keep workspace shortcuts from leaking out of the modal without blocking input typing.
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      manageProjectsDialog.close();
+    }
+  });
   initializeSortables();
   initialize();
 })();

@@ -166,72 +166,101 @@
   }
 }
 
-/* Use a common hit-area and 18px icon box for task-panel actions. */
+/* Align the task reference badge and panel actions on a single 36px grid. */
+.task-title-row {
+  align-items: center;
+  gap: 12px;
+}
+.task-title-row .task-title-reference {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: 0 0 auto;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
+  line-height: 1;
+}
 .task-title-row .task-header-action,
 .task-title-row .task-panel-close {
   display: grid !important;
   place-items: center;
-  flex: 0 0 34px !important;
-  width: 34px !important;
-  min-width: 34px !important;
-  max-width: 34px !important;
-  height: 34px !important;
+  align-self: center;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
   padding: 0 !important;
+  box-sizing: border-box;
+  border: 1.5px solid var(--line-strong) !important;
+  border-style: solid !important;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: var(--surface);
   font-size: 0 !important;
   line-height: 1 !important;
   letter-spacing: 0 !important;
 }
-
-#focus-task::before {
-  content: "";
-  display: block;
-  width: 18px;
-  height: 18px;
-  border: 1.6px solid currentColor;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    transparent 0 3.5px, currentColor 3.8px 5px, transparent 5.3px);
+.task-title-row .task-header-action:hover,
+.task-title-row .task-panel-close:hover,
+.task-title-row .task-more-toggle[aria-expanded="true"] {
+  border: 1.5px solid var(--line-strong) !important;
+  color: var(--ink);
+  background: var(--gh-control-hover, var(--surface-soft));
 }
-
-#task-more-toggle::before {
-  content: "";
-  display: block;
-  width: 3.5px;
-  height: 3.5px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: -5.5px 0 currentColor, 5.5px 0 currentColor;
+.task-title-row #focus-task[aria-pressed="true"],
+.task-title-row #focus-task[aria-pressed="true"]:hover {
+  border: 1.5px solid var(--accent) !important;
+  color: var(--accent-dark);
+  background: var(--accent-pale);
 }
-
-#close-panel::before,
-#close-panel::after {
-  content: "";
-  display: block;
-  grid-area: 1 / 1;
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
+.task-title-row .task-header-action:focus-visible,
+.task-title-row .task-panel-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-#close-panel::before { transform: rotate(45deg); }
-#close-panel::after { transform: rotate(-45deg); }
+.task-title-row .task-action-icon {
+  display: block;
+  flex: 0 0 20px;
+  width: 20px !important;
+  height: 20px !important;
+  overflow: visible;
+}
+.task-title-row .task-more-actions {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.task-title-row #task-more-toggle { margin: 0 !important; }
 
 .task-title-row .task-header-action svg,
 .task-title-row .task-panel-close svg,
 .attachment-heading .attachment-icon-button svg {
   display: block;
-  flex: 0 0 18px;
-  width: 18px !important;
-  height: 18px !important;
+  flex: 0 0 20px;
+  width: 20px !important;
+  height: 20px !important;
 }
 .attachment-heading .attachment-icon-button {
   display: grid;
   place-items: center;
-  flex: 0 0 34px !important;
-  width: 34px !important;
-  min-width: 34px !important;
-  height: 34px !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
   padding: 0 !important;
+}
+@media (max-width: 640px) {
+  .task-title-row { gap: 8px; }
 }
 
 /* In the toolbar, the filter container is the control border; avoid a second nested border. */

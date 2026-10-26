@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.14">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.1">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.2">
 </head>
 <body>
   <div class="app-shell">
@@ -377,9 +377,13 @@
           <label class="visually-hidden" for="task-title">Заголовок</label>
           <input id="task-title" class="text-field title-field" maxlength="200" required hidden>
           <span id="panel-task-reference" class="task-title-reference" aria-label="Номер задачи"></span>
-          <button id="focus-task" class="icon-button task-header-action focus-task-action" type="button" aria-label="Добавить задачу в фокус" title="Добавить в фокус" aria-pressed="false">◎</button>
+          <button id="focus-task" class="icon-button task-header-action focus-task-action" type="button" aria-label="Добавить задачу в фокус" title="Добавить в фокус" aria-pressed="false">
+            <svg class="task-action-icon" aria-hidden="true" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.1"/><circle cx="10" cy="10" r="3.2"/></svg>
+          </button>
           <div class="task-more-actions">
-            <button id="task-more-toggle" class="icon-button task-header-action" type="button" aria-expanded="false" aria-controls="task-more-menu" aria-label="Другие действия" title="Другие действия">···</button>
+            <button id="task-more-toggle" class="icon-button task-header-action" type="button" aria-expanded="false" aria-controls="task-more-menu" aria-label="Другие действия" title="Другие действия">
+              <svg class="task-action-icon" aria-hidden="true" viewBox="0 0 20 20" width="20" height="20" fill="currentColor"><circle cx="4.5" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/></svg>
+            </button>
             <div id="task-more-menu" class="task-more-menu" hidden>
               <button id="export-task" class="button button-quiet" type="button" title="Экспорт задачи в ZIP вместе с вложениями">↓ Экспорт ZIP</button>
               <button id="archive-task" class="button button-quiet" type="button" hidden>▣ Архивировать задачу</button>
@@ -387,7 +391,9 @@
               <button id="delete-task" class="button button-danger-quiet" type="button">Удалить задачу</button>
             </div>
           </div>
-          <button id="close-panel" class="icon-button task-panel-close" type="button" aria-label="Закрыть панель" title="Закрыть">×</button>
+          <button id="close-panel" class="icon-button task-panel-close" type="button" aria-label="Закрыть панель" title="Закрыть">
+            <svg class="task-action-icon" aria-hidden="true" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5.8 5.8 8.4 8.4M14.2 5.8l-8.4 8.4"/></svg>
+          </button>
         </div>
       </div>
 

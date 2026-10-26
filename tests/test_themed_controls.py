@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.1' in html
+    assert '/static/themed-controls.css?v=0.1.2' in html
     assert '/static/themed-selects.js?v=0.1.0' in html
 
     css_response = client.get("/static/themed-controls.css")
@@ -27,9 +27,14 @@ def test_theme_aware_controls_assets_are_loaded(client):
         ".board-toolbar .filter-box .theme-select-trigger",
         "border-color: transparent;",
         ".task-title-row .task-header-action",
-        "#focus-task::before",
-        "#task-more-toggle::before",
-        "#close-panel::after",
+        ".task-title-row {",
+        "align-items: center;",
+        ".task-title-row .task-title-reference",
+        "height: 36px;",
+        "border: 1.5px solid var(--line-strong) !important;",
+        ".task-title-row #focus-task[aria-pressed=\"true\"]",
+        ".task-title-row .task-action-icon",
+        "width: 20px !important;",
         ".attachment-heading .attachment-icon-button",
     ):
         assert fragment in css

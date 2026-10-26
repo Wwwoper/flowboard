@@ -1,6 +1,31 @@
 from __future__ import annotations
 
 
+def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_rendered(client):
+    html = client.get("/").text
+    assert 'class="board-toolbar" aria-label="Поиск и фильтры"' in html
+    assert html.count('class="toolbar-icon"') == 4
+    assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
+    assert 'aria-label="Создать проект" title="Создать проект"' in html
+    assert "⌘/Ctrl K" not in html
+
+    css = client.get("/static/themed-controls.css").text
+    for selector in (
+        ".board-toolbar > .search-box",
+        ".board-toolbar > .filter-box",
+        ".board-toolbar > .add-project-button",
+        ".board-toolbar > .search-box:focus-within",
+        ".board-toolbar .search-shortcut-keycap",
+        ".board-toolbar .toolbar-icon",
+    ):
+        assert selector in css
+    assert "--toolbar-control-height: 36px" in css
+
+    script = client.get("/static/app.js").text
+    assert 'const shortcutPlatform = navigator.userAgentData?.platform || navigator.platform || "";' in script
+    assert 'els.searchShortcut.textContent = isApplePlatform ? "⌘ K" : "Ctrl K";' in script
+
+
 def test_project_workspace_controls_are_served(client):
     response = client.get("/")
 

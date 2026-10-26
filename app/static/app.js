@@ -97,6 +97,7 @@
     quickTitle: $("#quick-title"),
     quickTaskType: $("#quick-task-type"),
     search: $("#search-input"),
+    searchShortcut: $("#search-shortcut"),
     projectFilter: $("#project-filter"),
     addProject: $("#add-project"),
     tagFilter: $("#tag-filter"),
@@ -194,6 +195,16 @@
     archiveTask: $("#archive-task"),
     columnOptionsToggles: $$("[data-column-options-toggle]"),
   });
+
+  const shortcutPlatform = navigator.userAgentData?.platform || navigator.platform || "";
+  const isApplePlatform = /mac|iphone|ipad|ipod/i.test(shortcutPlatform);
+  if (els.searchShortcut) {
+    els.searchShortcut.textContent = isApplePlatform ? "⌘ K" : "Ctrl K";
+    els.searchShortcut.setAttribute(
+      "aria-label",
+      isApplePlatform ? "Поиск — Command K" : "Поиск — Control K",
+    );
+  }
 
   function applyTheme(theme, persist = false) {
     const normalizedTheme = theme === "dark" ? "dark" : "light";

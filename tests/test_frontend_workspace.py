@@ -17,7 +17,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.16" in html
+    assert "/static/app.js?v=0.5.17" in html
     assert "/static/style.css?v=0.5.12" in html
 
 
@@ -32,6 +32,11 @@ def test_frontend_includes_project_search_undo_focus_and_density_behaviors(clien
     assert '.replace(/ё/g, "е")' in script
     assert 'function restoreDeletedTask(snapshot, files, wasFocused)' in script
     assert 'function handleFocusDone()' in script
+    assert 'function syncFocusedTask()' in script
+    assert 'syncFocusedTask();' in script
+    assert 'if (!task || task.status === "done")' in script
+    assert 'const wasFocused = state.focusTaskId === taskId;' in script
+    assert 'if (wasFocused && previousState.status !== "done") setFocusedTask(taskId);' in script
     assert 'function applyDensity(density, persist = false)' in script
     assert 'event.key === "/"' in script
     assert 'event.key.toLocaleLowerCase("en") === "p"' in script
@@ -138,7 +143,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.16" in html
+    assert "/static/app.js?v=0.5.17" in html
     assert "/static/style.css?v=0.5.12" in html
 
     script = client.get("/static/app.js").text
@@ -264,7 +269,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.16" in html
+    assert "/static/app.js?v=0.5.17" in html
     assert "/static/style.css?v=0.5.12" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html

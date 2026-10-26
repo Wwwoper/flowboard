@@ -623,7 +623,16 @@
     return sorted;
   }
 
+  function syncFocusedTask() {
+    if (state.focusTaskId === null) return;
+    const focusedTask = state.tasks.find((item) => item.id === state.focusTaskId);
+    if (focusedTask && focusedTask.status !== "done") return;
+    state.focusTaskId = null;
+    writeStorage("flowboard-focus-task", "");
+  }
+
   function renderBoard() {
+    syncFocusedTask();
     const visibleTasks = state.tasks.filter(matchesFilters);
     const doingCount = state.tasks.filter((task) => task.status === "doing").length;
 
@@ -672,7 +681,7 @@
 
   function renderFocusBar() {
     const task = state.tasks.find((item) => item.id === state.focusTaskId);
-    if (!task) {
+    if (!task || task.status === "done") {
       if (state.focusTaskId !== null) {
         state.focusTaskId = null;
         writeStorage("flowboard-focus-task", "");
@@ -1648,6 +1657,7 @@
     try {
       const taskId = Number(item.dataset.taskId);
       const previousState = state.dragOrigin || state.tasks.find((task) => task.id === taskId);
+      const wasFocused = state.focusTaskId === taskId;
       const changes = { status: list.dataset.status };
       if (sameColumn || state.columnPreferences[list.dataset.status].sort === "manual") {
         changes.position = position;
@@ -1655,7 +1665,10 @@
       await api(`/api/tasks/${taskId}`, { method: "PATCH", body: changes });
       await loadTasks();
       if (previousState) {
-        toast("Положение задачи изменено", "success", "Отменить", () => restoreTaskState(taskId, previousState));
+        toast("Положение задачи изменено", "success", "Отменить", async () => {
+          await restoreTaskState(taskId, previousState);
+          if (wasFocused && previousState.status !== "done") setFocusedTask(taskId);
+        });
       }
       state.dragOrigin = null;
     } catch (error) {

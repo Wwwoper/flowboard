@@ -2029,19 +2029,43 @@
     }
   }
 
+  function toggleDescriptionChecklistItem(input) {
+    if (!state.previewVisible || !state.selectedTask) return;
+    const lineNumber = Number(input.dataset.taskCheckbox);
+    if (!Number.isInteger(lineNumber) || lineNumber < 0) return;
+    const lines = els.taskDescription.value.split("\n");
+    const line = lines[lineNumber];
+    const match = typeof line === "string"
+      ? line.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/)
+      : null;
+    if (!match) {
+      void requestMarkdownPreview();
+      return;
+    }
+    lines[lineNumber] = `${match[1]}[${input.checked ? "x" : " "}]${line.slice(match[0].length)}`;
+    els.taskDescription.value = lines.join("\n");
+    input.setAttribute("aria-label", input.checked ? "Снять отметку" : "Отметить пункт списка");
+    void requestMarkdownPreview();
+    scheduleTaskDraftSave(0);
+  }
+
   els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
   els.togglePreview.addEventListener("click", () => {
     void setDescriptionEditing(state.previewVisible);
   });
   els.descriptionPreview.addEventListener("click", (event) => {
-    if (!state.previewVisible || event.target.closest("a, button")) return;
+    if (!state.previewVisible || event.target.closest("input[data-task-checkbox], a, button")) return;
     void setDescriptionEditing(true);
   });
   els.descriptionPreview.addEventListener("keydown", (event) => {
     if (!state.previewVisible || !["Enter", " "].includes(event.key)) return;
-    if (event.target.closest("a, button")) return;
+    if (event.target.closest("input[data-task-checkbox], a, button")) return;
     event.preventDefault();
     void setDescriptionEditing(true);
+  });
+  els.descriptionPreview.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("input[data-task-checkbox]");
+    if (checkbox) toggleDescriptionChecklistItem(checkbox);
   });
   els.taskDescription.addEventListener("input", () => {
     if (state.previewVisible) requestMarkdownPreview();

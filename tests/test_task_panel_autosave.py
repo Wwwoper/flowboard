@@ -52,3 +52,11 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     )
     assert 'toast("Описание скопировано")' in script
     assert 'toast("Не удалось скопировать описание.' in script
+
+
+def test_task_description_checklists_toggle_without_entering_edit_mode(client):
+    script = client.get("/static/app.js").text
+    assert "function toggleDescriptionChecklistItem(input)" in script
+    assert 'els.descriptionPreview.addEventListener("change"' in script
+    assert 'input[data-task-checkbox], a, button' in script
+    assert "scheduleTaskDraftSave(0)" in script

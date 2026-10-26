@@ -79,6 +79,29 @@ def test_safe_markdown_preview_escapes_html(client):
     assert "alert('xss')" not in html or "&lt;script&gt;" in html
 
 
+def test_safe_markdown_preview_renders_interactive_checklists_safely(client):
+    response = client.post(
+        "/api/preview-markdown",
+        json={
+            "text": (
+                "## Checklist\n- [x] Complete **first**\n- [ ] Pending\n"
+                "  - [ ] Nested\n\n```markdown\n- [ ] code example\n```\n\n"
+                '<input type="checkbox" checked>\n<script>alert(\'xss\')</script>'
+            )
+        },
+    )
+    assert response.status_code == 200
+    html = response.json()["html"]
+    assert html.count("<input") == 3
+    assert 'data-task-checkbox="1"' in html
+    assert 'data-task-checkbox="2"' in html
+    assert 'data-task-checkbox="3"' in html
+    assert "checked" in html
+    assert "<strong>first</strong>" in html
+    assert '<input type="checkbox" checked>' not in html
+    assert "<script>" not in html
+
+
 def test_task_api_responses_disable_browser_caching(client):
     created = create_task(client, "Fresh task")
 
@@ -93,7 +116,7 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.17" in response.text
+    assert "/static/app.js?v=0.5.18" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):

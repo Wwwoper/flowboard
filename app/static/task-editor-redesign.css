@@ -615,3 +615,77 @@
   .task-panel .task-title-pencil { transition: none; }
   .task-panel .tag-choice { transition: none; }
 }
+
+/* Keep task-panel copy and attachment controls consistent with their neighbors. */
+.task-panel .description-actions .inline-edit-button {
+  display: inline-grid;
+  flex: 0 0 36px;
+  place-items: center;
+  box-sizing: border-box;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  opacity: 1;
+}
+.task-panel .description-actions .inline-edit-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.task-panel .attachment-section { min-width: 0; }
+.task-panel .attachment-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.task-panel .attachment-heading-title {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.task-panel .attachment-heading .attachment-icon-button {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px !important;
+  box-sizing: border-box;
+  width: auto !important;
+  min-width: 96px !important;
+  max-width: 100% !important;
+  height: 36px !important;
+  margin-left: auto;
+  padding: 0 10px !important;
+  white-space: nowrap;
+}
+.task-panel .attachment-heading .attachment-icon-button svg {
+  display: block;
+  flex: 0 0 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+.task-panel .attachment-heading .attachment-icon-label {
+  display: inline-block;
+  flex: 0 1 auto;
+  line-height: 1;
+  white-space: nowrap;
+}
+@media (max-width: 360px) {
+  .task-panel .attachment-heading .attachment-icon-button {
+    min-width: 0 !important;
+    gap: 5px !important;
+    padding: 0 8px !important;
+  }
+  .task-panel .attachment-heading .attachment-icon-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

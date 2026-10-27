@@ -2133,8 +2133,8 @@
     els.copyDescription.title = "Описание скопировано";
     copyFeedbackTimer = window.setTimeout(() => {
       els.copyDescription.classList.remove("is-copied");
-      els.copyDescription.setAttribute("aria-label", "Копировать описание");
-      els.copyDescription.title = "Копировать описание";
+      els.copyDescription.setAttribute("aria-label", "Копировать");
+      els.copyDescription.title = "Копировать";
       copyFeedbackTimer = null;
     }, 1200);
   }
@@ -2849,6 +2849,9 @@
   }
   els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
   els.toggleAttachmentUpload.title = "Добавить вложение или перетащить файлы";
+
+  els.copyDescription.setAttribute("aria-label", "Копировать");
+  els.copyDescription.title = "Копировать";
 
   const openTaskPanelBeforeRedesign = openTaskPanel;
   openTaskPanel = async function openTaskPanelWithAccessibleReference(taskId) {

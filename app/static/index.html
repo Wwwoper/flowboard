@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.17">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.18">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.8">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.1.0">
@@ -156,11 +156,11 @@
             <span class="column-marker marker-todo"></span>
             <h2>К выполнению</h2>
             <span class="column-count" id="count-todo">0</span>
-            <button class="column-add" data-add-status="todo" type="button" title="Добавить задачу">＋</button>
+            <button class="column-add" data-add-status="todo" type="button" aria-label="Добавить задачу в колонку «К выполнению»" title="Добавить задачу в колонку «К выполнению»">＋</button>
           </header>
           <div class="column-options" data-column-options="todo">
             <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
-                    aria-label="Фильтр и сортировка колонки: todo" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+                    aria-label="Фильтр и сортировка задач: К выполнению" aria-expanded="false" title="Фильтр и сортировка задач: К выполнению">☷</button>
             <div class="column-options-popover" data-column-options-panel="todo" hidden>
               <label><span>Фильтр по тегу / типу</span>
                 <select data-column-filter="todo" aria-label="Фильтр по тегу и типу"></select>
@@ -189,11 +189,11 @@
             <span class="column-marker marker-doing"></span>
             <h2>В работе</h2>
             <span class="column-count" id="count-doing">0</span>
-            <button class="column-add" data-add-status="doing" type="button" title="Добавить задачу">＋</button>
+            <button class="column-add" data-add-status="doing" type="button" aria-label="Добавить задачу в колонку «В работе»" title="Добавить задачу в колонку «В работе»">＋</button>
           </header>
           <div class="column-options" data-column-options="doing">
             <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
-                    aria-label="Фильтр и сортировка колонки: doing" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+                    aria-label="Фильтр и сортировка задач: В работе" aria-expanded="false" title="Фильтр и сортировка задач: В работе">☷</button>
             <div class="column-options-popover" data-column-options-panel="doing" hidden>
               <label><span>Фильтр по тегу / типу</span>
                 <select data-column-filter="doing" aria-label="Фильтр по тегу и типу"></select>
@@ -223,11 +223,11 @@
             <span class="column-marker marker-waiting"></span>
             <h2>Ожидает</h2>
             <span class="column-count" id="count-waiting">0</span>
-            <button class="column-add" data-add-status="waiting" type="button" title="Добавить задачу">＋</button>
+            <button class="column-add" data-add-status="waiting" type="button" aria-label="Добавить задачу в колонку «Ожидает»" title="Добавить задачу в колонку «Ожидает»">＋</button>
           </header>
           <div class="column-options" data-column-options="waiting">
             <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
-                    aria-label="Фильтр и сортировка колонки: waiting" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+                    aria-label="Фильтр и сортировка задач: Ожидает" aria-expanded="false" title="Фильтр и сортировка задач: Ожидает">☷</button>
             <div class="column-options-popover" data-column-options-panel="waiting" hidden>
               <label><span>Фильтр по тегу / типу</span>
                 <select data-column-filter="waiting" aria-label="Фильтр по тегу и типу"></select>
@@ -260,7 +260,7 @@
           </header>
           <div class="column-options" data-column-options="done">
             <button class="column-options-toggle" type="button" data-column-options-toggle="done"
-                    aria-label="Фильтр и сортировка колонки: done" aria-expanded="false" title="Фильтр и сортировка">☷</button>
+                    aria-label="Фильтр и сортировка задач: Готово" aria-expanded="false" title="Фильтр и сортировка задач: Готово">☷</button>
             <div class="column-options-popover" data-column-options-panel="done" hidden>
               <label><span>Фильтр по тегу / типу</span>
                 <select data-column-filter="done" aria-label="Фильтр по тегу и типу"></select>

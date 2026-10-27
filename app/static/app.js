@@ -527,20 +527,26 @@
     top.appendChild(make("span", "task-open-hint", "↗"));
     card.appendChild(top);
 
-    const metadata = make("div", "task-card-meta");
-    const projectChip = make("span", `task-project-chip${project ? "" : " task-project-chip-empty"}`);
-    const projectMark = make("span", "task-project-mark");
-    if (project) projectMark.style.backgroundColor = projectAccent(project);
-    projectChip.appendChild(projectMark);
-    projectChip.appendChild(make("span", "task-project-name", project ? projectLabel(project) : "Без проекта"));
-    metadata.appendChild(projectChip);
-    if (typeTag) {
-      metadata.appendChild(make("span", `task-type-chip task-type-${typeTag.toLowerCase()}`, TASK_TYPE_LABELS[typeTag.toLowerCase()]));
-    }
-    card.appendChild(metadata);
-
+    // The title leads; the short description provides meaning before metadata.
     const excerpt = taskDescriptionExcerpt(task.description);
     if (excerpt) card.appendChild(make("p", "task-card-excerpt", excerpt));
+
+    // Do not render an empty metadata row or a placeholder for a missing project.
+    if (project || typeTag) {
+      const metadata = make("div", "task-card-meta");
+      if (project) {
+        const projectChip = make("span", "task-project-chip");
+        const projectMark = make("span", "task-project-mark");
+        projectMark.style.backgroundColor = projectAccent(project);
+        projectChip.appendChild(projectMark);
+        projectChip.appendChild(make("span", "task-project-name", projectLabel(project)));
+        metadata.appendChild(projectChip);
+      }
+      if (typeTag) {
+        metadata.appendChild(make("span", `task-type-chip task-type-${typeTag.toLowerCase()}`, TASK_TYPE_LABELS[typeTag.toLowerCase()]));
+      }
+      card.appendChild(metadata);
+    }
 
     if (hiddenTags.length) {
       const tagRow = make("div", "task-tags");
@@ -550,14 +556,14 @@
     }
 
     const footer = make("div", "task-card-footer");
-    const metrics = make("span", "task-card-metrics");
+    footer.appendChild(make("time", "task-updated", formatDate(task.updated_at)));
     if (task.attachments_count) {
+      const metrics = make("span", "task-card-metrics");
       const attachment = make("span", "attachment-mini", `↗ ${task.attachments_count}`);
       attachment.setAttribute("aria-label", `Вложений: ${task.attachments_count}`);
       metrics.appendChild(attachment);
+      footer.appendChild(metrics);
     }
-    footer.appendChild(metrics);
-    footer.appendChild(make("time", "task-updated", formatDate(task.updated_at)));
     card.appendChild(footer);
     card.addEventListener("click", (event) => {
       if (event.target.closest("button, a")) return;

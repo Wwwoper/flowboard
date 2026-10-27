@@ -2574,5 +2574,291 @@
     }
   });
   initializeSortables();
+  /* Task editor refresh: grouped tags, consistent controls, and a persistent footer. */
+  const taskPanelContent = make("div", "task-form-content");
+  const taskPanelFooter = make("div", "task-panel-footer");
+  const taskPanelFooterNodes = new Set([els.taskMeta, els.taskAutosaveStatus]);
+  Array.from(els.taskForm.children).forEach((child) => {
+    (taskPanelFooterNodes.has(child) ? taskPanelFooter : taskPanelContent).appendChild(child);
+  });
+  els.taskForm.replaceChildren(taskPanelContent, taskPanelFooter);
+
+  // Keep editor controls in one lightweight outline-icon style.
+  const taskPanelIconNamespace = "http://www.w3.org/2000/svg";
+  function createTaskPanelIcon(paths, size = 17) {
+    const svg = document.createElementNS(taskPanelIconNamespace, "svg");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("width", String(size));
+    svg.setAttribute("height", String(size));
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.65");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    paths.forEach((data) => {
+      const path = document.createElementNS(taskPanelIconNamespace, "path");
+      path.setAttribute("d", data);
+      svg.appendChild(path);
+    });
+    return svg;
+  }
+
+  // The reference badge is informative, not a second button.
+  els.taskTitleReference.setAttribute("role", "note");
+  const taskTitlePencil = $(".task-title-pencil", els.taskTitleDisplay);
+  if (taskTitlePencil) {
+    taskTitlePencil.replaceChildren(createTaskPanelIcon([
+      "m4 14.8-.7 2.8 2.8-.7 9.8-9.8a1.8 1.8 0 0 0-2.6-2.6Z",
+      "m12.1 5.6 2.6 2.6",
+    ], 15));
+  }
+  const taskMoreIcon = $(".task-action-icon", els.taskMoreToggle);
+  if (taskMoreIcon) {
+    taskMoreIcon.replaceWith(createTaskPanelIcon(["M4 10h.01M10 10h.01M16 10h.01"], 17));
+    $("svg", els.taskMoreToggle).setAttribute("stroke-width", "2.8");
+  }
+  if (!$("svg", els.togglePreview)) {
+    els.togglePreview.replaceChildren(createTaskPanelIcon([
+      "m4 14.8-.7 2.8 2.8-.7 9.8-9.8a1.8 1.8 0 0 0-2.6-2.6Z",
+      "m12.1 5.6 2.6 2.6",
+    ], 16));
+  }
+
+  const taskTagError = make("p", "task-tag-error");
+  taskTagError.id = "task-tag-error";
+  taskTagError.setAttribute("role", "alert");
+  taskTagError.setAttribute("aria-live", "polite");
+  taskTagError.hidden = true;
+  els.taskTagInput.setAttribute("aria-describedby", taskTagError.id);
+  els.taskTagInput.setAttribute("aria-invalid", "false");
+  els.taskTagList.classList.remove("tag-choice-list");
+  els.taskTagList.classList.add("tag-choice-groups");
+  els.taskTagList.setAttribute("aria-label", "Тип, проект и теги задачи");
+  els.taskTagCreateRow.hidden = false;
+  els.taskTagCustomToggle.hidden = true;
+
+  function setTaskTagError(message) {
+    taskTagError.textContent = message;
+    taskTagError.hidden = !message;
+    els.taskTagInput.setAttribute("aria-invalid", String(Boolean(message)));
+  }
+
+  tagChoiceDetails = function tagChoiceDetailsForGroupedEditor(value) {
+    const tag = String(value || "").trim();
+    const normalized = tag.toLocaleLowerCase("ru");
+    if (Object.hasOwn(TASK_TYPE_LABELS, normalized)) {
+      return { value: normalized, label: TASK_TYPE_LABELS[normalized], kind: "type" };
+    }
+    const project = projectFromTag(tag);
+    if (project) {
+      return { value: projectTag(project), label: projectLabel(project), kind: "project" };
+    }
+    return { value: tag, label: tag, kind: "custom" };
+  };
+
+  availableTaskTagChoices = function availableTaskTagChoicesGrouped() {
+    const choices = new Map();
+    const addChoice = (value) => {
+      const detail = tagChoiceDetails(value);
+      if (!detail.value) return;
+      const key = detail.value.toLocaleLowerCase("ru");
+      if (!choices.has(key)) choices.set(key, detail);
+    };
+
+    Object.keys(TASK_TYPE_LABELS).forEach(addChoice);
+    const archived = typeof archivedProjectSlugs === "undefined"
+      ? new Set()
+      : new Set(archivedProjectSlugs);
+    state.projects.filter((slug) => !archived.has(slug)).forEach((slug) => addChoice(projectTag(slug)));
+    const currentTags = editableTaskTags();
+    state.tasks.flatMap(taskTags).forEach((tag) => {
+      const detail = tagChoiceDetails(tag);
+      const project = projectFromTag(tag);
+      if (detail.kind === "project" && archived.has(project)
+        && !currentTags.some((currentTag) => projectFromTag(currentTag) === project)) return;
+      addChoice(tag);
+    });
+    currentTags.forEach(addChoice);
+
+    const kindOrder = { type: 0, project: 1, custom: 2 };
+    const typeOrder = Object.keys(TASK_TYPE_LABELS);
+    return [...choices.values()].sort((a, b) => {
+      if (kindOrder[a.kind] !== kindOrder[b.kind]) return kindOrder[a.kind] - kindOrder[b.kind];
+      if (a.kind === "type") return typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value);
+      return a.label.localeCompare(b.label, "ru");
+    });
+  };
+
+  renderTaskTagEditor = function renderGroupedTaskTagEditor() {
+    const tags = editableTaskTags();
+    const selected = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
+    const choices = availableTaskTagChoices();
+    const groupDefinitions = [
+      { kind: "type", label: "Тип" },
+      { kind: "project", label: "Проект" },
+      { kind: "custom", label: "Теги" },
+    ];
+    els.taskTags.value = tags.join(", ");
+    els.taskTagList.replaceChildren();
+
+    groupDefinitions.forEach((definition) => {
+      const group = make("section", `tag-choice-group tag-choice-group-${definition.kind}`);
+      const heading = make("h4", "tag-choice-group-heading", definition.label);
+      const list = make("div", "tag-choice-list");
+      list.setAttribute("role", "group");
+      list.setAttribute("aria-label", definition.kind === "project" ? "Проект, можно выбрать один" : definition.label);
+      const groupChoices = choices.filter((choice) => choice.kind === definition.kind);
+
+      groupChoices.forEach((choice) => {
+        const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
+        const noun = definition.kind === "project" ? "проект" : definition.kind === "type" ? "тип" : "тег";
+        const option = make("button", `tag-choice tag-choice-${choice.kind}${choice.kind === "type" ? ` tag-choice-${choice.value}` : ""}`, choice.label);
+        option.type = "button";
+        option.dataset.tag = choice.value;
+        option.setAttribute("aria-pressed", String(isSelected));
+        option.setAttribute("aria-label", `${isSelected ? "Снять выбор" : "Выбрать"}: ${noun} ${choice.label}`);
+        option.title = `${isSelected ? "Снять выбор" : "Выбрать"}: ${choice.label}`;
+        option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
+        list.appendChild(option);
+      });
+
+      if (!groupChoices.length && definition.kind === "project") {
+        list.appendChild(make("p", "tag-choice-empty", "Активных проектов пока нет."));
+      }
+      if (definition.kind === "custom") {
+        list.appendChild(els.taskTagCreateRow);
+        group.append(heading, list, taskTagError);
+      } else {
+        group.append(heading, list);
+      }
+      els.taskTagList.appendChild(group);
+    });
+    els.taskTagCustomToggle.hidden = true;
+    els.taskTagCreateRow.hidden = false;
+  };
+
+  toggleTaskTagChoice = function toggleGroupedTaskTagChoice(value) {
+    const detail = tagChoiceDetails(value);
+    const tags = editableTaskTags();
+    const normalized = detail.value.toLocaleLowerCase("ru");
+
+    if (detail.kind === "project") {
+      const alreadySelected = tags.some((tag) => {
+        const current = tagChoiceDetails(tag);
+        return current.kind === "project" && current.value.toLocaleLowerCase("ru") === normalized;
+      });
+      const nextTags = tags.filter((tag) => tagChoiceDetails(tag).kind !== "project");
+      if (!alreadySelected) nextTags.push(detail.value);
+      tags.splice(0, tags.length, ...nextTags);
+    } else {
+      const existingIndex = tags.findIndex((tag) => tag.toLocaleLowerCase("ru") === normalized);
+      if (existingIndex >= 0) tags.splice(existingIndex, 1);
+      else tags.push(detail.value);
+    }
+
+    const combined = tags.join(", ");
+    if (combined.length > 1000) {
+      toast("Список тегов не должен превышать 1000 символов", "error");
+      return;
+    }
+    setTaskTagError("");
+    els.taskTags.value = combined;
+    renderTaskTagEditor();
+    scheduleTaskDraftSave();
+  };
+
+  addTaskTags = function addTaskTagsWithValidation(value = els.taskTagInput.value) {
+    const incoming = String(value ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
+    if (!incoming.length) {
+      setTaskTagError("Введите название тега.");
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (incoming.some((tag) => projectFromTag(tag))) {
+      setTaskTagError("Проект выбирается в группе «Проект», а не добавляется как обычный тег.");
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
+
+    const existing = editableTaskTags();
+    const existingValues = new Set(existing.map((tag) => tag.toLocaleLowerCase("ru")));
+    const duplicate = incoming.find((tag, index) => {
+      const normalized = tag.toLocaleLowerCase("ru");
+      return existingValues.has(normalized)
+        || incoming.slice(0, index).some((previous) => previous.toLocaleLowerCase("ru") === normalized);
+    });
+    if (duplicate) {
+      setTaskTagError(`Тег «${duplicate}» уже добавлен.`);
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
+
+    const combined = [...existing, ...incoming].join(", ");
+    if (combined.length > 1000) {
+      setTaskTagError("Список тегов не должен превышать 1000 символов.");
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
+
+    setTaskTagError("");
+    els.taskTags.value = combined;
+    els.taskTagInput.value = "";
+    renderTaskTagEditor();
+    scheduleTaskDraftSave();
+    els.taskTagInput.focus({ preventScroll: true });
+  };
+
+  els.taskTagInput.addEventListener("input", () => setTaskTagError(""));
+
+  function updateDescriptionActionIcon(isEditing = !state.previewVisible) {
+    const icon = isEditing
+      ? ["M3.5 10.5 8 15l8.5-9"]
+      : [
+        "m4 14.8-.7 2.8 2.8-.7 9.8-9.8a1.8 1.8 0 0 0-2.6-2.6Z",
+        "m12.1 5.6 2.6 2.6",
+      ];
+    els.togglePreview.replaceChildren(createTaskPanelIcon(icon, 16));
+  }
+
+  const setDescriptionEditingBeforeRedesign = setDescriptionEditing;
+  setDescriptionEditing = async function setDescriptionEditingWithStableIcon(editing) {
+    await setDescriptionEditingBeforeRedesign(editing);
+    updateDescriptionActionIcon();
+  };
+
+  const closePanelBeforeRedesign = closePanel;
+  closePanel = function closePanelWithStableEditorIcon() {
+    closePanelBeforeRedesign();
+    updateDescriptionActionIcon(false);
+  };
+
+  const renderAttachmentsBeforeRedesign = renderAttachments;
+  renderAttachments = function renderAttachmentsWithClearEmptyState(attachments) {
+    renderAttachmentsBeforeRedesign(attachments);
+    const emptyState = $(".attachment-empty", els.attachmentList);
+    if (emptyState) {
+      emptyState.textContent = "Пока нет вложений. Нажмите «Добавить» или перетащите файлы сюда. Изображение можно вставить из буфера обмена: ⌘/Ctrl+V.";
+    }
+  };
+
+  const attachmentUploadLabel = make("span", "attachment-icon-label", "Добавить");
+  if (!$(".attachment-icon-label", els.toggleAttachmentUpload)) {
+    els.toggleAttachmentUpload.appendChild(attachmentUploadLabel);
+  }
+  els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
+  els.toggleAttachmentUpload.title = "Добавить вложение или перетащить файлы";
+
+  const openTaskPanelBeforeRedesign = openTaskPanel;
+  openTaskPanel = async function openTaskPanelWithAccessibleReference(taskId) {
+    await openTaskPanelBeforeRedesign(taskId);
+    const actualId = state.selectedTask?.id;
+    updateDescriptionActionIcon();
+    if (actualId !== undefined && String(actualId) === String(taskId)) {
+      els.taskTitleReference.setAttribute("aria-label", `Номер задачи ${actualId}`);
+      els.taskTitleReference.title = `Номер задачи ${actualId}`;
+    }
+  };
   initialize();
 })();

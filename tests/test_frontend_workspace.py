@@ -7,7 +7,9 @@ def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_ren
     assert html.count('class="toolbar-icon"') == 4
     assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
     assert 'aria-label="Создать проект" title="Создать проект"' in html
-    assert "⌘/Ctrl K" not in html
+    toolbar_html, _, shortcuts_html = html.partition('<dialog id="shortcuts-dialog"')
+    assert "⌘/Ctrl K" not in toolbar_html
+    assert "⌘/Ctrl K" in shortcuts_html
 
     css = client.get("/static/themed-controls.css").text
     for selector in (
@@ -314,10 +316,11 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
         'api("/api/archive/settings")',
         'api("/api/archive/completed", { method: "POST" })',
         'api(`/api/archive/tasks/${taskId}/restore`, { method: "POST" })',
-        'els.toggleDone.setAttribute("aria-label", "Показать остальные завершённые задачи")',
-        'els.toggleDone.setAttribute("aria-label", "Свернуть список завершённых задач")',
-        'els.toggleDone.setAttribute("aria-expanded", "false")',
-        'els.toggleDone.setAttribute("aria-expanded", "true")',
+        'const label = isExpanded',
+        '? "Свернуть список завершённых задач"',
+        '"Показать остальные завершённые задачи"',
+        'els.toggleDone.setAttribute("aria-label", label)',
+        'els.toggleDone.setAttribute("aria-expanded", String(isExpanded))',
     ):
         assert fragment in script
 

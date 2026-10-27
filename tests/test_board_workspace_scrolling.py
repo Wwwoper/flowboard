@@ -19,7 +19,9 @@ def test_board_workspace_uses_desktop_list_scrolling_and_drag_autoscroll(client)
     assert "const sortablesByList = new WeakMap();" in dragdrop
     assert "function findColumnAtPoint(board, clientX, clientY)" in dragdrop
     assert 'board.addEventListener("dragover", onDragOver);' in dragdrop
-    assert 'const targetList = column.querySelector(".task-list");' in dragdrop
+    assert 'const list = column.querySelector(".task-list");' in dragdrop
+    assert "function findColumnAtPoint(board, clientX, clientY)" in dragdrop
+    assert "const destination = findColumnAtPoint(board, event.clientX, event.clientY);" in dragdrop
     assert 'event.target.closest(".board-column")' not in dragdrop
 
 

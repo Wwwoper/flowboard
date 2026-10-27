@@ -488,7 +488,14 @@
     docs: "Документация",
     refactor: "Рефакторинг",
   };
-  const PROJECT_ACCENTS = ["#6975e8", "#239b8a", "#bd8242", "#a16ac8", "#477fbb", "#c56579"];
+  const PROJECT_ACCENT_KEYS = [
+    "--project-accent-1",
+    "--project-accent-2",
+    "--project-accent-3",
+    "--project-accent-4",
+    "--project-accent-5",
+    "--project-accent-6",
+  ];
 
   function setQuickTaskType(type) {
     const normalizedType = String(type || "").toLowerCase();
@@ -532,7 +539,8 @@
   function projectAccent(slug) {
     let hash = 0;
     for (const char of String(slug || "")) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-    return PROJECT_ACCENTS[hash % PROJECT_ACCENTS.length];
+    const key = PROJECT_ACCENT_KEYS[hash % PROJECT_ACCENT_KEYS.length];
+    return getComputedStyle(document.documentElement).getPropertyValue(key).trim() || "var(--line-strong)";
   }
 
   function makeTaskCard(task) {

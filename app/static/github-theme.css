@@ -17,6 +17,14 @@
   --accent: #0969da;
   --accent-dark: #0550ae;
   --accent-pale: #ddf4ff;
+  --accent-ink: #ffffff;
+  --project-accent-1: #6975e8;
+  --project-accent-2: #239b8a;
+  --project-accent-3: #bd8242;
+  --project-accent-4: #a16ac8;
+  --project-accent-5: #477fbb;
+  --project-accent-6: #c56579;
+  --overlay: #161e35;
   --green: #1f883d;
   --orange: #9a6700;
   --red: #cf222e;
@@ -60,6 +68,14 @@
   --accent: #6cb6ff;
   --accent-dark: #a5d6ff;
   --accent-pale: #102b46;
+  --accent-ink: #0d1117;
+  --project-accent-1: #a4aaff;
+  --project-accent-2: #65d7c3;
+  --project-accent-3: #e3b36f;
+  --project-accent-4: #c69af0;
+  --project-accent-5: #83b8f2;
+  --project-accent-6: #f09aaa;
+  --overlay: #000000;
   --green: #7ee787;
   --orange: #d29922;
   --red: #f47067;
@@ -131,15 +147,15 @@ button:focus-visible,
 }
 
 .button-primary {
-  color: var(--gh-primary-ink);
-  background: var(--gh-primary);
-  border-color: rgba(31, 35, 40, .15);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: transparent;
   box-shadow: none;
 }
 
 .button-primary:hover {
-  color: var(--gh-primary-ink);
-  background: var(--gh-primary-hover);
+  color: var(--accent-ink);
+  background: var(--accent-dark);
 }
 
 .button-danger-quiet {
@@ -312,7 +328,7 @@ kbd {
 
 .task-card:hover {
   border-color: var(--line-strong);
-  box-shadow: 0 2px 5px rgba(31, 35, 40, .08);
+  box-shadow: var(--gh-board-shadow);
   transform: translateY(-1px);
 }
 
@@ -433,7 +449,7 @@ kbd {
 .task-panel {
   color: var(--ink);
   background: var(--surface);
-  box-shadow: -8px 0 28px rgba(31, 35, 40, .16);
+  box-shadow: var(--shadow);
 }
 
 .task-title-display {
@@ -578,6 +594,12 @@ kbd {
   border: 1px solid var(--line);
 }
 
+/* Task type colors keep the same semantic meaning in cards, forms, and archive. */
+.archive-chip.task-type-bug { color: var(--gh-red-fg); background: var(--gh-red-bg); }
+.archive-chip.task-type-feature { color: var(--gh-green-fg); background: var(--gh-green-bg); }
+.archive-chip.task-type-docs { color: var(--gh-yellow-fg); background: var(--gh-yellow-bg); }
+.archive-chip.task-type-refactor { color: var(--gh-purple-fg); background: var(--gh-purple-bg); }
+
 .archive-task-title {
   color: var(--ink);
 }
@@ -590,13 +612,14 @@ kbd {
 
 /* Dark-mode-specific corrections for selectors already defined by the base stylesheet. */
 [data-theme="dark"] .button-primary {
-  color: var(--gh-primary-ink);
-  background: var(--gh-primary);
-  border-color: rgba(240, 246, 252, .1);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: transparent;
 }
 
 [data-theme="dark"] .button-primary:hover {
-  background: var(--gh-primary-hover);
+  color: var(--accent-ink);
+  background: var(--accent-dark);
 }
 
 [data-theme="dark"] .button-quiet:hover {
@@ -613,7 +636,7 @@ kbd {
 
 [data-theme="dark"] .task-card:hover {
   border-color: var(--line-strong);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  box-shadow: var(--gh-board-shadow);
 }
 
 [data-theme="dark"] .task-project-chip,
@@ -635,7 +658,7 @@ kbd {
 }
 
 [data-theme="dark"] .task-panel {
-  box-shadow: -8px 0 28px rgba(0, 0, 0, .4);
+  box-shadow: var(--shadow);
 }
 
 [data-theme="dark"] .markdown-preview pre,

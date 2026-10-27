@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.2' in html
+    assert '/static/themed-controls.css?v=0.1.8' in html
     assert '/static/themed-selects.js?v=0.1.0' in html
 
     css_response = client.get("/static/themed-controls.css")
@@ -14,10 +14,10 @@ def test_theme_aware_controls_assets_are_loaded(client):
         '.quick-type-option[data-task-type="feature"]',
         '.quick-type-option[data-task-type="docs"]',
         '.quick-type-option[data-task-type="refactor"]',
-        'color: var(--gh-red-fg, #a44e58)',
-        'color: var(--gh-green-fg, #267c69)',
-        'color: var(--gh-yellow-fg, #8b672b)',
-        'color: var(--gh-purple-fg, #7654a3)',
+        'color: var(--gh-red-fg, var(--red))',
+        'color: var(--gh-green-fg, var(--green))',
+        'color: var(--gh-yellow-fg, var(--orange))',
+        'color: var(--gh-purple-fg, var(--accent-dark))',
         ".theme-select-trigger",
         ".theme-select-menu[hidden]",
         '.theme-select-option[aria-selected="true"]',

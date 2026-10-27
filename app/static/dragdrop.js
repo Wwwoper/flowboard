@@ -13,13 +13,15 @@
       this.dragged = null;
       this.origin = null;
       this.oldIndex = -1;
+      this.dropSurface = element.closest(".board-column") || element;
       this.onDragStart = this.onDragStart.bind(this);
       this.onDragOver = this.onDragOver.bind(this);
       this.onDrop = this.onDrop.bind(this);
       this.onDragEnd = this.onDragEnd.bind(this);
       element.addEventListener("dragstart", this.onDragStart);
-      element.addEventListener("dragover", this.onDragOver);
-      element.addEventListener("drop", this.onDrop);
+      // Handle drops over the full column, including empty lists and headers.
+      this.dropSurface.addEventListener("dragover", this.onDragOver);
+      this.dropSurface.addEventListener("drop", this.onDrop);
       element.addEventListener("dragend", this.onDragEnd);
     }
 
@@ -52,18 +54,21 @@
     onDragOver(event) {
       const item = window.__flowboardDragging;
       if (!item) return;
-      const targetList = event.target.closest(".task-list");
-      if (!targetList || !document.body.contains(targetList)) return;
+      const targetColumn = event.target.closest(".board-column");
+      if (!targetColumn || targetColumn !== this.dropSurface) return;
+      const targetList = event.target.closest(".task-list") || this.element;
+      if (!this.dropSurface.contains(targetList) || !document.body.contains(targetList)) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       document.querySelectorAll(".board-column.is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
-      const column = targetList.closest(".board-column");
-      if (column) column.classList.add("is-drop-target");
+      targetColumn.classList.add("is-drop-target");
 
       // Scroll the destination list while dragging near its edges. This is
       // needed for predictable auto-scroll with native HTML5 drag-and-drop.
-      if (targetList.scrollHeight > targetList.clientHeight + 1) {
-        const rect = targetList.getBoundingClientRect();
+      const listRect = targetList.getBoundingClientRect();
+      const pointerWithinList = event.clientY >= listRect.top && event.clientY <= listRect.bottom;
+      if (pointerWithinList && targetList.scrollHeight > targetList.clientHeight + 1) {
+        const rect = listRect;
         const edgeThreshold = Math.min(56, Math.max(24, targetList.clientHeight * 0.12));
         const distanceFromTop = event.clientY - rect.top;
         const distanceFromBottom = rect.bottom - event.clientY;
@@ -95,8 +100,10 @@
 
     onDrop(event) {
       if (!window.__flowboardDragging) return;
-      const targetList = event.target.closest(".task-list");
-      if (!targetList) return;
+      const targetColumn = event.target.closest(".board-column");
+      if (!targetColumn || targetColumn !== this.dropSurface) return;
+      const targetList = event.target.closest(".task-list") || this.element;
+      if (!this.dropSurface.contains(targetList) || !document.body.contains(targetList)) return;
       event.preventDefault();
       const item = window.__flowboardDragging;
       // The drop event bubbles through the destination list, not the source list.
@@ -125,8 +132,8 @@
 
     destroy() {
       this.element.removeEventListener("dragstart", this.onDragStart);
-      this.element.removeEventListener("dragover", this.onDragOver);
-      this.element.removeEventListener("drop", this.onDrop);
+      this.dropSurface.removeEventListener("dragover", this.onDragOver);
+      this.dropSurface.removeEventListener("drop", this.onDrop);
       this.element.removeEventListener("dragend", this.onDragEnd);
     }
   }

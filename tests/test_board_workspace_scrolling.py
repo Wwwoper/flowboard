@@ -1,6 +1,6 @@
 def test_board_workspace_uses_desktop_list_scrolling_and_drag_autoscroll(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.0' in html
+    assert '/static/board-workspace.css?v=0.1.1' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
@@ -21,3 +21,18 @@ def test_board_workspace_uses_desktop_list_scrolling_and_drag_autoscroll(client)
     assert 'board.addEventListener("dragover", onDragOver);' in dragdrop
     assert 'const targetList = column.querySelector(".task-list");' in dragdrop
     assert 'event.target.closest(".board-column")' not in dragdrop
+
+
+
+def test_board_empty_states_are_compact_and_do_not_block_dragging(client):
+    html = client.get("/").text
+    assert html.count("Перетащите сюда задачу, чтобы начать работу") == 3
+    assert 'Пока нет завершённых задач.' in html
+
+    css = client.get("/static/board-workspace.css").text
+    assert ".board-column.is-empty > .task-list" in css
+    assert "min-height: 8px;" in css
+    assert ".board-column.is-empty > .column-empty" in css
+    assert "pointer-events: none;" in css
+    assert "@media (max-width: 1180px)" in css
+    assert css.rstrip().endswith("}")

@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.6">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.1.0">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.0">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.1">
 </head>
 <body>
   <div class="app-shell">
@@ -181,7 +181,7 @@
             </div>
           </div>
           <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
-          <p class="column-empty">Пока пусто. Добавьте первую задачу.</p>
+          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
         </section>
 
         <section class="board-column" data-column="doing">
@@ -215,7 +215,7 @@
           </div>
           <div class="wip-warning" id="wip-warning" hidden>Мягкий лимит: стоит сфокусироваться на текущих задачах</div>
           <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
-          <p class="column-empty">Здесь появятся задачи, над которыми вы работаете.</p>
+          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
         </section>
 
         <section class="board-column" data-column="waiting">
@@ -248,7 +248,7 @@
             </div>
           </div>
           <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
-          <p class="column-empty">Здесь появятся заблокированные или ожидающие задачи.</p>
+          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
         </section>
 
         <section class="board-column board-column-done" data-column="done">

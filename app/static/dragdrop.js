@@ -60,6 +60,25 @@
       const column = targetList.closest(".board-column");
       if (column) column.classList.add("is-drop-target");
 
+      // Scroll the destination list while dragging near its edges. This is
+      // needed for predictable auto-scroll with native HTML5 drag-and-drop.
+      if (targetList.scrollHeight > targetList.clientHeight + 1) {
+        const rect = targetList.getBoundingClientRect();
+        const edgeThreshold = Math.min(56, Math.max(24, targetList.clientHeight * 0.12));
+        const distanceFromTop = event.clientY - rect.top;
+        const distanceFromBottom = rect.bottom - event.clientY;
+        if (distanceFromTop < edgeThreshold && targetList.scrollTop > 0) {
+          const intensity = Math.min(1, (edgeThreshold - distanceFromTop) / edgeThreshold);
+          targetList.scrollTop -= Math.max(4, Math.round(14 * intensity));
+        } else if (
+          distanceFromBottom < edgeThreshold
+          && targetList.scrollTop + targetList.clientHeight < targetList.scrollHeight - 1
+        ) {
+          const intensity = Math.min(1, (edgeThreshold - distanceFromBottom) / edgeThreshold);
+          targetList.scrollTop += Math.max(4, Math.round(14 * intensity));
+        }
+      }
+
       const siblings = Array.from(targetList.querySelectorAll(this.options.draggable || ".task-card"))
         .filter((node) => node !== item);
       let afterNode = null;

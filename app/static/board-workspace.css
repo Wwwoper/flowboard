@@ -1,0 +1,41 @@
+/* Desktop board workspace: keep column headings visible and scroll task lists only. */
+@media (min-width: 1181px) {
+  .board {
+    height: max(260px, calc(100vh - 345px));
+    height: max(260px, calc(100dvh - 345px));
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .board-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .board-column > .column-header,
+  .board-column > .wip-warning {
+    flex: 0 0 auto;
+  }
+
+  .board-column > .task-list {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+
+  /* Empty-state copy stays immediately below the header instead of at the bottom. */
+  .board-column.is-empty > .task-list {
+    flex: 0 0 0;
+    height: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .board-column.is-empty > .column-empty {
+    flex: 0 0 auto;
+    margin-top: 8px;

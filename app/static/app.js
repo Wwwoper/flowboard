@@ -490,12 +490,30 @@
     });
   }
 
-  function taskDescriptionExcerpt(description, limit = 112) {
-    const plainText = String(description || "")
-      .replace(/```[\s\S]*?```/g, " ")
+  function taskDescriptionExcerpt(description, title = "", limit = 112) {
+    const source = String(description || "").replace(/\r\n?/g, "\n");
+    const lines = source.split("\n");
+    const firstLine = lines[0].trim().replace(/^#{1,6}\s+/, "");
+    const duplicateTitle = firstLine.match(/^Задача:\s*(.+?)\s*$/i);
+    const normalizeTitle = (value) => value.replace(/\s+/g, " ").trim().toLocaleLowerCase().replace(/ё/g, "е");
+    if (duplicateTitle && normalizeTitle(duplicateTitle[1]) === normalizeTitle(String(title || ""))) {
+      lines.shift();
+    }
+
+    const plainText = lines.join("\n")
+      // Keep code contents; remove only the Markdown fences around fenced blocks.
+      .replace(/^\s{0,3}(```+|~~~+)[^\n]*$/gm, "")
       .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .replace(/[`*_~>#]/g, "")
+      // Markdown markers are removed only in their syntactic positions.
+      .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+      .replace(/^\s{0,3}>\s?/gm, "")
+      .replace(/^\s{0,3}(?:[-+*]|\d+[.)])\s+/gm, "")
+      .replace(/\*\*(.*?)\*\*/gs, "$1")
+      .replace(/__(.*?)__/gs, "$1")
+      .replace(/\*(.*?)\*/gs, "$1")
+      .replace(/~~(.*?)~~/gs, "$1")
+      .replace(/`([^`]+)`/g, "$1")
       .replace(/\s+/g, " ")
       .trim();
     if (!plainText) return "";
@@ -528,7 +546,7 @@
     card.appendChild(top);
 
     // The title leads; the short description provides meaning before metadata.
-    const excerpt = taskDescriptionExcerpt(task.description);
+    const excerpt = taskDescriptionExcerpt(task.description, task.title);
     if (excerpt) card.appendChild(make("p", "task-card-excerpt", excerpt));
 
     // Do not render an empty metadata row or a placeholder for a missing project.
@@ -808,7 +826,7 @@
       if (metadata.childElementCount) copy.appendChild(metadata);
       const dates = make("p", "archive-item-dates", `Завершена: ${formatDateTime(task.closed_at)} · В архиве: ${formatDateTime(task.archived_at)}`);
       copy.appendChild(dates);
-      if (task.description) copy.appendChild(make("p", "archive-item-excerpt", taskDescriptionExcerpt(task.description, 180)));
+      if (task.description) copy.appendChild(make("p", "archive-item-excerpt", taskDescriptionExcerpt(task.description, task.title, 180)));
       item.appendChild(copy);
       const restore = make("button", "button button-small button-quiet archive-restore", "↶ Восстановить");
       restore.type = "button";

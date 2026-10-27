@@ -38,6 +38,7 @@ def build_markdown_export(
             task_attachments = attachments_by_task.get(task["id"], [])
             metadata: dict[str, Any] = {
                 "title": task["title"],
+                "result": task.get("result") or "",
                 "status": task["status"],
                 "tags": _tags(task["tags"]),
                 "created_at": task["created_at"],
@@ -135,6 +136,7 @@ def build_task_zip_export(
     filenames = [filename for _, filename in export_names]
     metadata: dict[str, Any] = {
         "title": task["title"],
+        "result": task.get("result") or "",
         "status": task["status"],
         "tags": _tags(task["tags"]),
         "created_at": task["created_at"],
@@ -161,7 +163,21 @@ def build_task_zip_export(
     lines.extend(["", "## Описание", "", "<!-- flowboard-description-start -->", ""])
     if description:
         lines.append(description)
-    lines.extend(["", "<!-- flowboard-description-end -->", "", "## Вложения", ""])
+    lines.extend(
+        [
+            "",
+            "<!-- flowboard-description-end -->",
+            "",
+            "## Результат выполнения",
+            "",
+            "<!-- flowboard-result-start -->",
+            "",
+        ]
+    )
+    result = str(task.get("result") or "").strip("\r\n")
+    if result:
+        lines.append(result)
+    lines.extend(["", "<!-- flowboard-result-end -->", "", "## Вложения", ""])
     if filenames:
         for filename in filenames:
             label = filename.replace("\\", "\\\\").replace("[", r"\[").replace("]", r"\]")

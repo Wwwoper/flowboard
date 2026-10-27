@@ -130,6 +130,7 @@
     taskTagCustomToggle: $("#task-tag-custom-toggle"),
     addTaskTag: $("#add-task-tag"),
     taskDescription: $("#task-description"),
+    taskResult: $("#task-result"),
     copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
     togglePreview: $("#toggle-preview"),
@@ -1005,6 +1006,7 @@
       els.taskTagInput.value = "";
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
+      els.taskResult.value = task.result || "";
       els.descriptionPreview.replaceChildren();
       els.descriptionPreview.hidden = false;
       els.taskDescription.hidden = true;
@@ -1061,6 +1063,7 @@
       status: els.taskStatus.value || task?.status || "todo",
       tags: editableTaskTags().join(", "),
       description: els.taskDescription.value,
+      result: els.taskResult.value,
     };
   }
 
@@ -1069,7 +1072,8 @@
       && draft.title === task.title
       && draft.status === task.status
       && normalizedTaskTags(draft.tags) === normalizedTaskTags(task.tags)
-      && draft.description === (task.description || "");
+      && draft.description === (task.description || "")
+      && draft.result === (task.result || "");
   }
 
   function setTaskAutosaveStatus(status, message) {
@@ -1109,6 +1113,7 @@
     const previousDetails = {
       title: task.title,
       description: task.description || "",
+      result: task.result || "",
       tags: task.tags || "",
       status: task.status,
       position: task.position,
@@ -1437,6 +1442,7 @@
       body: {
         title: snapshot.title,
         description: snapshot.description || "",
+        result: snapshot.result || "",
         tags: snapshot.tags || "",
         status: snapshot.status,
         position: snapshot.position,
@@ -1476,6 +1482,7 @@
         status: els.taskStatus.value,
         tags: editableTaskTags().join(", "),
         description: els.taskDescription.value,
+        result: els.taskResult.value,
       };
       const previousTags = String(task.tags || "")
         .split(",")
@@ -1486,7 +1493,8 @@
         current.title !== task.title ||
         current.status !== task.status ||
         current.tags !== previousTags ||
-        current.description !== (task.description || "")
+        current.description !== (task.description || "") ||
+        current.result !== (task.result || "")
       ) {
         await api(`/api/tasks/${task.id}`, {
           method: "PATCH",
@@ -1538,7 +1546,7 @@
   async function restoreDeletedTask(snapshot, files, wasFocused) {
     const created = await api("/api/tasks", {
       method: "POST",
-      body: { title: snapshot.title, description: snapshot.description || "", tags: snapshot.tags || "" },
+      body: { title: snapshot.title, description: snapshot.description || "", result: snapshot.result || "", tags: snapshot.tags || "" },
     });
     try {
       await api(`/api/tasks/${created.id}`, {
@@ -1605,6 +1613,7 @@
       const snapshot = {
         title: currentTask.title,
         description: currentTask.description || "",
+        result: currentTask.result || "",
         tags: currentTask.tags || "",
         status: currentTask.status,
         position: currentTask.position,
@@ -2331,6 +2340,8 @@
     if (state.previewVisible) requestMarkdownPreview();
   });
   els.taskDescription.addEventListener("blur", () => scheduleTaskDraftSave(180));
+  els.taskResult.addEventListener("input", () => scheduleTaskDraftSave(180));
+  els.taskResult.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
 

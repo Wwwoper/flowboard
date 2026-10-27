@@ -132,6 +132,7 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
             "title": "Export just this task",
             "description": "A **Markdown** description.",
             "tags": "project:flowboard, bug, needs-review",
+            "result": "Release published and smoke-tested.",
         },
     ).json()
     attached = client.post(
@@ -176,9 +177,12 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
             f"task-{task['id']} (2).md",
         ]
         assert post.metadata["flowboard_export_format"] == "single-task-v1"
+        assert post.metadata["result"] == "Release published and smoke-tested."
         assert post.content.startswith("# Export just this task\n")
         assert "## Описание" in post.content
         assert "A **Markdown** description." in post.content
+        assert "<!-- flowboard-result-start -->" in post.content
+        assert "Release published and smoke-tested." in post.content
         assert "## Вложения" in post.content
         assert "- [notes.txt](notes.txt)" in post.content
         from app.importer import parse_markdown_file
@@ -187,6 +191,7 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
         assert not skipped
         assert len(imported) == 1
         assert imported[0].description == "A **Markdown** description."
+        assert imported[0].result == "Release published and smoke-tested."
         assert archive.read("notes.txt") == b"first file"
         assert archive.read("notes (2).txt") == b"second file"
         assert archive.read(f"task-{task['id']} (2).md") == b"name collision"
@@ -200,3 +205,25 @@ def test_single_task_export_returns_404_for_unknown_task(client):
 def test_invalid_export_format_returns_400(client):
     response = client.get("/api/export?format=csv")
     assert response.status_code == 400
+
+
+def test_result_survives_markdown_export_and_import(client):
+    created = client.post(
+        "/api/tasks",
+        json={
+            "title": "Outcome",
+            "description": "Original requirements",
+            "result": "Shipped v1",
+        },
+    )
+    assert created.status_code == 201, created.text
+    exported = client.get("/api/export?format=md")
+    assert exported.status_code == 200
+    assert b"result: Shipped v1" in exported.content
+
+    assert client.delete(f"/api/tasks/{created.json()['id']}").status_code == 204
+    imported = upload_md(client, [("outcome.md", exported.content)])
+    assert imported.status_code == 200, imported.text
+    task = next(item for item in client.get("/api/tasks").json() if item["title"] == "Outcome")
+    assert task["description"] == "Original requirements"
+    assert task["result"] == "Shipped v1"

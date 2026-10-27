@@ -226,11 +226,21 @@ def _create_task(connection: sqlite3.Connection, task: ParsedTask) -> int:
     position = float(position_row[0])
     cursor = connection.execute(
         """
-        INSERT INTO tasks (title, description, status, position, tags, created_at,
+        INSERT INTO tasks (title, description, result, status, position, tags, created_at,
                            updated_at, closed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (task.title, task.description, task.status, position, task.tags, created, updated, closed),
+        (
+            task.title,
+            task.description,
+            task.result,
+            task.status,
+            position,
+            task.tags,
+            created,
+            updated,
+            closed,
+        ),
     )
     return int(cursor.lastrowid)
 
@@ -368,11 +378,19 @@ def create_task(
     ).fetchone()
     cursor = connection.execute(
         """
-        INSERT INTO tasks (title, description, status, position, tags, created_at,
+        INSERT INTO tasks (title, description, result, status, position, tags, created_at,
                            updated_at, closed_at)
-        VALUES (?, ?, 'todo', ?, ?, ?, ?, NULL)
+        VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, NULL)
         """,
-        (title, payload.description, float(position_row[0]), payload.tags, now, now),
+        (
+            title,
+            payload.description,
+            payload.result,
+            float(position_row[0]),
+            payload.tags,
+            now,
+            now,
+        ),
     )
     connection.commit()
     task = _require_task(connection, int(cursor.lastrowid))
@@ -419,10 +437,10 @@ def patch_task(
 
     new_status = changes.get("status", current["status"])
     assignments: dict[str, Any] = {}
-    for field in ("title", "description", "status", "position", "tags"):
+    for field in ("title", "description", "result", "status", "position", "tags"):
         if field in changes:
             value = changes[field]
-            if field in ("description", "tags") and value is None:
+            if field in ("description", "result", "tags") and value is None:
                 value = ""
             assignments[field] = value
 

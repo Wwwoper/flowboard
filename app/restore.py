@@ -68,6 +68,11 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
             seen_ids.add(task_id)
             if task.get("status") not in STATUSES:
                 raise ValueError(f"Неизвестный статус задачи {task_id}")
+            result = task.get("result", "")
+            if not isinstance(result, str) or len(result) > 5000:
+                raise ValueError(
+                    f"Некорректный результат выполнения задачи {task_id}"
+                )
             if (
                 not isinstance(task.get("title"), str)
                 or not task["title"].strip()
@@ -86,15 +91,16 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                     connection.execute(
                         """
                         INSERT INTO tasks (
-                            id, title, description, status, position, tags,
+                            id, title, description, result, status, position, tags,
                             created_at, updated_at, closed_at, archived_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             task["id"],
                             task["title"],
                             task.get("description", ""),
+                            task.get("result", ""),
                             task["status"],
                             float(task.get("position", 0)),
                             task.get("tags", ""),

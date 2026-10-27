@@ -16,6 +16,7 @@ class StrictModel(BaseModel):
 class TaskCreate(StrictModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=5000)
+    result: str = Field(default="", max_length=5000)
     tags: str = Field(default="", max_length=1000)
 
     @field_validator("title")
@@ -30,6 +31,7 @@ class TaskCreate(StrictModel):
 class TaskPatch(StrictModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
+    result: str | None = Field(default=None, max_length=5000)
     status: TaskStatus | None = None
     position: float | None = None
     tags: str | None = Field(default=None, max_length=1000)
@@ -66,6 +68,7 @@ class TaskSummary(BaseModel):
     id: int
     title: str
     description: str
+    result: str = ""
     status: TaskStatus
     position: float
     tags: str

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
     description TEXT NOT NULL DEFAULT '',
+    result TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'doing', 'waiting', 'done')),
     position REAL NOT NULL DEFAULT 0,
     tags TEXT NOT NULL DEFAULT '',
@@ -64,6 +65,8 @@ def initialize_database(db_path: str | Path | None = None) -> None:
         }
         if "archived_at" not in task_columns:
             connection.execute("ALTER TABLE tasks ADD COLUMN archived_at TEXT NULL")
+        if "result" not in task_columns:
+            connection.execute("ALTER TABLE tasks ADD COLUMN result TEXT NOT NULL DEFAULT ''")
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at)"
         )

@@ -15,6 +15,10 @@ TASK_DESCRIPTION_RE = re.compile(
     r"(?s)<!-- flowboard-description-start -->\r?\n(.*?)\r?\n"
     r"<!-- flowboard-description-end -->"
 )
+TASK_RESULT_RE = re.compile(
+    r"(?s)<!-- flowboard-result-start -->\r?\n(.*?)\r?\n"
+    r"<!-- flowboard-result-end -->"
+)
 EXPORTED_TASK_RE = re.compile(
     r"(?ms)^<!-- kanban-task-start -->\s*\n---\s*\n"
     r"(?P<meta>.*?)\n---\s*\n(?P<body>.*?)\n<!-- kanban-task-end -->"
@@ -55,6 +59,7 @@ def normalize_tags(value: Any) -> str:
 class ParsedTask:
     title: str
     description: str = ""
+    result: str = ""
     status: str = "todo"
     tags: str = ""
     created_at: str | None = None
@@ -88,6 +93,15 @@ def _task_from_metadata(
         description = body.strip()
     if len(description) > 5000:
         return None, SkippedRecord(filename, "описание длиннее 5000 символов")
+    is_single_task_export = metadata.get("flowboard_export_format") == "single-task-v1"
+    result_match = TASK_RESULT_RE.search(body) if is_single_task_export else None
+    if result_match is not None:
+        result = result_match.group(1).strip("\r\n")
+    else:
+        result_value = metadata.get("result", "")
+        result = result_value if isinstance(result_value, str) else ""
+    if len(result) > 5000:
+        return None, SkippedRecord(filename, "результат длиннее 5000 символов")
 
     status = normalize_status(metadata.get("status"))
     closed_at = normalize_timestamp(metadata.get("closed_at"))
@@ -100,6 +114,7 @@ def _task_from_metadata(
         ParsedTask(
             title=title,
             description=description,
+            result=result,
             status=status,
             tags=normalize_tags(metadata.get("tags")),
             created_at=normalize_timestamp(metadata.get("created_at")),

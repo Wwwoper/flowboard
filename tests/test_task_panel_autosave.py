@@ -11,6 +11,8 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert 'id="task-autosave-status"' in html
     assert 'class="panel-actions"' not in html
     assert 'id="export-task"' in html
+    assert 'id="task-result"' in html
+    assert "Результат выполнения" in html
 
     style = client.get("/static/style.css").text
     assert ".task-header-action" in style
@@ -23,6 +25,7 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert "function updateTaskFocusButton()" in script
     assert "function setTaskAutosaveStatus(status, message)" in script
     assert 'els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180))' in script
+    assert 'els.taskResult.addEventListener("input", () => scheduleTaskDraftSave(180))' in script
     assert 'els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180))' in script
 
 

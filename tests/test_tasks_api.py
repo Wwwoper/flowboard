@@ -150,3 +150,42 @@ def test_dark_theme_styles_and_theme_persistence_hook(client):
     assert js_response.status_code == 200
     assert 'localStorage.setItem("flowboard-theme", normalizedTheme)' in js_response.text
     assert 'localStorage.getItem("flowboard-theme")' in html_response.text
+
+
+def test_task_result_is_separate_persisted_and_optional(client):
+    created_response = client.post(
+        "/api/tasks",
+        json={"title": "Result task", "description": "Requirements", "result": ""},
+    )
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    assert created["result"] == ""
+
+    updated = client.patch(
+        f"/api/tasks/{created['id']}",
+        json={"result": "Implemented independently", "description": "Updated requirements"},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["result"] == "Implemented independently"
+    assert updated.json()["description"] == "Updated requirements"
+
+    closed = client.patch(f"/api/tasks/{created['id']}", json={"status": "done"})
+    assert closed.status_code == 200
+    assert closed.json()["result"] == "Implemented independently"
+
+    detail = client.get(f"/api/tasks/{created['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["result"] == "Implemented independently"
+    assert detail.json()["description"] == "Updated requirements"
+
+    cleared = client.patch(f"/api/tasks/{created['id']}", json={"result": None})
+    assert cleared.status_code == 200
+    assert cleared.json()["result"] == ""
+
+
+def test_task_result_validation_and_old_records_default_to_empty(client):
+    created = create_task(client, "Legacy-compatible task")
+    assert created["result"] == ""
+    assert client.patch(
+        f"/api/tasks/{created['id']}", json={"result": "x" * 5001}
+    ).status_code == 422

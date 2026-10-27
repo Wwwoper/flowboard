@@ -2426,7 +2426,6 @@
 
   const projectManagerStyles = document.createElement("style");
   projectManagerStyles.textContent = `
-    .manage-projects-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; min-width: 0; padding-inline: 10px; white-space: nowrap; }
     .manage-projects-dialog { width: min(620px, calc(100vw - 28px)); max-height: min(82vh, 760px); overflow: auto; }
     .manage-projects-help { margin: 12px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
     .project-manager-section { margin-top: 16px; }
@@ -2444,8 +2443,6 @@
     .project-manager-empty { margin: 0; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .project-manager-empty[hidden] { display: none; }
     @media (max-width: 480px) {
-      .manage-projects-button { padding-inline: 9px; }
-      .manage-projects-button .manage-projects-label { display: none; }
       .manage-projects-dialog { width: calc(100vw - 20px); padding: 16px; }
       .project-manager-item { align-items: flex-start; gap: 8px; padding: 9px; }
       .project-manager-action { padding-inline: 7px; }
@@ -2453,12 +2450,20 @@
   `;
   document.head.appendChild(projectManagerStyles);
 
-  const manageProjectsButton = make("button", "button button-small button-quiet manage-projects-button");
+  const manageProjectsButton = make("button", "button button-quiet toolbar-menu-item manage-projects-button");
   manageProjectsButton.type = "button";
   manageProjectsButton.setAttribute("aria-label", "Управление проектами");
   manageProjectsButton.title = "Управление проектами";
-  manageProjectsButton.append(make("span", "manage-projects-icon", "▦"), make("span", "manage-projects-label", "Управление"));
-  els.addProject.insertAdjacentElement("afterend", manageProjectsButton);
+  const manageProjectsIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  manageProjectsIcon.setAttribute("class", "toolbar-menu-item-icon");
+  manageProjectsIcon.setAttribute("viewBox", "0 0 20 20");
+  manageProjectsIcon.setAttribute("aria-hidden", "true");
+  manageProjectsIcon.setAttribute("focusable", "false");
+  const manageProjectsIconPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  manageProjectsIconPath.setAttribute("d", "M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z");
+  manageProjectsIcon.append(manageProjectsIconPath);
+  manageProjectsButton.append(manageProjectsIcon, make("span", "manage-projects-label", "Управление проектами"));
+  $("#settings-other-heading").parentElement.append(manageProjectsButton);
 
   const manageProjectsDialog = document.createElement("dialog");
   manageProjectsDialog.id = "manage-projects-dialog";
@@ -2559,7 +2564,7 @@
   manageProjectsDialog.addEventListener("click", (event) => {
     if (event.target === manageProjectsDialog) manageProjectsDialog.close();
   });
-  manageProjectsDialog.addEventListener("close", () => manageProjectsButton.focus({ preventScroll: true }));
+  manageProjectsDialog.addEventListener("close", () => $("#settings-menu > summary").focus({ preventScroll: true }));
   manageProjectsDialog.addEventListener("keydown", (event) => {
     // Keep workspace shortcuts from leaking out of the modal without blocking input typing.
     event.stopPropagation();

@@ -258,3 +258,56 @@
   color: var(--muted);
   border-top-color: var(--line);
 }
+
+
+/* Surface hierarchy: quiet columns, clear card surfaces, and theme-derived states. */
+:root .board-column {
+  background: color-mix(in srgb, var(--gh-column, var(--surface-soft)) 92%, var(--surface) 8%);
+  border-color: color-mix(in srgb, var(--line) 42%, var(--gh-column, var(--surface-soft)));
+  box-shadow: none;
+}
+
+:root .board-column.is-drop-target {
+  background: color-mix(in srgb, var(--accent-pale) 64%, var(--gh-column, var(--surface-soft)));
+  border-color: var(--accent);
+}
+
+:root .board-column.wip-over-limit:not(.is-drop-target) {
+  background: color-mix(in srgb, var(--gh-red-bg) 32%, var(--gh-column, var(--surface-soft)));
+  border-color: color-mix(in srgb, var(--gh-red-fg) 48%, var(--line));
+}
+
+:root .wip-warning {
+  color: var(--gh-yellow-fg);
+  background: color-mix(in srgb, var(--gh-yellow-bg) 82%, var(--surface));
+  border-color: color-mix(in srgb, var(--gh-yellow-fg) 32%, var(--line));
+}
+
+:root .task-card {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--line-strong) 18%, transparent);
+}
+
+:root .task-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--line-strong) 28%, transparent);
+}
+
+:root .task-card.dragging {
+  opacity: .4;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--line-strong) 34%, transparent);
+}
+
+:root .task-card.is-focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--gh-focus, color-mix(in srgb, var(--accent) 20%, transparent));
+}
+
+:root .board-column-done {
+  background: color-mix(in srgb, var(--gh-column, var(--surface-soft)) 94%, var(--green) 6%);
+}
+
+:root .board-column-done .task-card {
+  border-color: var(--line);
+}

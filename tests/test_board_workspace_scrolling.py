@@ -14,3 +14,10 @@ def test_board_workspace_uses_desktop_list_scrolling_and_drag_autoscroll(client)
     assert "const edgeThreshold = Math.min(56, Math.max(24, targetList.clientHeight * 0.12));" in dragdrop
     assert "targetList.scrollTop -= Math.max(4, Math.round(14 * intensity));" in dragdrop
     assert "targetList.scrollTop += Math.max(4, Math.round(14 * intensity));" in dragdrop
+    # Drag routing must use the pointer's destination column, not event.target,
+    # because the dragged card itself is moved in the DOM while dragging.
+    assert "const sortablesByList = new WeakMap();" in dragdrop
+    assert "function findColumnAtPoint(board, clientX, clientY)" in dragdrop
+    assert 'board.addEventListener("dragover", onDragOver);' in dragdrop
+    assert 'const targetList = column.querySelector(".task-list");' in dragdrop
+    assert 'event.target.closest(".board-column")' not in dragdrop

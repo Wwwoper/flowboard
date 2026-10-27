@@ -211,3 +211,50 @@
   }
   .add-project-label { display: none; }
 }
+
+/* Completed cards stay fully interactive; compact only their secondary details. */
+.board-column-done > .task-list {
+  gap: 5px;
+}
+
+.board-column-done .done-card {
+  opacity: 1;
+  padding: 9px 10px 7px;
+}
+
+.board-column-done .done-card.dragging {
+  opacity: .4;
+}
+
+.board-column-done .done-card .task-card-title {
+  color: var(--ink);
+}
+
+.board-column-done .done-card .task-card-meta {
+  margin-top: 5px;
+  gap: 4px;
+}
+
+.board-column-done .done-card .task-project-chip,
+.board-column-done .done-card .task-type-chip,
+.board-column-done .done-card .tag-pill {
+  padding: 2px 5px;
+  font-size: 9px;
+}
+
+.board-column-done .done-card .task-card-excerpt {
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.board-column-done .done-card .task-tags {
+  margin-top: 5px;
+  gap: 4px;
+}
+
+.board-column-done .done-card .task-card-footer {
+  margin-top: 6px;
+  padding-top: 5px;
+  color: var(--muted);
+  border-top-color: var(--line);
+}

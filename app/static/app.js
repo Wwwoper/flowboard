@@ -63,6 +63,8 @@
     }));
   }
 
+  const doneColumnCollapseQuery = window.matchMedia("(max-width: 1180px)");
+
   const state = {
     tasks: [],
     selectedTask: null,
@@ -658,17 +660,20 @@
       list.replaceChildren();
 
       let tasksToRender = statusTasks;
-      if (status === "done" && !state.doneExpanded) {
+      if (status === "done" && doneColumnCollapseQuery.matches && !state.doneExpanded) {
         tasksToRender = statusTasks.slice(0, 5);
-        els.toggleDone.hidden = statusTasks.length <= 5;
-        els.toggleDone.setAttribute("aria-label", "Показать остальные завершённые задачи");
-        els.toggleDone.title = "Показать остальные завершённые задачи";
-        els.toggleDone.setAttribute("aria-expanded", "false");
-      } else if (status === "done") {
-        els.toggleDone.hidden = statusTasks.length <= 5;
-        els.toggleDone.setAttribute("aria-label", "Свернуть список завершённых задач");
-        els.toggleDone.title = "Свернуть список завершённых задач";
-        els.toggleDone.setAttribute("aria-expanded", "true");
+      }
+
+      if (status === "done") {
+        const canCollapseDone = doneColumnCollapseQuery.matches && statusTasks.length > 5;
+        const isExpanded = canCollapseDone && state.doneExpanded;
+        const label = isExpanded
+          ? "Свернуть список завершённых задач"
+          : "Показать остальные завершённые задачи";
+        els.toggleDone.hidden = !canCollapseDone;
+        els.toggleDone.setAttribute("aria-label", label);
+        els.toggleDone.title = label;
+        els.toggleDone.setAttribute("aria-expanded", String(isExpanded));
       }
 
       tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));
@@ -1994,6 +1999,7 @@
     els.attachmentPreviewError.hidden = false;
   });
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
+  doneColumnCollapseQuery.addEventListener("change", () => renderBoard());
 
   els.columnOptionsToggles.forEach((button) => button.addEventListener("click", (event) => {
     event.stopPropagation();

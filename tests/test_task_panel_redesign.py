@@ -5,7 +5,7 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.26" in html
+    assert "/static/app.js?v=0.5.27" in html
     assert "/static/github-theme.css?v=0.2.3" in html
     assert "/static/task-editor-redesign.css?v=0.1.0" in html
     for element_id in (

@@ -783,7 +783,8 @@
   backdrop-filter: blur(3px);
 }
 .create-project-dialog,
-.delete-image-dialog {
+.delete-image-dialog,
+.delete-task-dialog {
   width: min(440px, calc(100vw - 28px));
   padding: 22px;
   border-radius: 15px;
@@ -796,19 +797,23 @@
 }
 .create-project-dialog .shortcuts-dialog-header { gap: 14px; }
 .create-project-dialog .shortcuts-dialog-header h2,
-.delete-image-dialog .shortcuts-dialog-header h2 {
+.delete-image-dialog .shortcuts-dialog-header h2,
+.delete-task-dialog .shortcuts-dialog-header h2 {
   margin: 0;
   font-size: 21px;
   letter-spacing: -.4px;
 }
-.delete-image-content {
+.delete-image-content,
+.delete-task-content {
   display: flex;
   flex-direction: column;
   gap: 18px;
   min-width: 0;
 }
-.delete-image-dialog .shortcuts-dialog-header { gap: 14px; }
-.delete-image-message { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.delete-image-dialog .shortcuts-dialog-header,
+.delete-task-dialog .shortcuts-dialog-header { gap: 14px; }
+.delete-image-message,
+.delete-task-message { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .delete-image-remember {
   display: flex;
   align-items: flex-start;
@@ -819,12 +824,14 @@
   cursor: pointer;
 }
 .delete-image-remember input { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--accent); }
-.delete-image-confirm:not(:disabled) {
+.delete-image-confirm:not(:disabled),
+.delete-task-confirm:not(:disabled) {
   border-color: var(--gh-red-fg, var(--red));
   color: var(--gh-red-fg, var(--red));
   background: var(--gh-red-bg, var(--accent-pale));
 }
-.delete-image-confirm:not(:disabled):hover {
+.delete-image-confirm:not(:disabled):hover,
+.delete-task-confirm:not(:disabled):hover {
   border-color: var(--gh-red-fg, var(--red));
   background: color-mix(in srgb, var(--gh-red-bg, var(--accent-pale)) 72%, var(--surface));
 }
@@ -854,7 +861,8 @@
 .create-project-actions .button { min-width: 108px; min-height: 36px; }
 @media (max-width: 480px) {
   .create-project-dialog,
-  .delete-image-dialog { width: calc(100vw - 20px); padding: 16px; }
+  .delete-image-dialog,
+  .delete-task-dialog { width: calc(100vw - 20px); padding: 16px; }
   .create-project-actions { gap: 6px; }
   .create-project-actions .button { flex: 1 1 0; min-width: 0; }
 }

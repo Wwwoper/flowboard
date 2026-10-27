@@ -44,7 +44,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.26" in html
+    assert "/static/app.js?v=0.5.27" in html
     assert "/static/style.css?v=0.5.18" in html
 
 
@@ -174,7 +174,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.26" in html
+    assert "/static/app.js?v=0.5.27" in html
     assert "/static/style.css?v=0.5.18" in html
 
     script = client.get("/static/app.js").text
@@ -300,7 +300,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.26" in html
+    assert "/static/app.js?v=0.5.27" in html
     assert "/static/style.css?v=0.5.18" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
@@ -360,7 +360,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.8" in html
+    assert "/static/themed-controls.css?v=0.1.9" in html
     for fragment in (
         'id="settings-appearance-heading" class="toolbar-menu-section-title">Внешний вид</h3>',
         'id="settings-themes-heading" class="toolbar-menu-section-title">Управление темами</h3>',

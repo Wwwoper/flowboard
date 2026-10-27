@@ -1559,10 +1559,44 @@
     toast("Задача восстановлена вместе с вложениями");
   }
 
+  const deleteTaskDialog = $("#delete-task-dialog");
+  const deleteTaskMessage = $("#delete-task-message");
+  const closeDeleteTaskDialogButton = $("#close-delete-task");
+  const cancelDeleteTaskButton = $("#cancel-delete-task");
+  const confirmDeleteTaskButton = $("#confirm-delete-task");
+  let pendingTaskDeleteConfirmation = null;
+
+  function requestTaskDeleteConfirmation(title) {
+    if (deleteTaskDialog.open) return Promise.resolve(false);
+
+    deleteTaskMessage.textContent = `Вы действительно хотите удалить задачу «${title}» вместе со всеми вложениями? После удаления задачу можно будет восстановить из уведомления.`;
+    return new Promise((resolve) => {
+      pendingTaskDeleteConfirmation = resolve;
+      deleteTaskDialog.showModal();
+      cancelDeleteTaskButton.focus({ preventScroll: true });
+    });
+  }
+
+  function finishTaskDeleteConfirmation(confirmed) {
+    const resolve = pendingTaskDeleteConfirmation;
+    if (!resolve) return;
+    pendingTaskDeleteConfirmation = null;
+    if (deleteTaskDialog.open) deleteTaskDialog.close();
+    resolve(confirmed);
+  }
+
+  closeDeleteTaskDialogButton.addEventListener("click", () => finishTaskDeleteConfirmation(false));
+  cancelDeleteTaskButton.addEventListener("click", () => finishTaskDeleteConfirmation(false));
+  confirmDeleteTaskButton.addEventListener("click", () => finishTaskDeleteConfirmation(true));
+  deleteTaskDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    finishTaskDeleteConfirmation(false);
+  });
+
   async function handleDeleteTask() {
     const task = state.selectedTask;
     if (!task) return;
-    if (!window.confirm(`Удалить задачу «${els.taskTitle.value || task.title}» вместе со всеми вложениями?`)) return;
+    if (!(await requestTaskDeleteConfirmation(els.taskTitle.value || task.title))) return;
     if (!(await saveCurrentTaskDraft())) return;
     const currentTask = state.selectedTask;
     if (!currentTask) return;

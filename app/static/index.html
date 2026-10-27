@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.18">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.8">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.9">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.1.0">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.2">
 </head>
@@ -334,6 +334,19 @@
       </div>
     </form>
   </dialog>
+  <dialog id="delete-task-dialog" class="app-modal delete-task-dialog" aria-labelledby="delete-task-heading" aria-describedby="delete-task-message" aria-modal="true">
+    <div class="delete-task-content">
+      <div class="shortcuts-dialog-header">
+        <div><p class="eyebrow">УДАЛЕНИЕ ЗАДАЧИ</p><h2 id="delete-task-heading">Удалить задачу?</h2></div>
+        <button id="close-delete-task" class="icon-button" type="button" aria-label="Закрыть окно подтверждения удаления задачи" title="Закрыть">×</button>
+      </div>
+      <p id="delete-task-message" class="delete-task-message">Задача и все её вложения будут удалены. После удаления задачу можно будет восстановить из уведомления.</p>
+      <div class="create-project-actions delete-task-actions">
+        <button id="cancel-delete-task" class="button button-quiet" type="button">Отмена</button>
+        <button id="confirm-delete-task" class="button delete-task-confirm" type="button">Удалить задачу</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="delete-image-dialog" class="app-modal delete-image-dialog" aria-labelledby="delete-image-heading" aria-describedby="delete-image-message" aria-modal="true">
     <div class="delete-image-content">
       <div class="shortcuts-dialog-header">
@@ -504,6 +517,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.26" defer></script>
+  <script src="/static/app.js?v=0.5.27" defer></script>
 </body>
 </html>

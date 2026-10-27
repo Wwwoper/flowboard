@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.8' in html
+    assert '/static/themed-controls.css?v=0.1.9' in html
     assert '/static/themed-selects.js?v=0.1.0' in html
 
     css_response = client.get("/static/themed-controls.css")

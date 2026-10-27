@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.14">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.2">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.6">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.7">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.1.0">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.1">
 </head>
@@ -334,6 +334,20 @@
       </div>
     </form>
   </dialog>
+  <dialog id="delete-image-dialog" class="app-modal delete-image-dialog" aria-labelledby="delete-image-heading" aria-describedby="delete-image-message" aria-modal="true">
+    <div class="delete-image-content">
+      <div class="shortcuts-dialog-header">
+        <div><p class="eyebrow">УДАЛЕНИЕ ИЗОБРАЖЕНИЯ</p><h2 id="delete-image-heading">Удалить изображение?</h2></div>
+        <button id="close-delete-image" class="icon-button" type="button" aria-label="Закрыть окно подтверждения удаления" title="Закрыть">×</button>
+      </div>
+      <p id="delete-image-message" class="delete-image-message">Вы действительно хотите удалить это изображение? Это действие нельзя отменить.</p>
+      <label class="delete-image-remember"><input id="skip-image-delete-confirmation" type="checkbox"> Больше не спрашивать при удалении изображений</label>
+      <div class="create-project-actions delete-image-actions">
+        <button id="cancel-delete-image" class="button button-quiet" type="button">Отмена</button>
+        <button id="confirm-delete-image" class="button delete-image-confirm" type="button">Удалить изображение</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title">
     <div class="attachment-preview-dialog-header">
       <h2 id="attachment-preview-title">Предпросмотр изображения</h2>
@@ -490,6 +504,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.21" defer></script>
+  <script src="/static/app.js?v=0.5.22" defer></script>
 </body>
 </html>

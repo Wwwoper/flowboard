@@ -1238,6 +1238,7 @@
       const item = make("li", "attachment-item");
       const extension = attachment.filename.includes(".") ? attachment.filename.split(".").pop().toLowerCase() : "FILE";
       const isPreviewableImage = ["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg"].includes(extension);
+      const isImageAttachment = /^(?:apng|avif|bmp|gif|heic|heif|ico|icon|jpe?g|jfif|png|svg|tiff?|webp)$/i.test(extension);
       const details = make("span", "attachment-file-details");
       const fileDate = make("small", "", `${formatBytes(attachment.size)} · ${formatDate(attachment.created_at)}`);
 
@@ -1287,7 +1288,7 @@
       const remove = make("button", "attachment-remove", "×");
       remove.type = "button";
       remove.setAttribute("aria-label", `Удалить вложение ${attachment.filename}`);
-      remove.addEventListener("click", () => removeAttachment(attachment.id, attachment.filename));
+      remove.addEventListener("click", () => removeAttachment(attachment.id, attachment.filename, isImageAttachment));
       item.appendChild(remove);
       els.attachmentList.appendChild(item);
     });
@@ -1608,8 +1609,11 @@
     void uploadFiles(files);
   }
 
-  async function removeAttachment(attachmentId, filename) {
-    if (!window.confirm(`Удалить вложение «${filename}»?`)) return;
+  async function removeAttachment(attachmentId, filename, isImage = false) {
+    const confirmed = isImage
+      ? await requestImageDeleteConfirmation(filename)
+      : window.confirm(`Удалить вложение «${filename}»?`);
+    if (!confirmed) return;
     if (!(await saveCurrentTaskDraft())) return;
     try {
       const response = await fetch(`/api/files/${attachmentId}`, { cache: "no-store" });
@@ -1722,8 +1726,49 @@
   const createProjectClose = $("#close-create-project");
   const createProjectCancel = $("#cancel-create-project");
   const createProjectSubmit = $("#submit-create-project");
+  const IMAGE_DELETE_CONFIRMATION_KEY = "flowboard-skip-image-delete-confirmation";
+  const deleteImageDialog = $("#delete-image-dialog");
+  const deleteImageMessage = $("#delete-image-message");
+  const skipImageDeleteConfirmation = $("#skip-image-delete-confirmation");
+  const closeDeleteImageDialogButton = $("#close-delete-image");
+  const cancelDeleteImageButton = $("#cancel-delete-image");
+  const confirmDeleteImageButton = $("#confirm-delete-image");
+  let pendingImageDeleteConfirmation = null;
   let createProjectBusy = false;
   let focusQuickTitleAfterCreateProject = false;
+
+  function requestImageDeleteConfirmation(filename) {
+    if (readStorage(IMAGE_DELETE_CONFIRMATION_KEY) === "true") return Promise.resolve(true);
+    if (deleteImageDialog.open) return Promise.resolve(false);
+
+    deleteImageMessage.textContent = `Вы действительно хотите удалить изображение «${filename}»? Это действие нельзя отменить.`;
+    skipImageDeleteConfirmation.checked = false;
+    return new Promise((resolve) => {
+      pendingImageDeleteConfirmation = resolve;
+      deleteImageDialog.showModal();
+      cancelDeleteImageButton.focus({ preventScroll: true });
+    });
+  }
+
+  function finishImageDeleteConfirmation(confirmed) {
+    const resolve = pendingImageDeleteConfirmation;
+    if (!resolve) return;
+    pendingImageDeleteConfirmation = null;
+
+    if (confirmed && skipImageDeleteConfirmation.checked) {
+      writeStorage(IMAGE_DELETE_CONFIRMATION_KEY, "true");
+    }
+    if (deleteImageDialog.open) deleteImageDialog.close();
+    resolve(confirmed);
+  }
+
+  closeDeleteImageDialogButton.addEventListener("click", () => finishImageDeleteConfirmation(false));
+  cancelDeleteImageButton.addEventListener("click", () => finishImageDeleteConfirmation(false));
+  confirmDeleteImageButton.addEventListener("click", () => finishImageDeleteConfirmation(true));
+  deleteImageDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    finishImageDeleteConfirmation(false);
+  });
 
   function setCreateProjectError(message) {
     createProjectError.textContent = message;

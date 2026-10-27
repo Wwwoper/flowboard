@@ -90,6 +90,7 @@
   state.columnPreferences = readColumnPreferences();
   state.archivedTasks = [];
   state.archiveSettings = { archive_enabled: true, archive_after_days: 30 };
+  state.taskSettings = { require_result_to_close: false };
   state.archiveFilters = { search: "", project: "", tag: "", period: "" };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -186,6 +187,7 @@
     archiveDialog: $("#archive-dialog"),
     archiveClose: $("#close-archive"),
     archiveAutoEnabled: $("#archive-auto-enabled"),
+    requireResultToClose: $("#require-result-to-close"),
     archiveAfterDays: $("#archive-after-days"),
     archiveSearch: $("#archive-search"),
     archiveProjectFilter: $("#archive-project-filter"),
@@ -291,9 +293,27 @@
     const data = contentType.includes("application/json") ? await response.json() : await response.text();
     if (!response.ok) {
       const message = typeof data === "object" && data !== null ? data.detail : data;
-      throw new Error(Array.isArray(message) ? message.map((entry) => entry.msg || String(entry)).join("; ") : (message || `Ошибка ${response.status}`));
+      const errorMessage = Array.isArray(message)
+        ? message.map((entry) => entry.msg || String(entry)).join("; ")
+        : (message || `Ошибка ${response.status}`);
+      if (response.status === 409 && String(errorMessage).includes("Результат выполнения")) {
+        const match = String(url).match(/^\/api\/tasks\/(\d+)/);
+        if (match) void focusResultField(Number(match[1]));
+      }
+      throw new Error(errorMessage);
     }
     return data;
+  }
+
+  async function focusResultField(taskId) {
+    if (state.selectedTask?.id === taskId) {
+      if (els.taskStatus) els.taskStatus.value = state.selectedTask.status;
+      els.taskResult.focus({ preventScroll: true });
+      return;
+    }
+    if (state.selectedTask && !(await saveCurrentTaskDraft())) return;
+    await openTaskPanel(taskId);
+    if (state.selectedTask?.id === taskId) els.taskResult.focus({ preventScroll: true });
   }
 
   function toast(message, type = "success", actionLabel = "", onAction = null) {
@@ -863,6 +883,25 @@
       item.appendChild(restore);
       els.archiveList.appendChild(item);
     });
+  }
+
+  async function loadTaskSettings() {
+    state.taskSettings = await api("/api/task-settings");
+    els.requireResultToClose.checked = state.taskSettings.require_result_to_close;
+  }
+
+  async function saveTaskSettings() {
+    const requested = { require_result_to_close: els.requireResultToClose.checked };
+    try {
+      state.taskSettings = await api("/api/task-settings", { method: "PATCH", body: requested });
+      els.requireResultToClose.checked = state.taskSettings.require_result_to_close;
+      toast(state.taskSettings.require_result_to_close
+        ? "Для закрытия задачи теперь требуется результат выполнения"
+        : "Обязательность результата перед закрытием отключена");
+    } catch (error) {
+      els.requireResultToClose.checked = state.taskSettings.require_result_to_close;
+      toast(`Не удалось сохранить настройку задач: ${error.message}`, "error");
+    }
   }
 
   async function loadArchiveSettings() {
@@ -1971,7 +2010,7 @@
       state.wipLimit = config.wip_limit;
       state.maxFileSizeMb = config.max_file_size_mb;
       els.maxFileMb.textContent = String(config.max_file_size_mb);
-      await loadTasks();
+      await Promise.all([loadTaskSettings(), loadTasks()]);
     } catch (error) {
       toast(`Не удалось загрузить данные: ${error.message}`, "error");
     }
@@ -2344,6 +2383,7 @@
   els.taskResult.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
+  els.requireResultToClose.addEventListener("change", () => { void saveTaskSettings(); });
 
   for (const eventName of ["dragenter", "dragover"]) {
     els.attachmentDropzone.addEventListener(eventName, (event) => {

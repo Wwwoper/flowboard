@@ -72,7 +72,11 @@ def initialize_database(db_path: str | Path | None = None) -> None:
         )
         connection.executemany(
             "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
-            [("archive_enabled", "true"), ("archive_after_days", "30")],
+            [
+                ("archive_enabled", "true"),
+                ("archive_after_days", "30"),
+                ("require_result_to_close", "false"),
+            ],
         )
         connection.commit()
     finally:

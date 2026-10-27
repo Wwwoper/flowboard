@@ -32,6 +32,8 @@ from app.models import (
     TaskCreate,
     TaskDetail,
     TaskPatch,
+    TaskSettingsPatch,
+    TaskSettingsRead,
     TaskSummary,
 )
 
@@ -40,6 +42,7 @@ ATTACHMENT_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,10}$")
 
 
 ARCHIVE_SETTING_DEFAULTS = {"archive_enabled": "true", "archive_after_days": "30"}
+TASK_SETTING_DEFAULTS = {"require_result_to_close": "false"}
 ARCHIVE_INTERVAL_SECONDS = 60 * 60
 
 
@@ -59,6 +62,14 @@ def _archive_settings(connection: sqlite3.Connection) -> dict[str, Any]:
     if after_days not in {7, 30, 60, 90}:
         after_days = 30
     return {"archive_enabled": enabled, "archive_after_days": after_days}
+
+
+def _task_settings(connection: sqlite3.Connection) -> dict[str, bool]:
+    row = connection.execute(
+        "SELECT value FROM app_settings WHERE key = ?", ("require_result_to_close",)
+    ).fetchone()
+    value = row["value"] if row else TASK_SETTING_DEFAULTS["require_result_to_close"]
+    return {"require_result_to_close": value == "true"}
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
@@ -322,6 +333,28 @@ def update_archive_settings(
     return ArchiveSettingsRead(**_archive_settings(connection))
 
 
+@app.get("/api/task-settings", response_model=TaskSettingsRead)
+def get_task_settings(connection: sqlite3.Connection = Depends(get_db)) -> TaskSettingsRead:
+    return TaskSettingsRead(**_task_settings(connection))
+
+
+@app.patch("/api/task-settings", response_model=TaskSettingsRead)
+def update_task_settings(
+    payload: TaskSettingsPatch, connection: sqlite3.Connection = Depends(get_db)
+) -> TaskSettingsRead:
+    changes = payload.model_dump(exclude_unset=True)
+    for key, value in changes.items():
+        if value is None:
+            raise HTTPException(status_code=400, detail=f"Настройка {key} не может быть null")
+        connection.execute(
+            "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, str(value).lower()),
+        )
+    connection.commit()
+    return TaskSettingsRead(**_task_settings(connection))
+
+
 @app.post("/api/archive/completed")
 def archive_all_completed(connection: sqlite3.Connection = Depends(get_db)) -> dict[str, int]:
     archived_at = utc_now()
@@ -436,6 +469,19 @@ def patch_task(
         raise HTTPException(status_code=400, detail="Позиция должна быть конечным числом")
 
     new_status = changes.get("status", current["status"])
+    blocked_close = False
+    if current["status"] != "done" and new_status == "done":
+        if _task_settings(connection)["require_result_to_close"]:
+            result = changes.get("result", current["result"] or "")
+            if not str(result or "").strip():
+                blocked_close = True
+                changes.pop("status", None)
+                new_status = current["status"]
+                if not changes:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Перед закрытием задачи заполните поле «Результат выполнения».",
+                    )
     assignments: dict[str, Any] = {}
     for field in ("title", "description", "result", "status", "position", "tags"):
         if field in changes:
@@ -465,6 +511,11 @@ def patch_task(
     values.extend([now, closed_at, task_id])
     connection.execute(f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?", values)
     connection.commit()
+    if blocked_close:
+        raise HTTPException(
+            status_code=409,
+            detail="Перед закрытием задачи заполните поле «Результат выполнения».",
+        )
     return _task_summary(_require_task(connection, task_id))
 
 

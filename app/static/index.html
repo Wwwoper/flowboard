@@ -46,6 +46,11 @@
         <details class="toolbar-menu" id="settings-menu">
           <summary class="toolbar-menu-trigger"><svg class="toolbar-menu-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.5 5h13M3.5 10h13M3.5 15h13"></path><circle cx="7" cy="5" r="1.6"></circle><circle cx="12.5" cy="10" r="1.6"></circle><circle cx="8.5" cy="15" r="1.6"></circle></svg><span>Настройки</span></summary>
           <div class="toolbar-menu-panel" role="group" aria-label="Настройки интерфейса">
+            <section class="toolbar-menu-section" aria-labelledby="settings-tasks-heading">
+              <h3 id="settings-tasks-heading" class="toolbar-menu-section-title">Задачи</h3>
+              <label class="archive-auto-toggle"><input id="require-result-to-close" type="checkbox"> Требовать результат перед закрытием</label>
+              <p class="theme-manager-help">При включении задачи нельзя закрыть без заполненного результата выполнения.</p>
+            </section>
             <section class="toolbar-menu-section" aria-labelledby="settings-appearance-heading">
               <h3 id="settings-appearance-heading" class="toolbar-menu-section-title">Внешний вид</h3>
               <button id="theme-toggle" class="button button-quiet toolbar-menu-item theme-toggle" type="button"
@@ -521,6 +526,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.27" defer></script>
+  <script src="/static/app.js?v=0.5.28" defer></script>
 </body>
 </html>

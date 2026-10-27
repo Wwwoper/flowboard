@@ -54,6 +54,14 @@ class AttachmentRead(BaseModel):
     created_at: str
 
 
+class TaskSettingsRead(BaseModel):
+    require_result_to_close: bool
+
+
+class TaskSettingsPatch(StrictModel):
+    require_result_to_close: bool | None = None
+
+
 class ArchiveSettingsRead(BaseModel):
     archive_enabled: bool
     archive_after_days: Literal[7, 30, 60, 90]

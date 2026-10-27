@@ -119,7 +119,9 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .tag-pill-more { color: #7c86a0; background: transparent; padding-inline: 2px; }
 .task-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: #a0a8b8; font-size: 9px; margin-top: 10px; border-top: 1px solid #f1f3f7; padding-top: 7px; }
 .task-card-metrics { display: flex; align-items: center; gap: 7px; }
-.attachment-mini { display: inline-flex; align-items: center; gap: 3px; }
+.attachment-mini { display: inline-flex; align-items: center; gap: 3px; color: #8d97aa; font-weight: 650; }
+.attachment-mini-icon { font-size: 10px; line-height: 1; }
+.attachment-mini-count { font-size: 9px; }
 .done-card { opacity: .85; }
 .done-card .task-card-title { color: #667089; }
 .done-toggle {

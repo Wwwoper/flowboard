@@ -333,6 +333,15 @@
     timer = window.setTimeout(dismiss, actionLabel ? 8500 : 4200);
   }
 
+  function pluralAttachments(count) {
+    const n = Math.abs(count) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return "вложений";
+    if (n1 > 1 && n1 < 5) return "вложения";
+    if (n1 === 1) return "вложение";
+    return "вложений";
+  }
+
   function pluralTasks(count) {
     const n = Math.abs(count) % 100;
     const n1 = n % 10;
@@ -550,9 +559,10 @@
     if (excerpt) card.appendChild(make("p", "task-card-excerpt", excerpt));
 
     // Do not render an empty metadata row or a placeholder for a missing project.
-    if (project || typeTag) {
+    if ((project && project !== state.project) || typeTag) {
       const metadata = make("div", "task-card-meta");
-      if (project) {
+      // The selected project is already clear from the board filter context.
+      if (project && project !== state.project) {
         const projectChip = make("span", "task-project-chip");
         const projectMark = make("span", "task-project-mark");
         projectMark.style.backgroundColor = projectAccent(project);
@@ -574,11 +584,21 @@
     }
 
     const footer = make("div", "task-card-footer");
-    footer.appendChild(make("time", "task-updated", formatDate(task.updated_at)));
+    const updated = make("time", "task-updated", formatDate(task.updated_at));
+    const updatedDateTime = formatDateTime(task.updated_at);
+    updated.dateTime = task.updated_at || "";
+    updated.title = `Последнее изменение: ${updatedDateTime}`;
+    updated.setAttribute("aria-label", `Последнее изменение: ${updatedDateTime}`);
+    footer.appendChild(updated);
     if (task.attachments_count) {
       const metrics = make("span", "task-card-metrics");
-      const attachment = make("span", "attachment-mini", `↗ ${task.attachments_count}`);
-      attachment.setAttribute("aria-label", `Вложений: ${task.attachments_count}`);
+      const attachment = make("span", "attachment-mini");
+      attachment.setAttribute("role", "img");
+      const attachmentIcon = make("span", "attachment-mini-icon", "📎");
+      attachmentIcon.setAttribute("aria-hidden", "true");
+      attachment.appendChild(attachmentIcon);
+      attachment.appendChild(make("span", "attachment-mini-count", String(task.attachments_count)));
+      attachment.setAttribute("aria-label", `${task.attachments_count} ${pluralAttachments(task.attachments_count)}`);
       metrics.appendChild(attachment);
       footer.appendChild(metrics);
     }

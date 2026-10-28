@@ -44,7 +44,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.34" in html
     assert "/static/style.css?v=0.5.19" in html
 
 
@@ -162,7 +162,7 @@ def test_task_panel_can_upload_images_pasted_from_clipboard(client):
     assert ".attachment-paste-hint" in css
 
 
-def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(client):
+def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_export(client):
     html = client.get("/").text
     for element_id in (
         "task-tag-list",
@@ -174,7 +174,7 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.34" in html
     assert "/static/style.css?v=0.5.19" in html
 
     script = client.get("/static/app.js").text
@@ -182,19 +182,20 @@ def test_task_panel_has_compact_layout_mouse_tag_editor_and_single_task_export(c
     assert "function tagChoiceDetails(value)" in script
     assert "function availableTaskTagChoices()" in script
     assert "function toggleTaskTagChoice(value)" in script
-    assert 'option.setAttribute("aria-pressed", String(isSelected))' in script
-    assert 'const customChoicesExist = choices.some((choice) => choice.kind === "custom")' in script
-    assert 'els.taskTagCustomToggle.addEventListener("click"' in script
+    assert 'option.setAttribute("aria-selected", String(isSelected))' in script
+    assert 'const canCreate = Boolean(els.taskTagInput.value.trim()) && inputDetail.kind === "custom" && !exactMatch' in script
+    assert 'els.taskTagCustomToggle.addEventListener("click", toggleTaskTagPopover)' in script
     assert 'els.addTaskTag.addEventListener("click", () => addTaskTags())' in script
     assert 'els.exportTask.addEventListener("click", handleTaskExport)' in script
     assert 'window.location.href = `/api/tasks/${task.id}/export`' in script
     assert "async function handleTaskExport()" in script
 
     css = client.get("/static/style.css").text
+    redesign_css = client.get("/static/task-editor-redesign.css").text
     assert "grid-template-columns: minmax(0, 1.08fr) minmax(245px, .92fr)" in css
-    assert ".tag-choice[aria-pressed=\"true\"]" in css
-    assert ".task-tag-custom-toggle" in css
-    assert "overflow-y: auto" in css
+    assert ".task-tag-option.is-selected" in redesign_css
+    assert ".task-tag-add-trigger" in redesign_css
+    assert "overflow-y: auto" in redesign_css
     assert "@media (max-height: 720px) and (min-width: 721px)" in css
 
 
@@ -301,7 +302,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.34" in html
     assert "/static/style.css?v=0.5.19" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html

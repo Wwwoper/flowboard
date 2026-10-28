@@ -74,7 +74,6 @@
     project: readStorage("flowboard-last-project"),
     projects: readStoredProjects(),
     quickTaskType: "",
-    taskTagInputExpanded: false,
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
     density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
     dragOrigin: null,
@@ -89,8 +88,6 @@
     draftSavePromise: null,
     attachmentPreviewUrl: null,
     attachmentPreviewToken: 0,
-    taskTagsExpanded: false,
-    taskTagDisclosureTaskId: null,
     attachmentsExpanded: false,
     attachmentDisclosureTaskId: null,
   };
@@ -131,9 +128,13 @@
     taskTitleDisplayText: $("#task-title-display-text"),
     taskTitleReference: $("#panel-task-reference"),
     taskStatus: $("#task-status"),
+    taskType: $("#task-type"),
+    taskProject: $("#task-project"),
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
     taskTagInput: $("#task-tag-input"),
+    taskTagPopover: $("#task-tag-popover"),
+    taskTagOptions: $("#task-tag-options"),
     taskTagCreateRow: $("#task-tag-create-row"),
     taskTagCustomToggle: $("#task-tag-custom-toggle"),
     addTaskTag: $("#add-task-tag"),
@@ -1055,8 +1056,8 @@
       els.taskTitleReference.textContent = `#${task.id}`;
       els.taskStatus.value = task.status;
       els.taskTags.value = task.tags || "";
-      state.taskTagInputExpanded = false;
       els.taskTagInput.value = "";
+      setTaskTagPopoverOpen(false);
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.taskResult.value = task.result || "";
@@ -1264,75 +1265,6 @@
       if (a.kind === "type") return typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value);
       return a.label.localeCompare(b.label, "ru");
     });
-  }
-
-  function renderTaskTagEditor() {
-    const tags = editableTaskTags();
-    const selected = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
-    els.taskTags.value = tags.join(", ");
-    els.taskTagList.replaceChildren();
-
-    const choices = availableTaskTagChoices();
-    const customChoicesExist = choices.some((choice) => choice.kind === "custom");
-    choices.forEach((choice) => {
-      const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
-      const option = make("button", `tag-choice tag-choice-${choice.kind}${choice.kind === "type" ? ` tag-choice-${choice.value}` : ""}`, choice.label);
-      option.type = "button";
-      option.dataset.tag = choice.value;
-      option.setAttribute("aria-pressed", String(isSelected));
-      option.setAttribute("aria-label", `${isSelected ? "Убрать" : "Добавить"} тег ${choice.label}`);
-      option.title = `${isSelected ? "Убрать" : "Добавить"} тег «${choice.label}»`;
-      option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
-      els.taskTagList.appendChild(option);
-    });
-
-    // Keep the editor compact when the workspace only uses reserved tags.
-    els.taskTagCreateRow.hidden = !customChoicesExist && !state.taskTagInputExpanded;
-    els.taskTagCustomToggle.hidden = customChoicesExist || state.taskTagInputExpanded;
-  }
-
-  function toggleTaskTagChoice(value) {
-    const detail = tagChoiceDetails(value);
-    const tags = editableTaskTags();
-    const normalized = detail.value.toLocaleLowerCase("ru");
-    const existingIndex = tags.findIndex((tag) => tag.toLocaleLowerCase("ru") === normalized);
-    if (existingIndex >= 0) {
-      tags.splice(existingIndex, 1);
-    } else {
-      tags.push(detail.value);
-    }
-    const combined = tags.join(", ");
-    if (combined.length > 1000) {
-      toast("Список тегов не должен превышать 1000 символов", "error");
-      return;
-    }
-    els.taskTags.value = combined;
-    renderTaskTagEditor();
-    scheduleTaskDraftSave();
-  }
-
-  function addTaskTags(value = els.taskTagInput.value) {
-    const incoming = String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean);
-    if (!incoming.length) return;
-    const tags = editableTaskTags();
-    const known = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
-    for (const tag of incoming) {
-      const normalized = tag.toLocaleLowerCase("ru");
-      if (!known.has(normalized)) {
-        tags.push(tag);
-        known.add(normalized);
-      }
-    }
-    const combined = tags.join(", ");
-    if (combined.length > 1000) {
-      toast("Список тегов не должен превышать 1000 символов", "error");
-      return;
-    }
-    els.taskTags.value = combined;
-    els.taskTagInput.value = "";
-    renderTaskTagEditor();
-    scheduleTaskDraftSave();
-    els.taskTagInput.focus({ preventScroll: true });
   }
 
   function renderAttachments(attachments) {
@@ -2126,18 +2058,8 @@
   }));
 
   els.taskForm.addEventListener("submit", (event) => event.preventDefault());
-  els.taskTagCustomToggle.addEventListener("click", () => {
-    state.taskTagInputExpanded = true;
-    renderTaskTagEditor();
-    els.taskTagInput.focus({ preventScroll: true });
-  });
+  els.taskTagCustomToggle.addEventListener("click", toggleTaskTagPopover);
   els.addTaskTag.addEventListener("click", () => addTaskTags());
-  els.taskTagInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addTaskTags();
-    }
-  });
   els.exportTask.addEventListener("click", handleTaskExport);
   els.closePanel.addEventListener("click", () => { void dismissTaskPanel(); });
   els.overlay.addEventListener("click", () => { void dismissTaskPanel(); });
@@ -2876,6 +2798,7 @@
   const taskPanelFooterNodes = new Set([els.taskMeta, els.taskAutosaveStatus]);
   const taskPropertiesNodes = new Set([
     $(".field-grid", els.taskForm),
+    $(".task-tags-field", els.taskForm),
     $(".attachment-section", els.taskForm),
   ]);
   Array.from(els.taskForm.children).forEach((child) => {
@@ -2929,18 +2852,9 @@
     $("svg", els.taskMoreToggle).setAttribute("stroke-width", "2.8");
   }
 
-  const taskTagError = make("p", "task-tag-error");
-  taskTagError.id = "task-tag-error";
-  taskTagError.setAttribute("role", "alert");
-  taskTagError.setAttribute("aria-live", "polite");
-  taskTagError.hidden = true;
-  els.taskTagInput.setAttribute("aria-describedby", taskTagError.id);
+  const taskTagError = $("#task-tag-error");
   els.taskTagInput.setAttribute("aria-invalid", "false");
-  els.taskTagList.classList.remove("tag-choice-list");
-  els.taskTagList.classList.add("tag-choice-groups");
-  els.taskTagList.setAttribute("aria-label", "Тип, проект и теги задачи");
-  els.taskTagCreateRow.hidden = false;
-  els.taskTagCustomToggle.hidden = true;
+  let activeTaskTagOption = -1;
 
   function setTaskTagError(message) {
     taskTagError.textContent = message;
@@ -2948,7 +2862,7 @@
     els.taskTagInput.setAttribute("aria-invalid", String(Boolean(message)));
   }
 
-  tagChoiceDetails = function tagChoiceDetailsForGroupedEditor(value) {
+  tagChoiceDetails = function tagChoiceDetailsForPopover(value) {
     const tag = String(value || "").trim();
     const normalized = tag.toLocaleLowerCase("ru");
     if (Object.hasOwn(TASK_TYPE_LABELS, normalized)) {
@@ -2961,45 +2875,30 @@
     return { value: tag, label: tag, kind: "custom" };
   };
 
-  availableTaskTagChoices = function availableTaskTagChoicesGrouped() {
+  availableTaskTagChoices = function availableTaskTagChoicesForPopover() {
     const choices = new Map();
     const addChoice = (value) => {
       const detail = tagChoiceDetails(value);
-      if (!detail.value) return;
+      if (!detail.value || detail.kind !== "custom") return;
       const key = detail.value.toLocaleLowerCase("ru");
       if (!choices.has(key)) choices.set(key, detail);
     };
 
-    Object.keys(TASK_TYPE_LABELS).forEach(addChoice);
-    const archived = typeof archivedProjectSlugs === "undefined"
-      ? new Set()
-      : new Set(archivedProjectSlugs);
-    state.projects.filter((slug) => !archived.has(slug)).forEach((slug) => addChoice(projectTag(slug)));
-    const currentTags = editableTaskTags();
-    state.tasks.flatMap(taskTags).forEach((tag) => {
-      const detail = tagChoiceDetails(tag);
-      const project = projectFromTag(tag);
-      if (detail.kind === "project" && archived.has(project)
-        && !currentTags.some((currentTag) => projectFromTag(currentTag) === project)) return;
-      addChoice(tag);
-    });
-    currentTags.forEach(addChoice);
-
-    const kindOrder = { type: 0, project: 1, custom: 2 };
-    const typeOrder = Object.keys(TASK_TYPE_LABELS);
+    state.tasks.flatMap(taskTags).forEach(addChoice);
+    editableTaskTags().forEach(addChoice);
     return [...choices.values()].sort((a, b) => {
-      if (kindOrder[a.kind] !== kindOrder[b.kind]) return kindOrder[a.kind] - kindOrder[b.kind];
-      if (a.kind === "type") return typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value);
+      const aSelected = editableTaskTags().some((tag) => tag.toLocaleLowerCase("ru") === a.value.toLocaleLowerCase("ru"));
+      const bSelected = editableTaskTags().some((tag) => tag.toLocaleLowerCase("ru") === b.value.toLocaleLowerCase("ru"));
+      if (aSelected !== bSelected) return aSelected ? -1 : 1;
       return a.label.localeCompare(b.label, "ru");
     });
   };
 
   function updateReservedTaskTag(kind, value) {
+    if (value === "__multiple__") return;
     const tags = editableTaskTags();
     const current = tags.filter((tag) => tagChoiceDetails(tag).kind === kind);
     const nextTags = tags.filter((tag) => tagChoiceDetails(tag).kind !== kind);
-
-    if (value === "__multiple__") return;
     if (value) nextTags.push(value);
     const combined = nextTags.join(", ");
     if (combined.length > 1000) {
@@ -3013,116 +2912,163 @@
     scheduleTaskDraftSave();
   }
 
-  renderTaskTagEditor = function renderCompactTaskTagEditor() {
-    const taskId = state.selectedTask?.id ?? null;
-    if (taskId !== state.taskTagDisclosureTaskId) {
-      state.taskTagDisclosureTaskId = taskId;
-      state.taskTagsExpanded = false;
+  function renderReservedTaskSelect(select, kind, placeholderText) {
+    // Reserved values are collected separately because the tag popover only manages custom tags.
+    const allChoices = new Map();
+    Object.keys(TASK_TYPE_LABELS).forEach((tag) => {
+      const detail = tagChoiceDetails(tag);
+      if (detail.kind === kind) allChoices.set(detail.value.toLocaleLowerCase("ru"), detail);
+    });
+    const archived = typeof archivedProjectSlugs === "undefined"
+      ? new Set()
+      : new Set(archivedProjectSlugs);
+    const currentTags = editableTaskTags();
+    state.projects.filter((slug) => !archived.has(slug)
+      || currentTags.some((tag) => projectFromTag(tag) === slug)).forEach((slug) => {
+      const detail = tagChoiceDetails(projectTag(slug));
+      if (detail.kind === kind) allChoices.set(detail.value.toLocaleLowerCase("ru"), detail);
+    });
+    state.tasks.flatMap(taskTags).forEach((tag) => {
+      const detail = tagChoiceDetails(tag);
+      const project = projectFromTag(tag);
+      if (kind === "project" && project && archived.has(project)
+        && !currentTags.some((currentTag) => projectFromTag(currentTag) === project)) return;
+      if (detail.kind === kind) allChoices.set(detail.value.toLocaleLowerCase("ru"), detail);
+    });
+    editableTaskTags().forEach((tag) => {
+      const detail = tagChoiceDetails(tag);
+      if (detail.kind === kind) allChoices.set(detail.value.toLocaleLowerCase("ru"), detail);
+    });
+    const selected = editableTaskTags().filter((tag) => tagChoiceDetails(tag).kind === kind);
+    select.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = placeholderText;
+    select.appendChild(placeholder);
+    if (selected.length > 1) {
+      const multiple = document.createElement("option");
+      multiple.value = "__multiple__";
+      multiple.textContent = `Несколько значений (${selected.length})`;
+      multiple.selected = true;
+      multiple.disabled = true;
+      select.appendChild(multiple);
     }
+    [...allChoices.values()].sort((a, b) => a.label.localeCompare(b.label, "ru")).forEach((choice) => {
+      const option = document.createElement("option");
+      option.value = choice.value;
+      option.textContent = choice.label;
+      option.selected = selected.length === 1
+        && selected[0].toLocaleLowerCase("ru") === choice.value.toLocaleLowerCase("ru");
+      select.appendChild(option);
+    });
+    if (!selected.length) placeholder.selected = true;
+  }
+
+  function setTaskTagPopoverOpen(open, restoreFocus = false) {
+    els.taskTagPopover.hidden = !open;
+    els.taskTagCustomToggle.setAttribute("aria-expanded", String(open));
+    els.taskTagInput.setAttribute("aria-expanded", String(open));
+    if (open) {
+      activeTaskTagOption = -1;
+      els.taskTagInput.value = "";
+      setTaskTagError("");
+      renderTaskTagEditor();
+      els.taskTagInput.focus({ preventScroll: true });
+      els.taskTagInput.select();
+    } else {
+      activeTaskTagOption = -1;
+      els.taskTagInput.removeAttribute("aria-activedescendant");
+      if (restoreFocus) els.taskTagCustomToggle.focus({ preventScroll: true });
+    }
+  }
+
+  function toggleTaskTagPopover() {
+    setTaskTagPopoverOpen(els.taskTagPopover.hidden, true);
+  }
+
+  function renderTaskTagEditor() {
     const tags = editableTaskTags();
     const selected = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
-    const choices = availableTaskTagChoices();
-    const groupDefinitions = [
-      { kind: "type", label: "Тип" },
-      { kind: "project", label: "Проект" },
-      { kind: "custom", label: "Теги" },
-    ];
     els.taskTags.value = tags.join(", ");
     els.taskTagList.replaceChildren();
 
-    groupDefinitions.forEach((definition) => {
-      const group = make("section", `tag-choice-group tag-choice-group-${definition.kind}`);
-      const heading = make("h4", "tag-choice-group-heading", definition.label);
-      const groupChoices = choices.filter((choice) => choice.kind === definition.kind);
-
-      if (definition.kind !== "custom") {
-        const select = make("select", "text-field tag-metadata-select");
-        const kindLabel = definition.kind === "type" ? "Тип задачи" : "Проект задачи";
-        select.setAttribute("aria-label", kindLabel);
-        const selectedChoices = groupChoices.filter((choice) => selected.has(choice.value.toLocaleLowerCase("ru")));
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = definition.kind === "type" ? "Без типа" : "Без проекта";
-        select.appendChild(placeholder);
-
-        if (selectedChoices.length > 1) {
-          const multiple = document.createElement("option");
-          multiple.value = "__multiple__";
-          multiple.textContent = `Несколько значений (${selectedChoices.length})`;
-          multiple.selected = true;
-          select.appendChild(multiple);
-        }
-        groupChoices.forEach((choice) => {
-          const option = document.createElement("option");
-          option.value = choice.value;
-          option.textContent = choice.label;
-          option.selected = selectedChoices.length === 1
-            && selectedChoices[0].value.toLocaleLowerCase("ru") === choice.value.toLocaleLowerCase("ru");
-          select.appendChild(option);
-        });
-        if (selectedChoices.length === 0) placeholder.selected = true;
-        select.addEventListener("change", () => updateReservedTaskTag(definition.kind, select.value));
-        group.append(heading, select);
-      } else {
-        const list = make("div", "tag-choice-list");
-        list.setAttribute("role", "group");
-        list.setAttribute("aria-label", "Пользовательские теги");
-        const orderedChoices = [...groupChoices].sort((a, b) => {
-          const aSelected = selected.has(a.value.toLocaleLowerCase("ru"));
-          const bSelected = selected.has(b.value.toLocaleLowerCase("ru"));
-          if (aSelected !== bSelected) return aSelected ? -1 : 1;
-          return a.label.localeCompare(b.label, "ru");
-        });
-        orderedChoices.forEach((choice, index) => {
-          const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
-          const option = make("button", `tag-choice tag-choice-custom${index >= 4 ? " tag-choice-collapsed" : ""}`, choice.label);
-          option.type = "button";
-          option.dataset.tag = choice.value;
-          option.setAttribute("aria-pressed", String(isSelected));
-          option.setAttribute("aria-label", `${isSelected ? "Снять выбор" : "Выбрать"}: тег ${choice.label}`);
-          option.title = `${isSelected ? "Снять выбор" : "Выбрать"}: ${choice.label}`;
-          if (index >= 4 && !state.taskTagsExpanded) option.hidden = true;
-          option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
-          list.appendChild(option);
-        });
-        list.appendChild(els.taskTagCreateRow);
-        const hiddenCount = Math.max(0, orderedChoices.length - 4);
-        const expand = make("button", "text-button task-tag-expand", state.taskTagsExpanded ? "Свернуть теги" : `+${hiddenCount} ещё`);
-        expand.type = "button";
-        expand.hidden = hiddenCount === 0;
-        expand.setAttribute("aria-expanded", String(state.taskTagsExpanded));
-        expand.setAttribute("aria-label", state.taskTagsExpanded ? "Свернуть список тегов" : `Показать ещё ${hiddenCount} тегов`);
-        expand.addEventListener("click", () => {
-          state.taskTagsExpanded = !state.taskTagsExpanded;
-          renderTaskTagEditor();
-        });
-        group.append(heading, list, expand, taskTagError);
-      }
-      els.taskTagList.appendChild(group);
-    });
-    els.taskTagCustomToggle.hidden = true;
-    els.taskTagCreateRow.hidden = false;
-  };
-
-  toggleTaskTagChoice = function toggleGroupedTaskTagChoice(value) {
-    const detail = tagChoiceDetails(value);
-    const tags = editableTaskTags();
-    const normalized = detail.value.toLocaleLowerCase("ru");
-
-    if (detail.kind === "project") {
-      const alreadySelected = tags.some((tag) => {
-        const current = tagChoiceDetails(tag);
-        return current.kind === "project" && current.value.toLocaleLowerCase("ru") === normalized;
+    tags.filter((tag) => tagChoiceDetails(tag).kind === "custom").forEach((tag) => {
+      const chip = make("span", "task-tag-chip");
+      const label = make("span", "task-tag-chip-label", tag);
+      const remove = make("button", "task-tag-chip-remove", "×");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Удалить тег ${tag}`);
+      remove.title = `Удалить тег «${tag}»`;
+      remove.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const nextTags = editableTaskTags().filter((value) => value.toLocaleLowerCase("ru") !== tag.toLocaleLowerCase("ru"));
+        els.taskTags.value = nextTags.join(", ");
+        renderTaskTagEditor();
+        scheduleTaskDraftSave();
       });
-      const nextTags = tags.filter((tag) => tagChoiceDetails(tag).kind !== "project");
-      if (!alreadySelected) nextTags.push(detail.value);
-      tags.splice(0, tags.length, ...nextTags);
-    } else {
-      const existingIndex = tags.findIndex((tag) => tag.toLocaleLowerCase("ru") === normalized);
-      if (existingIndex >= 0) tags.splice(existingIndex, 1);
-      else tags.push(detail.value);
-    }
+      chip.append(label, remove);
+      els.taskTagList.appendChild(chip);
+    });
 
+    renderReservedTaskSelect(els.taskType, "type", "Без типа");
+    renderReservedTaskSelect(els.taskProject, "project", "Без проекта");
+
+    const query = normalizeSearch(els.taskTagInput.value);
+    const choices = availableTaskTagChoices().filter((choice) => !query || normalizeSearch(choice.label).includes(query));
+    choices.sort((a, b) => {
+      const aSelected = selected.has(a.value.toLocaleLowerCase("ru"));
+      const bSelected = selected.has(b.value.toLocaleLowerCase("ru"));
+      if (aSelected !== bSelected) return aSelected ? -1 : 1;
+      return a.label.localeCompare(b.label, "ru");
+    });
+    els.taskTagOptions.replaceChildren();
+    if (!choices.length) {
+      els.taskTagOptions.appendChild(make("p", "task-tag-empty", query ? "Совпадений не найдено." : "Пока нет доступных тегов."));
+    }
+    choices.forEach((choice, index) => {
+      const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
+      const option = make("button", `task-tag-option${isSelected ? " is-selected" : ""}${index === activeTaskTagOption ? " is-active" : ""}`);
+      option.type = "button";
+      option.id = `task-tag-option-${index}`;
+      option.dataset.tag = choice.value;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", String(isSelected));
+      option.setAttribute("aria-label", `${isSelected ? "Снять выбор" : "Выбрать"} тег ${choice.label}`);
+      option.appendChild(make("span", "task-tag-option-check", isSelected ? "✓" : ""));
+      option.appendChild(make("span", "task-tag-option-label", choice.label));
+      option.addEventListener("click", () => {
+        toggleTaskTagChoice(choice.value);
+        els.taskTagInput.focus({ preventScroll: true });
+      });
+      els.taskTagOptions.appendChild(option);
+    });
+    if (activeTaskTagOption < 0 || activeTaskTagOption >= choices.length) {
+      els.taskTagInput.removeAttribute("aria-activedescendant");
+    } else {
+      els.taskTagInput.setAttribute("aria-activedescendant", `task-tag-option-${activeTaskTagOption}`);
+    }
+    const exactMatch = choices.find((choice) => normalizeSearch(choice.label) === query
+      || normalizeSearch(choice.value) === query);
+    const inputDetail = tagChoiceDetails(els.taskTagInput.value.trim());
+    const canCreate = Boolean(els.taskTagInput.value.trim()) && inputDetail.kind === "custom" && !exactMatch;
+    els.taskTagCreateRow.hidden = !canCreate;
+    els.addTaskTag.disabled = !canCreate;
+    els.addTaskTag.textContent = canCreate
+      ? `＋ Создать тег «${els.taskTagInput.value.trim()}»`
+      : "＋ Создать тег";
+    taskTagError.hidden = !taskTagError.textContent;
+    els.taskTagCustomToggle.setAttribute("aria-expanded", String(!els.taskTagPopover.hidden));
+  }
+
+  function toggleTaskTagChoice(value) {
+    const detail = tagChoiceDetails(value);
+    if (!detail.value || detail.kind !== "custom") return;
+    const tags = editableTaskTags();
+    activeTaskTagOption = -1;
+    const normalized = detail.value.toLocaleLowerCase("ru");
+    const existingIndex = tags.findIndex((tag) => tag.toLocaleLowerCase("ru") === normalized);
+    if (existingIndex >= 0) tags.splice(existingIndex, 1);
+    else tags.push(detail.value);
     const combined = tags.join(", ");
     if (combined.length > 1000) {
       toast("Список тегов не должен превышать 1000 символов", "error");
@@ -3132,51 +3078,105 @@
     els.taskTags.value = combined;
     renderTaskTagEditor();
     scheduleTaskDraftSave();
-  };
+  }
 
-  addTaskTags = function addTaskTagsWithValidation(value = els.taskTagInput.value) {
-    const incoming = String(value ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
-    if (!incoming.length) {
+  function addTaskTags(value = els.taskTagInput.value) {
+    const tag = String(value ?? "").trim();
+    if (!tag) {
       setTaskTagError("Введите название тега.");
       els.taskTagInput.focus({ preventScroll: true });
       return;
     }
-
-    if (incoming.some((tag) => projectFromTag(tag))) {
-      setTaskTagError("Проект выбирается в группе «Проект», а не добавляется как обычный тег.");
+    if (tag.includes(",")) {
+      setTaskTagError("Название одного тега не может содержать запятую.");
       els.taskTagInput.focus({ preventScroll: true });
       return;
     }
-
+    const detail = tagChoiceDetails(tag);
+    if (detail.kind !== "custom") {
+      setTaskTagError(`Значение «${detail.label}» выбирается в поле «${detail.kind === "type" ? "Тип" : "Проект"}».`);
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
+    const existingChoice = availableTaskTagChoices().find((choice) => normalizeSearch(choice.value) === normalizeSearch(tag)
+      || normalizeSearch(choice.label) === normalizeSearch(tag));
+    if (existingChoice) {
+      const isSelected = editableTaskTags().some((item) => item.toLocaleLowerCase("ru") === existingChoice.value.toLocaleLowerCase("ru"));
+      if (!isSelected) toggleTaskTagChoice(existingChoice.value);
+      els.taskTagInput.value = "";
+      setTaskTagError("");
+      renderTaskTagEditor();
+      els.taskTagInput.focus({ preventScroll: true });
+      return;
+    }
     const existing = editableTaskTags();
-    const existingValues = new Set(existing.map((tag) => tag.toLocaleLowerCase("ru")));
-    const duplicate = incoming.find((tag, index) => {
-      const normalized = tag.toLocaleLowerCase("ru");
-      return existingValues.has(normalized)
-        || incoming.slice(0, index).some((previous) => previous.toLocaleLowerCase("ru") === normalized);
-    });
+    const duplicate = existing.find((item) => normalizeSearch(item) === normalizeSearch(tag));
     if (duplicate) {
-      setTaskTagError(`Тег «${duplicate}» уже добавлен.`);
-      els.taskTagInput.focus({ preventScroll: true });
+      setTaskTagError(`Тег «${duplicate}» уже выбран.`);
       return;
     }
-
-    const combined = [...existing, ...incoming].join(", ");
+    const combined = [...existing, tag].join(", ");
     if (combined.length > 1000) {
       setTaskTagError("Список тегов не должен превышать 1000 символов.");
-      els.taskTagInput.focus({ preventScroll: true });
       return;
     }
-
-    setTaskTagError("");
     els.taskTags.value = combined;
     els.taskTagInput.value = "";
+    setTaskTagError("");
     renderTaskTagEditor();
     scheduleTaskDraftSave();
     els.taskTagInput.focus({ preventScroll: true });
-  };
+  }
 
-  els.taskTagInput.addEventListener("input", () => setTaskTagError(""));
+  function moveActiveTaskTagOption(step) {
+    const options = Array.from(els.taskTagOptions.querySelectorAll("[role=option]"));
+    if (!options.length) {
+      activeTaskTagOption = -1;
+      return;
+    }
+    activeTaskTagOption = activeTaskTagOption < 0
+      ? (step > 0 ? 0 : options.length - 1)
+      : (activeTaskTagOption + step + options.length) % options.length;
+    renderTaskTagEditor();
+    const active = $(`#task-tag-option-${activeTaskTagOption}`, els.taskTagOptions);
+    active?.scrollIntoView({ block: "nearest" });
+    els.taskTagInput.setAttribute("aria-activedescendant", active?.id || "");
+  }
+
+  els.taskType.addEventListener("change", () => updateReservedTaskTag("type", els.taskType.value));
+  els.taskProject.addEventListener("change", () => updateReservedTaskTag("project", els.taskProject.value));
+  els.taskTagInput.addEventListener("input", () => {
+    setTaskTagError("");
+    activeTaskTagOption = -1;
+    els.taskTagInput.removeAttribute("aria-activedescendant");
+    renderTaskTagEditor();
+  });
+  els.taskTagInput.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      moveActiveTaskTagOption(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const active = els.taskTagOptions.querySelector('[role="option"].is-active');
+      if (active) toggleTaskTagChoice(active.dataset.tag);
+      else addTaskTags();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setTaskTagPopoverOpen(false, true);
+    }
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (els.taskTagPopover.hidden) return;
+    if (els.taskTagPopover.contains(event.target) || els.taskTagCustomToggle.contains(event.target)) return;
+    setTaskTagPopoverOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || els.taskTagPopover.hidden) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setTaskTagPopoverOpen(false, true);
+  });
 
   const closePanelBeforeRedesign = closePanel;
   closePanel = function closePanelWithStableEditorIcon() {

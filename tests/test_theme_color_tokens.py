@@ -17,7 +17,6 @@ def test_primary_actions_follow_the_active_theme_accent(client):
 def test_task_type_colors_use_the_same_semantic_tokens_in_picker_cards_and_archive(client):
     picker_css = client.get("/static/themed-controls.css").text
     theme_css = client.get("/static/github-theme.css").text
-    editor_css = client.get("/static/style.css").text
 
     pairs = {
         "bug": ("gh-red-fg", "gh-red-bg"),
@@ -31,8 +30,6 @@ def test_task_type_colors_use_the_same_semantic_tokens_in_picker_cards_and_archi
         assert f"background: var(--{background}" in picker_css
         assert f".task-type-{task_type} {{ color: var(--{foreground})" in theme_css
         assert f".archive-chip.task-type-{task_type} {{ color: var(--{foreground})" in theme_css
-        assert f".tag-choice-type.tag-choice-{task_type} {{ color: var(--{foreground}" in editor_css
-        assert f"background: var(--{background}" in editor_css
 
 
 def test_status_and_project_colors_are_theme_tokens(client):

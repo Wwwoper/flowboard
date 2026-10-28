@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="/static/style.css?v=0.5.19">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.9">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.3">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.4">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.2">
 </head>
 <body>
@@ -465,15 +465,35 @@
             <option value="done">Готово</option>
           </select>
         </div>
-        <div class="task-tags-field">
-          <div id="task-tag-list" class="tag-choice-list" aria-label="Доступные теги"></div>
-          <button id="task-tag-custom-toggle" class="text-button task-tag-custom-toggle" type="button" hidden>＋ Добавить свой тег</button>
-          <div id="task-tag-create-row" class="tag-add-row" hidden>
-            <input id="task-tag-input" class="text-field" maxlength="1000" placeholder="Новый тег…" autocomplete="off" aria-label="Новый тег">
-            <button id="add-task-tag" class="button button-small button-quiet" type="button" aria-label="Добавить тег" title="Добавить тег">＋</button>
-          </div>
-          <input id="task-tags" class="visually-hidden" maxlength="1000" aria-hidden="true" tabindex="-1">
+        <div>
+          <label class="field-label" for="task-type">Тип</label>
+          <select id="task-type" class="text-field" aria-label="Тип задачи">
+            <option value="">Без типа</option>
+          </select>
         </div>
+        <div>
+          <label class="field-label" for="task-project">Проект</label>
+          <select id="task-project" class="text-field" aria-label="Проект задачи">
+            <option value="">Без проекта</option>
+          </select>
+        </div>
+      </div>
+      <div class="task-tags-field">
+        <span class="field-label">Теги</span>
+        <div class="task-tag-chip-row">
+          <div id="task-tag-list" class="task-tag-chips" aria-label="Выбранные теги"></div>
+          <button id="task-tag-custom-toggle" class="button button-small button-quiet task-tag-add-trigger" type="button" aria-expanded="false" aria-controls="task-tag-popover">＋ Добавить тег</button>
+        </div>
+        <div id="task-tag-popover" class="task-tag-popover" hidden>
+          <label class="visually-hidden" for="task-tag-input">Поиск тегов</label>
+          <input id="task-tag-input" class="text-field task-tag-search" maxlength="1000" placeholder="Поиск тегов…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="task-tag-options" aria-expanded="false" aria-describedby="task-tag-error">
+          <div id="task-tag-options" class="task-tag-options" role="listbox" aria-label="Доступные теги"></div>
+          <div id="task-tag-create-row" class="task-tag-create-row" hidden>
+            <button id="add-task-tag" class="text-button task-tag-create-button" type="button">＋ Создать тег</button>
+          </div>
+          <p id="task-tag-error" class="task-tag-error" role="alert" aria-live="polite" hidden></p>
+        </div>
+        <input id="task-tags" class="visually-hidden" maxlength="1000" aria-hidden="true" tabindex="-1">
       </div>
 
       <section id="task-description-section" class="task-description-section task-editor-workspace">
@@ -523,7 +543,7 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
-  <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.33" defer></script>
+  <script src="/static/themed-selects.js?v=0.1.1" defer></script>
+  <script src="/static/app.js?v=0.5.34" defer></script>
 </body>
 </html>

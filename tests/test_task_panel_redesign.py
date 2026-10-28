@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 
-def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
+def test_task_panel_redesign_uses_theme_tokens_and_searchable_tag_popover(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.34" in html
     assert "/static/github-theme.css?v=0.2.3" in html
-    assert "/static/task-editor-redesign.css?v=0.2.3" in html
+    assert "/static/task-editor-redesign.css?v=0.2.4" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -24,11 +24,17 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     for fragment in (
         "task-form-content",
         "task-panel-footer",
-        "function renderCompactTaskTagEditor()",
-        "function addTaskTagsWithValidation(",
+        "function renderTaskTagEditor()",
+        "function setTaskTagPopoverOpen(open, restoreFocus = false)",
+        "function availableTaskTagChoicesForPopover()",
+        "function moveActiveTaskTagOption(step)",
+        'event.key === "ArrowDown" || event.key === "ArrowUp"',
+        'event.key === "Enter"',
+        'event.key === "Escape"',
+        'normalizeSearch(choice.value) === normalizeSearch(tag)',
+        'choices.sort((a, b) => {',
         'setTaskTagError("Введите название тега.")',
-        'setTaskTagError(`Тег «${duplicate}» уже добавлен.`)',
-        "Проект выбирается в группе «Проект»",
+        'taskTagError.hidden = !taskTagError.textContent',
         'emptyState.textContent = "Нет вложений. Нажмите «Добавить», чтобы прикрепить файл.";',
         'els.taskTitleReference.setAttribute("aria-label", `Номер задачи ${actualId}`)',
     ):
@@ -38,9 +44,11 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     for selector in (
         ".task-form-content",
         ".task-panel-footer",
-        ".tag-choice-groups",
-        ".tag-choice-group-heading",
-        '.tag-choice[aria-pressed="true"]::before',
+        ".task-tag-chips",
+        ".task-tag-popover",
+        ".task-tag-options",
+        ".task-tag-option.is-selected",
+        ".task-tag-chip-remove",
         ".task-tag-error",
         ".task-title-reference",
         ".markdown-preview li:has(input[data-task-checkbox])",
@@ -66,7 +74,8 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     assert 'id="copy-description" class="icon-button workspace-copy-button"' in tabs
     assert 'id="toggle-preview"' not in html
     assert 'class="result-heading"' not in html
-    assert '<span class="field-label">Теги</span>' not in html
+    assert '<span class="field-label">Теги</span>' in html
+    assert 'id="task-tag-popover" class="task-tag-popover" hidden' in html
 
     script = client.get("/static/app.js").text
     for fragment in (
@@ -105,27 +114,43 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
 
 def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
     html = client.get("/").text
-    assert "/static/task-editor-redesign.css?v=0.2.3" in html
-    assert "/static/app.js?v=0.5.33" in html
+    assert "/static/task-editor-redesign.css?v=0.2.4" in html
+    assert "/static/app.js?v=0.5.34" in html
 
     script = client.get("/static/app.js").text
     for fragment in (
         'function updateReservedTaskTag(kind, value)',
-        'make("select", "text-field tag-metadata-select")',
-        'select.setAttribute("aria-label", kindLabel)',
-        'function renderCompactTaskTagEditor()',
-        'state.taskTagsExpanded',
-        'make("button", "text-button task-tag-expand"',
+        'function renderReservedTaskSelect(select, kind, placeholderText)',
+        'renderReservedTaskSelect(els.taskType, "type", "Без типа")',
+        'renderReservedTaskSelect(els.taskProject, "project", "Без проекта")',
+        'function renderTaskTagEditor()',
+        'function setTaskTagPopoverOpen(open, restoreFocus = false)',
+        'document.addEventListener("pointerdown", (event) => {',
+        'document.addEventListener("keydown", (event) => {',
         'make("button", "text-button attachment-list-toggle"',
         'function updateAttachmentDisclosure(attachments)',
         'els.attachmentList.hidden = count > 0 && !state.attachmentsExpanded',
     ):
         assert fragment in script
 
+    html = client.get("/").text
+    for fragment in (
+        'id="task-type"',
+        'id="task-project"',
+        'id="task-tag-popover"',
+        'id="task-tag-options" class="task-tag-options" role="listbox"',
+        'id="task-tag-custom-toggle"',
+    ):
+        assert fragment in html
+
     css = client.get("/static/task-editor-redesign.css").text
     for fragment in (
-        ".tag-metadata-select",
-        ".tag-choice-collapsed[hidden]",
+        ".task-tag-chip-row",
+        ".task-tag-popover[hidden]",
+        ".task-tag-options",
+        "max-height: 350px",
+        "@media (max-width: 700px)",
+        "position: fixed",
         ".attachment-list[hidden]",
         ".attachment-list-toggle",
     ):

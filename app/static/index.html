@@ -21,7 +21,7 @@
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=0.5.19">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.9">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.10">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.2">
 </head>
@@ -366,6 +366,19 @@
       </div>
     </div>
   </dialog>
+  <dialog id="confirm-action-dialog" class="app-modal confirm-action-dialog" aria-labelledby="confirm-action-heading" aria-describedby="confirm-action-message" aria-modal="true">
+    <div class="confirm-action-content">
+      <div class="shortcuts-dialog-header">
+        <div><p class="eyebrow">ПОДТВЕРЖДЕНИЕ</p><h2 id="confirm-action-heading">Подтвердите действие</h2></div>
+        <button id="close-confirm-action" class="icon-button" type="button" aria-label="Закрыть окно подтверждения" title="Закрыть">×</button>
+      </div>
+      <p id="confirm-action-message" class="confirm-action-message"></p>
+      <div class="create-project-actions confirm-action-actions">
+        <button id="cancel-confirm-action" class="button button-quiet" type="button">Отмена</button>
+        <button id="accept-confirm-action" class="button" type="button">Подтвердить</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title">
     <div class="attachment-preview-dialog-header">
       <h2 id="attachment-preview-title">Предпросмотр изображения</h2>
@@ -544,6 +557,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.2" defer></script>
-  <script src="/static/app.js?v=0.5.36" defer></script>
+  <script src="/static/app.js?v=0.5.37" defer></script>
 </body>
 </html>

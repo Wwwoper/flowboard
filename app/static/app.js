@@ -965,7 +965,11 @@
   }
 
   async function archiveCompletedTasks() {
-    const confirmed = window.confirm("Переместить все задачи из колонки «Готово» в архив? Их можно будет восстановить позже.");
+    const confirmed = await requestActionConfirmation({
+      title: "Архивировать все завершённые задачи?",
+      message: "Переместить все задачи из колонки «Готово» в архив? Их можно будет восстановить позже.",
+      confirmLabel: "Архивировать",
+    });
     if (!confirmed) return;
     try {
       const result = await api("/api/archive/completed", { method: "POST" });
@@ -1705,7 +1709,12 @@
   async function removeAttachment(attachmentId, filename, isImage = false) {
     const confirmed = isImage
       ? await requestImageDeleteConfirmation(filename)
-      : window.confirm(`Удалить вложение «${filename}»?`);
+      : await requestActionConfirmation({
+        title: "Удалить вложение?",
+        message: `Удалить вложение «${filename}»?`,
+        confirmLabel: "Удалить вложение",
+        danger: true,
+      });
     if (!confirmed) return;
     if (!(await saveCurrentTaskDraft())) return;
     try {
@@ -1820,6 +1829,13 @@
   const createProjectCancel = $("#cancel-create-project");
   const createProjectSubmit = $("#submit-create-project");
   const IMAGE_DELETE_CONFIRMATION_KEY = "flowboard-skip-image-delete-confirmation";
+  const confirmActionDialog = $("#confirm-action-dialog");
+  const confirmActionHeading = $("#confirm-action-heading");
+  const confirmActionMessage = $("#confirm-action-message");
+  const closeConfirmActionButton = $("#close-confirm-action");
+  const cancelConfirmActionButton = $("#cancel-confirm-action");
+  const acceptConfirmActionButton = $("#accept-confirm-action");
+  let pendingActionConfirmation = null;
   const deleteImageDialog = $("#delete-image-dialog");
   const deleteImageMessage = $("#delete-image-message");
   const skipImageDeleteConfirmation = $("#skip-image-delete-confirmation");
@@ -1827,6 +1843,37 @@
   const cancelDeleteImageButton = $("#cancel-delete-image");
   const confirmDeleteImageButton = $("#confirm-delete-image");
   let pendingImageDeleteConfirmation = null;
+
+  function requestActionConfirmation({ title, message, confirmLabel = "Подтвердить", danger = false }) {
+    if (confirmActionDialog.open || pendingActionConfirmation) return Promise.resolve(false);
+
+    confirmActionHeading.textContent = title;
+    confirmActionMessage.textContent = message;
+    acceptConfirmActionButton.textContent = confirmLabel;
+    acceptConfirmActionButton.classList.toggle("confirm-action-danger", danger);
+    return new Promise((resolve) => {
+      pendingActionConfirmation = resolve;
+      confirmActionDialog.showModal();
+      cancelConfirmActionButton.focus({ preventScroll: true });
+    });
+  }
+
+  function finishActionConfirmation(confirmed) {
+    const resolve = pendingActionConfirmation;
+    if (!resolve) return;
+    pendingActionConfirmation = null;
+    if (confirmActionDialog.open) confirmActionDialog.close();
+    resolve(confirmed);
+  }
+
+  closeConfirmActionButton.addEventListener("click", () => finishActionConfirmation(false));
+  cancelConfirmActionButton.addEventListener("click", () => finishActionConfirmation(false));
+  acceptConfirmActionButton.addEventListener("click", () => finishActionConfirmation(true));
+  confirmActionDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    finishActionConfirmation(false);
+  });
+
   let createProjectBusy = false;
   let focusQuickTitleAfterCreateProject = false;
 
@@ -2561,11 +2608,17 @@
       toast(error.message || "Не удалось переключить тему", "error");
     }
   });
-  els.deleteThemeButton.addEventListener("click", () => {
+  els.deleteThemeButton.addEventListener("click", async () => {
     const themeId = els.savedThemesSelect.value;
     if (!themeId || themeId === "builtin") return;
     const name = window.FlowboardThemeManager.getThemeName(themeId);
-    if (!window.confirm(`Удалить тему «${name}» из библиотеки? Это действие нельзя отменить.`)) return;
+    const confirmed = await requestActionConfirmation({
+      title: "Удалить тему из библиотеки?",
+      message: `Удалить тему «${name}» из библиотеки? Это действие нельзя отменить.`,
+      confirmLabel: "Удалить тему",
+      danger: true,
+    });
+    if (!confirmed) return;
     try {
       window.FlowboardThemeManager.deleteTheme(themeId);
       applyTheme(document.documentElement.dataset.theme || "light");

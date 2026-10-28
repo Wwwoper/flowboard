@@ -866,3 +866,41 @@
   .create-project-actions { gap: 6px; }
   .create-project-actions .button { flex: 1 1 0; min-width: 0; }
 }
+
+/* Shared confirmation dialog for actions that do not need a specialized flow. */
+.confirm-action-dialog {
+  width: min(440px, calc(100vw - 28px));
+  padding: 22px;
+  border-radius: 15px;
+}
+.confirm-action-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.confirm-action-dialog .shortcuts-dialog-header { gap: 14px; }
+.confirm-action-dialog .shortcuts-dialog-header h2 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -.4px;
+}
+.confirm-action-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.confirm-action-danger:not(:disabled) {
+  border-color: var(--gh-red-fg, var(--red));
+  color: var(--gh-red-fg, var(--red));
+  background: var(--gh-red-bg, var(--accent-pale));
+}
+.confirm-action-danger:not(:disabled):hover {
+  border-color: var(--gh-red-fg, var(--red));
+  background: color-mix(in srgb, var(--gh-red-bg, var(--accent-pale)) 72%, var(--surface));
+}
+@media (max-width: 480px) {
+  .confirm-action-dialog { width: calc(100vw - 20px); padding: 16px; }
+}

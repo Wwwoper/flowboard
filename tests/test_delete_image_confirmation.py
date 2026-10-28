@@ -27,7 +27,9 @@ def test_image_deletion_uses_themed_dialog_and_app_wide_reminder_preference(clie
         'deleteImageDialog.addEventListener("cancel", (event) => {',
     ):
         assert fragment in script
-    assert 'window.confirm(`Удалить вложение «${filename}»?`)' in script
+    assert 'window.confirm(' not in script
+    assert 'await requestActionConfirmation({' in script
+    assert 'title: "Удалить вложение?"' in script
 
     controls = client.get("/static/themed-controls.css").text
     for selector in (

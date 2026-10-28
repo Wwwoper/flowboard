@@ -174,6 +174,9 @@
     toastRegion: $("#toast-region"),
     toggleDone: $("#toggle-done"),
     wipWarning: $("#wip-warning"),
+    settingsOpen: $("#open-settings"),
+    settingsDialog: $("#settings-dialog"),
+    settingsClose: $("#close-settings"),
     themeToggle: $("#theme-toggle"),
     themeToggleIcon: $("#theme-toggle-icon"),
     themeToggleLabel: $("#theme-toggle-label"),
@@ -2234,7 +2237,10 @@
   $$('[data-archive-completed]').forEach((button) => button.addEventListener("click", () => {
     void archiveCompletedTasks();
   }));
-  els.archiveOpen.addEventListener("click", () => { void openArchive(); });
+  els.archiveOpen.addEventListener("click", () => {
+    if (els.settingsDialog.open) els.settingsDialog.close();
+    void openArchive();
+  });
   els.archiveClose.addEventListener("click", () => els.archiveDialog.close());
   els.archiveDialog.addEventListener("click", (event) => {
     if (event.target === els.archiveDialog) els.archiveDialog.close();
@@ -2524,6 +2530,7 @@
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
     if (event.key === "Escape") {
       if (createProjectDialog.open) return;
+      if (els.settingsDialog.open) return;
       if (els.attachmentPreviewDialog.open) {
         event.preventDefault();
         closeAttachmentPreview();
@@ -2545,6 +2552,7 @@
         }
       }
     }
+    if (els.settingsDialog.open) return;
     if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("en") === "k") {
       event.preventDefault();
       els.search.focus();
@@ -2568,6 +2576,46 @@
       event.preventDefault();
       if (!els.shortcutsDialog.open) els.shortcutsDialog.showModal();
     }
+  });
+
+  function selectSettingsTab(tabName, { focus = false } = {}) {
+    const tabs = $$('[data-settings-tab]');
+    const panels = $$('[data-settings-panel]');
+    const selectedTab = tabs.find((tab) => tab.dataset.settingsTab === tabName);
+    if (!selectedTab) return;
+    tabs.forEach((tab) => {
+      const selected = tab === selectedTab;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== tabName; });
+    if (focus) selectedTab.focus({ preventScroll: true });
+  }
+
+  els.settingsOpen.addEventListener("click", () => {
+    if (!els.settingsDialog.open) els.settingsDialog.showModal();
+    const activeTab = $('[data-settings-tab][aria-selected="true"]');
+    (activeTab || els.settingsClose).focus({ preventScroll: true });
+  });
+  els.settingsClose.addEventListener("click", () => els.settingsDialog.close());
+  els.settingsDialog.addEventListener("click", (event) => {
+    if (event.target === els.settingsDialog) els.settingsDialog.close();
+  });
+  els.settingsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
+  $$('[data-settings-tab]').forEach((tab) => {
+    tab.addEventListener("click", () => selectSettingsTab(tab.dataset.settingsTab));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+      const tabs = $$('[data-settings-tab]');
+      const currentIndex = tabs.indexOf(tab);
+      let nextIndex = currentIndex;
+      if (event.key === "Home") nextIndex = 0;
+      else if (event.key === "End") nextIndex = tabs.length - 1;
+      else if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+      else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      event.preventDefault();
+      selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true });
+    });
   });
 
   els.themeToggle.addEventListener("click", toggleTheme);
@@ -2638,7 +2686,11 @@
       toast(error.message || "Не удалось сбросить тему", "error");
     }
   });
-  els.shortcutsButton.addEventListener("click", () => els.shortcutsDialog.showModal());
+  els.shortcutsButton.addEventListener("click", () => {
+    if (els.settingsDialog.open) els.settingsDialog.close();
+    if (!els.shortcutsDialog.open) els.shortcutsDialog.showModal();
+  });
+  els.shortcutsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
   els.closeShortcuts.addEventListener("click", () => els.shortcutsDialog.close());
   els.shortcutsDialog.addEventListener("click", (event) => {
     if (event.target === els.shortcutsDialog) els.shortcutsDialog.close();
@@ -2757,7 +2809,7 @@
   manageProjectsIconPath.setAttribute("d", "M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z");
   manageProjectsIcon.append(manageProjectsIconPath);
   manageProjectsButton.append(manageProjectsIcon, make("span", "manage-projects-label", "Управление проектами"));
-  $("#settings-other-heading").parentElement.append(manageProjectsButton);
+  $("#settings-panel-other .settings-option-list").append(manageProjectsButton);
 
   const manageProjectsDialog = document.createElement("dialog");
   manageProjectsDialog.id = "manage-projects-dialog";
@@ -2828,6 +2880,7 @@
 
   function openManageProjectsDialog() {
     if (manageProjectsDialog.open) return;
+    if (els.settingsDialog.open) els.settingsDialog.close();
     renderProjectManager();
     manageProjectsDialog.showModal();
     closeManageProjectsButton.focus({ preventScroll: true });
@@ -2858,7 +2911,7 @@
   manageProjectsDialog.addEventListener("click", (event) => {
     if (event.target === manageProjectsDialog) manageProjectsDialog.close();
   });
-  manageProjectsDialog.addEventListener("close", () => $("#settings-menu > summary").focus({ preventScroll: true }));
+  manageProjectsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
   manageProjectsDialog.addEventListener("keydown", (event) => {
     // Keep workspace shortcuts from leaking out of the modal without blocking input typing.
     event.stopPropagation();

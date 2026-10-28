@@ -922,12 +922,97 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 .toolbar-menu-trigger::after { content: "⌄"; color: var(--muted); font-size: 12px; margin-left: 1px; }
+.settings-open-button::after { display: none; }
 .toolbar-menu-trigger:hover,
 .toolbar-menu[open] > .toolbar-menu-trigger {
   border-color: var(--line-strong);
   color: var(--ink);
   background: var(--surface-soft);
 }
+.settings-dialog {
+  width: min(820px, calc(100vw - 28px));
+  height: min(660px, calc(100dvh - 28px));
+  max-height: calc(100dvh - 28px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.settings-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-dialog-header h2 { margin: 0; font-size: 22px; letter-spacing: -.45px; }
+.settings-dialog-header .eyebrow { margin: 0 0 5px; }
+.settings-layout {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  min-height: 0;
+  height: calc(100% - 86px);
+}
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 10px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+.settings-tab {
+  display: flex;
+  align-items: center;
+  min-height: 39px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-tab:hover { color: var(--ink); background: var(--surface); }
+.settings-tab[aria-selected="true"] {
+  color: var(--accent-dark);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: var(--surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.settings-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-panels { min-width: 0; min-height: 0; padding: 24px; overflow-y: auto; overscroll-behavior: contain; }
+.settings-panel[hidden] { display: none; }
+.settings-panel h3 { margin: 0; font-size: 17px; letter-spacing: -.2px; }
+.settings-panel-description { margin: 7px 0 22px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.settings-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+}
+.settings-option-row > span { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.settings-option-row strong { font-size: 12px; font-weight: 650; }
+.settings-option-row small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.settings-option-row input { flex: 0 0 auto; width: 17px; height: 17px; accent-color: var(--accent); }
+.settings-option-list { display: flex; flex-direction: column; gap: 8px; }
+.settings-dialog .toolbar-menu-item.button { justify-content: flex-start; width: 100%; min-height: 40px; padding: 10px 12px; border-radius: 8px; font-size: 12px; }
+.settings-dialog .theme-manager-label { margin: 18px 0 7px; }
+.settings-dialog .theme-manager-select { margin: 0 0 12px; }
+.settings-dialog .theme-manager-help,
+.settings-dialog .theme-manager-status { margin: 4px 0 12px; font-size: 11px; }
+.settings-dialog .theme-manager-actions { margin-bottom: 12px; }
+.settings-dialog .theme-manager-actions .toolbar-menu-item.button { padding-inline: 10px; }
 .toolbar-menu-panel {
   position: absolute;
   top: calc(100% + 8px);
@@ -1083,6 +1168,16 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .board-stats { gap: 6px; }
 }
 @media (max-width: 640px) {
+  .settings-dialog { width: calc(100vw - 16px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .settings-dialog-header { padding: 17px 16px 14px; }
+  .settings-dialog-header h2 { font-size: 19px; }
+  .settings-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: calc(100% - 73px); }
+  .settings-tabs { flex-direction: row; gap: 5px; padding: 8px 10px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .settings-tab { flex: 0 0 auto; min-height: 35px; padding: 8px 10px; white-space: nowrap; font-size: 11px; }
+  .settings-panels { padding: 19px 16px; }
+  .settings-panel-description { margin-bottom: 17px; }
+  .settings-option-row { gap: 12px; }
+  .settings-dialog .theme-manager-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .topbar { height: 60px; }
   .brand strong { font-size: 15px; }
   .brand-mark { width: 29px; height: 29px; }

@@ -679,7 +679,6 @@
   padding: 10px;
 }
 #files-menu .toolbar-menu-panel { width: min(250px, calc(100vw - 24px)); }
-#settings-menu .toolbar-menu-panel { width: min(330px, calc(100vw - 24px)); }
 .toolbar-menu-section {
   display: flex;
   flex-direction: column;
@@ -699,7 +698,8 @@
   line-height: 1.35;
   letter-spacing: .015em;
 }
-.toolbar-menu-panel .toolbar-menu-item.button {
+.toolbar-menu-panel .toolbar-menu-item.button,
+.settings-dialog .toolbar-menu-item.button {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -715,9 +715,12 @@
   font-weight: 550;
 }
 .toolbar-menu-item.button > span { min-width: 0; }
-.toolbar-menu-panel .theme-toggle { padding: 8px 10px !important; }
+.toolbar-menu-panel .theme-toggle,
+.settings-dialog .theme-toggle { padding: 8px 10px !important; }
 .toolbar-menu-panel .theme-toggle-label,
-.toolbar-menu-panel .density-toggle > span { display: inline; }
+.toolbar-menu-panel .density-toggle > span,
+.settings-dialog .theme-toggle-label,
+.settings-dialog .density-toggle > span { display: inline; }
 .theme-manager-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
 .theme-manager-actions .toolbar-menu-item.button { padding-inline: 8px; }
 .theme-manager-label {
@@ -728,7 +731,8 @@
   font-weight: 600;
   line-height: 1.35;
 }
-.toolbar-menu-panel .theme-manager-select {
+.toolbar-menu-panel .theme-manager-select,
+.settings-dialog .theme-manager-select {
   box-sizing: border-box;
   display: block;
   width: 100%;
@@ -759,7 +763,6 @@
 .toolbar-menu-item.button:focus-visible,
 .toolbar-menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 420px) {
-  #settings-menu .toolbar-menu-panel { width: min(330px, calc(100vw - 16px)); }
   .theme-manager-actions { grid-template-columns: minmax(0, 1fr); }
 }
 

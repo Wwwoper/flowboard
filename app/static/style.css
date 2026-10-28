@@ -923,8 +923,6 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .brand strong { font-size: 16px; letter-spacing: -.35px; }
 .brand-mark { width: 31px; height: 31px; border-radius: 9px; }
 .topbar-actions { gap: 7px; }
-.topbar-import-button { min-height: 36px; padding: 8px 11px; gap: 7px; font-size: var(--type-meta); line-height: var(--line-height-heading); }
-.topbar-import-button .toolbar-menu-item-icon { width: 16px; height: 16px; flex-basis: 16px; }
 .toolbar-menu { position: relative; flex: 0 0 auto; }
 .toolbar-menu > summary { list-style: none; }
 .toolbar-menu > summary::-webkit-details-marker { display: none; }
@@ -945,7 +943,8 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 .toolbar-menu-trigger::after { content: "⌄"; color: var(--muted); font-size: 12px; margin-left: 1px; }
-.settings-open-button::after { display: none; }
+.settings-open-button::after,
+.topbar-import-button::after { display: none; }
 .toolbar-menu-trigger:hover,
 .toolbar-menu[open] > .toolbar-menu-trigger {
   border-color: var(--line-strong);
@@ -1212,7 +1211,6 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .brand strong { font-size: 15px; }
   .brand-mark { width: 29px; height: 29px; }
   .toolbar-menu-trigger { min-height: 34px; padding: 7px 8px; gap: 5px; font-size: 10px; }
-  .topbar-import-button { min-height: 34px; padding: 7px 8px; gap: 5px; font-size: 10px; }
   .toolbar-menu-trigger::after { display: none; }
   .toolbar-menu-panel { width: min(220px, calc(100vw - 26px)); }
   .page-heading { align-items: center; padding: 23px 0 15px; }

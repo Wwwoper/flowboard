@@ -81,6 +81,7 @@
     wipLimit: 3,
     maxFileSizeMb: 20,
     previewVisible: false,
+    activeTaskTab: "description",
     previewRequest: 0,
     draftSaveTimer: null,
     draftSavePromise: null,
@@ -132,6 +133,11 @@
     addTaskTag: $("#add-task-tag"),
     taskDescription: $("#task-description"),
     taskResult: $("#task-result"),
+    taskDescriptionTab: $("#task-description-tab"),
+    taskResultTab: $("#task-result-tab"),
+    taskDescriptionPanel: $("#task-description-panel"),
+    taskResultPanel: $("#task-result-panel"),
+    taskResultIndicator: $("#task-result-indicator"),
     copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
     togglePreview: $("#toggle-preview"),
@@ -1013,6 +1019,8 @@
     document.body.style.overflow = "";
     state.selectedTask = null;
     state.previewVisible = false;
+    setTaskWorkspaceTab("description");
+    updateTaskResultIndicator();
     els.descriptionPreview.hidden = true;
     els.taskDescription.hidden = false;
     els.togglePreview.textContent = "✎";
@@ -1046,6 +1054,8 @@
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.taskResult.value = task.result || "";
+      setTaskWorkspaceTab("description");
+      updateTaskResultIndicator();
       els.descriptionPreview.replaceChildren();
       els.descriptionPreview.hidden = false;
       els.taskDescription.hidden = true;
@@ -2297,6 +2307,33 @@
     els.taskTitleDisplay.focus({ preventScroll: true });
   }
 
+  function updateTaskResultIndicator() {
+    els.taskResultIndicator.hidden = !els.taskResult.value.trim();
+  }
+
+  function setTaskWorkspaceTab(tab, focus = false) {
+    const activeTab = tab === "result" ? "result" : "description";
+    state.activeTaskTab = activeTab;
+    const descriptionSelected = activeTab === "description";
+    els.taskDescriptionTab.setAttribute("aria-selected", String(descriptionSelected));
+    els.taskDescriptionTab.tabIndex = descriptionSelected ? 0 : -1;
+    els.taskDescriptionPanel.hidden = !descriptionSelected;
+    els.taskResultTab.setAttribute("aria-selected", String(!descriptionSelected));
+    els.taskResultTab.tabIndex = descriptionSelected ? -1 : 0;
+    els.taskResultPanel.hidden = descriptionSelected;
+    if (focus) (descriptionSelected ? els.taskDescriptionTab : els.taskResultTab).focus({ preventScroll: true });
+  }
+
+  function handleTaskWorkspaceTabKeydown(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    let tab = state.activeTaskTab;
+    if (event.key === "Home") tab = "description";
+    else if (event.key === "End") tab = "result";
+    else tab = state.activeTaskTab === "description" ? "result" : "description";
+    setTaskWorkspaceTab(tab, true);
+  }
+
   async function setDescriptionEditing(editing) {
     if (!editing && !(await saveCurrentTaskDraft())) return;
     state.previewVisible = !editing;
@@ -2357,6 +2394,10 @@
     scheduleTaskDraftSave(0);
   }
 
+  els.taskDescriptionTab.addEventListener("click", () => setTaskWorkspaceTab("description"));
+  els.taskResultTab.addEventListener("click", () => setTaskWorkspaceTab("result"));
+  els.taskDescriptionTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
+  els.taskResultTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
   els.togglePreview.addEventListener("click", () => {
     void setDescriptionEditing(state.previewVisible);
@@ -2379,7 +2420,10 @@
     if (state.previewVisible) requestMarkdownPreview();
   });
   els.taskDescription.addEventListener("blur", () => scheduleTaskDraftSave(180));
-  els.taskResult.addEventListener("input", () => scheduleTaskDraftSave(180));
+  els.taskResult.addEventListener("input", () => {
+    updateTaskResultIndicator();
+    scheduleTaskDraftSave(180);
+  });
   els.taskResult.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
@@ -2762,14 +2806,30 @@
     }
   });
   initializeSortables();
-  /* Task editor refresh: grouped tags, consistent controls, and a persistent footer. */
+  /* Keep the title and save status fixed while the workspace and properties scroll independently. */
+  const taskPanelHeader = make("div", "task-panel-header");
   const taskPanelContent = make("div", "task-form-content");
+  const taskPropertiesSidebar = make("aside", "task-properties-sidebar");
   const taskPanelFooter = make("div", "task-panel-footer");
   const taskPanelFooterNodes = new Set([els.taskMeta, els.taskAutosaveStatus]);
+  const taskPropertiesNodes = new Set([
+    $(".field-grid", els.taskForm),
+    $(".attachment-section", els.taskForm),
+  ]);
   Array.from(els.taskForm.children).forEach((child) => {
-    (taskPanelFooterNodes.has(child) ? taskPanelFooter : taskPanelContent).appendChild(child);
+    if (child === els.taskId) return;
+    if (child.classList.contains("task-title-field")) {
+      taskPanelHeader.appendChild(child);
+    } else if (taskPropertiesNodes.has(child)) {
+      taskPropertiesSidebar.appendChild(child);
+    } else if (taskPanelFooterNodes.has(child)) {
+      taskPanelFooter.appendChild(child);
+    } else {
+      taskPanelContent.appendChild(child);
+    }
   });
-  els.taskForm.replaceChildren(taskPanelContent, taskPanelFooter);
+  taskPanelContent.appendChild(taskPropertiesSidebar);
+  els.taskForm.replaceChildren(els.taskId, taskPanelHeader, taskPanelContent, taskPanelFooter);
 
   // Keep editor controls in one lightweight outline-icon style.
   const taskPanelIconNamespace = "http://www.w3.org/2000/svg";

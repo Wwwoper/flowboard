@@ -89,6 +89,10 @@
     draftSavePromise: null,
     attachmentPreviewUrl: null,
     attachmentPreviewToken: 0,
+    taskTagsExpanded: false,
+    taskTagDisclosureTaskId: null,
+    attachmentsExpanded: false,
+    attachmentDisclosureTaskId: null,
   };
   state.columnPreferences = readColumnPreferences();
   state.archivedTasks = [];
@@ -3009,7 +3013,31 @@
     });
   };
 
-  renderTaskTagEditor = function renderGroupedTaskTagEditor() {
+  function updateReservedTaskTag(kind, value) {
+    const tags = editableTaskTags();
+    const current = tags.filter((tag) => tagChoiceDetails(tag).kind === kind);
+    const nextTags = tags.filter((tag) => tagChoiceDetails(tag).kind !== kind);
+
+    if (value === "__multiple__") return;
+    if (value) nextTags.push(value);
+    const combined = nextTags.join(", ");
+    if (combined.length > 1000) {
+      toast("Список тегов не должен превышать 1000 символов", "error");
+      renderTaskTagEditor();
+      return;
+    }
+    if (current.length === 1 && current[0] === value) return;
+    els.taskTags.value = combined;
+    renderTaskTagEditor();
+    scheduleTaskDraftSave();
+  }
+
+  renderTaskTagEditor = function renderCompactTaskTagEditor() {
+    const taskId = state.selectedTask?.id ?? null;
+    if (taskId !== state.taskTagDisclosureTaskId) {
+      state.taskTagDisclosureTaskId = taskId;
+      state.taskTagsExpanded = false;
+    }
     const tags = editableTaskTags();
     const selected = new Set(tags.map((tag) => tag.toLocaleLowerCase("ru")));
     const choices = availableTaskTagChoices();
@@ -3024,32 +3052,70 @@
     groupDefinitions.forEach((definition) => {
       const group = make("section", `tag-choice-group tag-choice-group-${definition.kind}`);
       const heading = make("h4", "tag-choice-group-heading", definition.label);
-      const list = make("div", "tag-choice-list");
-      list.setAttribute("role", "group");
-      list.setAttribute("aria-label", definition.kind === "project" ? "Проект, можно выбрать один" : definition.label);
       const groupChoices = choices.filter((choice) => choice.kind === definition.kind);
 
-      groupChoices.forEach((choice) => {
-        const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
-        const noun = definition.kind === "project" ? "проект" : definition.kind === "type" ? "тип" : "тег";
-        const option = make("button", `tag-choice tag-choice-${choice.kind}${choice.kind === "type" ? ` tag-choice-${choice.value}` : ""}`, choice.label);
-        option.type = "button";
-        option.dataset.tag = choice.value;
-        option.setAttribute("aria-pressed", String(isSelected));
-        option.setAttribute("aria-label", `${isSelected ? "Снять выбор" : "Выбрать"}: ${noun} ${choice.label}`);
-        option.title = `${isSelected ? "Снять выбор" : "Выбрать"}: ${choice.label}`;
-        option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
-        list.appendChild(option);
-      });
+      if (definition.kind !== "custom") {
+        const select = make("select", "text-field tag-metadata-select");
+        const kindLabel = definition.kind === "type" ? "Тип задачи" : "Проект задачи";
+        select.setAttribute("aria-label", kindLabel);
+        const selectedChoices = groupChoices.filter((choice) => selected.has(choice.value.toLocaleLowerCase("ru")));
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = definition.kind === "type" ? "Без типа" : "Без проекта";
+        select.appendChild(placeholder);
 
-      if (!groupChoices.length && definition.kind === "project") {
-        list.appendChild(make("p", "tag-choice-empty", "Активных проектов пока нет."));
-      }
-      if (definition.kind === "custom") {
-        list.appendChild(els.taskTagCreateRow);
-        group.append(heading, list, taskTagError);
+        if (selectedChoices.length > 1) {
+          const multiple = document.createElement("option");
+          multiple.value = "__multiple__";
+          multiple.textContent = `Несколько значений (${selectedChoices.length})`;
+          multiple.selected = true;
+          select.appendChild(multiple);
+        }
+        groupChoices.forEach((choice) => {
+          const option = document.createElement("option");
+          option.value = choice.value;
+          option.textContent = choice.label;
+          option.selected = selectedChoices.length === 1
+            && selectedChoices[0].value.toLocaleLowerCase("ru") === choice.value.toLocaleLowerCase("ru");
+          select.appendChild(option);
+        });
+        if (selectedChoices.length === 0) placeholder.selected = true;
+        select.addEventListener("change", () => updateReservedTaskTag(definition.kind, select.value));
+        group.append(heading, select);
       } else {
-        group.append(heading, list);
+        const list = make("div", "tag-choice-list");
+        list.setAttribute("role", "group");
+        list.setAttribute("aria-label", "Пользовательские теги");
+        const orderedChoices = [...groupChoices].sort((a, b) => {
+          const aSelected = selected.has(a.value.toLocaleLowerCase("ru"));
+          const bSelected = selected.has(b.value.toLocaleLowerCase("ru"));
+          if (aSelected !== bSelected) return aSelected ? -1 : 1;
+          return a.label.localeCompare(b.label, "ru");
+        });
+        orderedChoices.forEach((choice, index) => {
+          const isSelected = selected.has(choice.value.toLocaleLowerCase("ru"));
+          const option = make("button", `tag-choice tag-choice-custom${index >= 4 ? " tag-choice-collapsed" : ""}`, choice.label);
+          option.type = "button";
+          option.dataset.tag = choice.value;
+          option.setAttribute("aria-pressed", String(isSelected));
+          option.setAttribute("aria-label", `${isSelected ? "Снять выбор" : "Выбрать"}: тег ${choice.label}`);
+          option.title = `${isSelected ? "Снять выбор" : "Выбрать"}: ${choice.label}`;
+          if (index >= 4 && !state.taskTagsExpanded) option.hidden = true;
+          option.addEventListener("click", () => toggleTaskTagChoice(choice.value));
+          list.appendChild(option);
+        });
+        list.appendChild(els.taskTagCreateRow);
+        const hiddenCount = Math.max(0, orderedChoices.length - 4);
+        const expand = make("button", "text-button task-tag-expand", state.taskTagsExpanded ? "Свернуть теги" : `+${hiddenCount} ещё`);
+        expand.type = "button";
+        expand.hidden = hiddenCount === 0;
+        expand.setAttribute("aria-expanded", String(state.taskTagsExpanded));
+        expand.setAttribute("aria-label", state.taskTagsExpanded ? "Свернуть список тегов" : `Показать ещё ${hiddenCount} тегов`);
+        expand.addEventListener("click", () => {
+          state.taskTagsExpanded = !state.taskTagsExpanded;
+          renderTaskTagEditor();
+        });
+        group.append(heading, list, expand, taskTagError);
       }
       els.taskTagList.appendChild(group);
     });
@@ -3172,6 +3238,37 @@
   }
   els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
   els.toggleAttachmentUpload.title = "Добавить вложение или перетащить файлы";
+
+  const attachmentListToggle = make("button", "text-button attachment-list-toggle", "Показать вложения");
+  attachmentListToggle.type = "button";
+  attachmentListToggle.setAttribute("aria-controls", "attachment-list");
+  attachmentListToggle.setAttribute("aria-expanded", "false");
+  els.toggleAttachmentUpload.parentElement.insertBefore(attachmentListToggle, els.toggleAttachmentUpload);
+
+  function updateAttachmentDisclosure(attachments) {
+    const taskId = state.selectedTask?.id ?? null;
+    const count = attachments.length;
+    if (taskId !== state.attachmentDisclosureTaskId) {
+      state.attachmentDisclosureTaskId = taskId;
+      state.attachmentsExpanded = count <= 3;
+    }
+    attachmentListToggle.hidden = count === 0;
+    attachmentListToggle.textContent = state.attachmentsExpanded ? "Свернуть" : `Показать вложения · ${count}`;
+    attachmentListToggle.setAttribute("aria-expanded", String(state.attachmentsExpanded));
+    attachmentListToggle.setAttribute("aria-label", state.attachmentsExpanded ? "Свернуть вложения" : `Показать список вложений (${count})`);
+    els.attachmentList.hidden = count > 0 && !state.attachmentsExpanded;
+  }
+
+  attachmentListToggle.addEventListener("click", () => {
+    state.attachmentsExpanded = !state.attachmentsExpanded;
+    const count = Number(els.attachmentCount.textContent) || 0;
+    updateAttachmentDisclosure(Array.from({ length: count }));
+  });
+  const renderAttachmentsBeforeDisclosure = renderAttachments;
+  renderAttachments = function renderAttachmentsWithDisclosure(attachments) {
+    renderAttachmentsBeforeDisclosure(attachments);
+    updateAttachmentDisclosure(attachments);
+  };
 
   els.copyDescription.setAttribute("aria-label", "Копировать");
   els.copyDescription.title = "Копировать";

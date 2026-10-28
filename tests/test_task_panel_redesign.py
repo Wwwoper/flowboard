@@ -5,9 +5,9 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.30" in html
+    assert "/static/app.js?v=0.5.31" in html
     assert "/static/github-theme.css?v=0.2.3" in html
-    assert "/static/task-editor-redesign.css?v=0.2.1" in html
+    assert "/static/task-editor-redesign.css?v=0.2.2" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -24,7 +24,7 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     for fragment in (
         "task-form-content",
         "task-panel-footer",
-        "function renderGroupedTaskTagEditor()",
+        "function renderCompactTaskTagEditor()",
         "function addTaskTagsWithValidation(",
         'setTaskTagError("Введите название тега.")',
         'setTaskTagError(`Тег «${duplicate}» уже добавлен.`)',
@@ -95,5 +95,34 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
         "overflow-y: auto",
         "@media (max-width: 700px)",
         "@media (max-width: 420px)",
+    ):
+        assert fragment in css
+
+
+def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
+    html = client.get("/").text
+    assert "/static/task-editor-redesign.css?v=0.2.2" in html
+    assert "/static/app.js?v=0.5.31" in html
+
+    script = client.get("/static/app.js").text
+    for fragment in (
+        'function updateReservedTaskTag(kind, value)',
+        'make("select", "text-field tag-metadata-select")',
+        'select.setAttribute("aria-label", kindLabel)',
+        'function renderCompactTaskTagEditor()',
+        'state.taskTagsExpanded',
+        'make("button", "text-button task-tag-expand"',
+        'make("button", "text-button attachment-list-toggle"',
+        'function updateAttachmentDisclosure(attachments)',
+        'els.attachmentList.hidden = count > 0 && !state.attachmentsExpanded',
+    ):
+        assert fragment in script
+
+    css = client.get("/static/task-editor-redesign.css").text
+    for fragment in (
+        ".tag-metadata-select",
+        ".tag-choice-collapsed[hidden]",
+        ".attachment-list[hidden]",
+        ".attachment-list-toggle",
     ):
         assert fragment in css

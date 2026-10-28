@@ -2809,7 +2809,7 @@
   manageProjectsIconPath.setAttribute("d", "M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z");
   manageProjectsIcon.append(manageProjectsIconPath);
   manageProjectsButton.append(manageProjectsIcon, make("span", "manage-projects-label", "Управление проектами"));
-  $("#settings-panel-other .settings-option-list").append(manageProjectsButton);
+  $("#organization-settings-actions").append(manageProjectsButton);
 
   const manageProjectsDialog = document.createElement("dialog");
   manageProjectsDialog.id = "manage-projects-dialog";

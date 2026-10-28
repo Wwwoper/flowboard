@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.38" in html
-    assert "/static/style.css?v=0.5.20" in html
+    assert "/static/app.js?v=0.5.39" in html
+    assert "/static/style.css?v=0.5.21" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -174,8 +174,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.38" in html
-    assert "/static/style.css?v=0.5.20" in html
+    assert "/static/app.js?v=0.5.39" in html
+    assert "/static/style.css?v=0.5.21" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -309,8 +309,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.38" in html
-    assert "/static/style.css?v=0.5.20" in html
+    assert "/static/app.js?v=0.5.39" in html
+    assert "/static/style.css?v=0.5.21" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -344,7 +344,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.20" in html
+    assert "/static/style.css?v=0.5.21" in html
     assert '/static/github-theme.css?v=0.2.3' in html
 
     style = client.get("/static/style.css").text
@@ -370,14 +370,20 @@ def test_input_focus_does_not_highlight_form_frames(client):
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
     assert "/static/themed-controls.css?v=0.1.10" in html
+    assert html.count('class="settings-tab"') == 4
     for fragment in (
+        'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
         'id="settings-tab-appearance" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-appearance" data-settings-tab="appearance"',
-        'id="settings-tab-themes" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-themes" data-settings-tab="themes"',
-        'id="settings-tab-other" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-other" data-settings-tab="other"',
+        'id="settings-tab-behavior" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-behavior" data-settings-tab="behavior"',
+        'id="settings-tab-organization" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-organization" data-settings-tab="organization"',
         'id="settings-panel-tasks" class="settings-panel" role="tabpanel"',
         'id="settings-panel-appearance" class="settings-panel" role="tabpanel"',
-        'id="settings-panel-themes" class="settings-panel" role="tabpanel"',
-        'id="settings-panel-other" class="settings-panel" role="tabpanel"',
+        'id="settings-panel-behavior" class="settings-panel" role="tabpanel"',
+        'id="settings-panel-organization" class="settings-panel" role="tabpanel"',
+        '<h4>Пользовательские темы</h4>',
+        '<h4>Архив задач</h4>',
+        'id="open-archive"',
+        'id="organization-settings-actions"',
         'id="theme-delete-help"',
         'id="theme-reset-help"',
         'id="theme-toggle-icon" class="toolbar-menu-item-icon theme-toggle-icon"',
@@ -394,6 +400,9 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
 
     script = client.get("/static/app.js").text
     assert 'Активна встроенная тема. Сохранено тем: ${themes.length}' in script
+    assert '$("#organization-settings-actions").append(manageProjectsButton);' in script
+    assert '$("#settings-panel-other .settings-option-list").append(manageProjectsButton);' not in script
+    assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script
 
 
 def test_column_header_actions_have_contextual_names_and_comfortable_hit_areas(client):

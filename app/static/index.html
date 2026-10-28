@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.20">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.21">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.10">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
@@ -258,20 +258,27 @@
     </div>
     <div class="settings-layout">
       <div class="settings-tabs" role="tablist" aria-label="Разделы настроек" aria-orientation="vertical">
-        <button id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи</button>
+        <button id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>
         <button id="settings-tab-appearance" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-appearance" data-settings-tab="appearance" tabindex="-1">Внешний вид</button>
-        <button id="settings-tab-themes" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-themes" data-settings-tab="themes" tabindex="-1">Управление темами</button>
-        <button id="settings-tab-other" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-other" data-settings-tab="other" tabindex="-1">Прочее</button>
+        <button id="settings-tab-behavior" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-behavior" data-settings-tab="behavior" tabindex="-1">Поведение</button>
+        <button id="settings-tab-organization" class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-organization" data-settings-tab="organization" tabindex="-1">Проекты и организация</button>
       </div>
       <div class="settings-panels">
         <section id="settings-panel-tasks" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-tasks" data-settings-panel="tasks">
-          <h3>Задачи</h3>
-          <p class="settings-panel-description">Настройте правила завершения задач.</p>
+          <h3>Задачи и архив</h3>
+          <p class="settings-panel-description">Настройте завершение задач и управляйте архивом.</p>
           <label class="settings-option-row"><span><strong>Требовать результат перед закрытием</strong><small>Задачу нельзя завершить, пока не заполнен результат выполнения.</small></span><input id="require-result-to-close" type="checkbox"></label>
+          <div class="settings-section">
+            <h4>Архив задач</h4>
+            <p class="settings-section-description">Просмотр архива и параметры автоархивирования.</p>
+            <div class="settings-option-list">
+              <button id="open-archive" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14v3H3zM4.5 8v8h11V8M8 11h4"></path></svg><span>Открыть архив задач</span></button>
+            </div>
+          </div>
         </section>
         <section id="settings-panel-appearance" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-appearance" data-settings-panel="appearance" hidden>
           <h3>Внешний вид</h3>
-          <p class="settings-panel-description">Настройте оформление доски.</p>
+          <p class="settings-panel-description">Настройте оформление доски и палитры.</p>
           <div class="settings-option-list">
             <button id="theme-toggle" class="button button-quiet toolbar-menu-item theme-toggle" type="button" aria-label="Переключить тему" aria-pressed="false" title="Переключить тему">
               <svg id="theme-toggle-icon" class="toolbar-menu-item-icon theme-toggle-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.5"></circle><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7"></path></svg>
@@ -281,29 +288,33 @@
               <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="12" height="4" rx="1"></rect><rect x="4" y="12" width="12" height="4" rx="1"></rect></svg><span id="density-toggle-label">Плотность: комфортная</span>
             </button>
           </div>
-        </section>
-        <section id="settings-panel-themes" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-themes" data-settings-panel="themes" hidden>
-          <h3>Управление темами</h3>
-          <p class="settings-panel-description">Импортируйте, экспортируйте и выбирайте палитры оформления.</p>
-          <div class="theme-manager-actions">
-            <button id="import-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13V3m0 0 3 3m-3-3L7 6M4 12v4h12v-4"></path></svg><span>Импорт темы</span></button>
-            <button id="export-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v10m0 0 3-3m-3 3-3-3M4 14v2h12v-2"></path></svg><span>Экспорт темы</span></button>
+          <div class="settings-section">
+            <h4>Пользовательские темы</h4>
+            <p class="settings-section-description">Импортируйте, экспортируйте и выбирайте палитры оформления.</p>
+            <div class="theme-manager-actions">
+              <button id="import-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13V3m0 0 3 3m-3-3L7 6M4 12v4h12v-4"></path></svg><span>Импорт темы</span></button>
+              <button id="export-theme-button" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v10m0 0 3-3m-3 3-3-3M4 14v2h12v-2"></path></svg><span>Экспорт темы</span></button>
+            </div>
+            <label class="theme-manager-label" for="saved-themes-select">Текущая тема</label>
+            <select id="saved-themes-select" class="text-field theme-manager-select" aria-label="Выбрать сохранённую тему"><option value="builtin">Стандартная палитра Flowboard</option></select>
+            <button id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-reset-help" title="Восстановить стандартную тему"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 8a6.5 6.5 0 1 1 1.5 6.5M4 3.5V8h4.5"></path></svg><span>Восстановить стандартную тему</span></button>
+            <p id="theme-reset-help" class="theme-manager-help">Доступно, когда выбрана пользовательская тема.</p>
+            <button id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-delete-help" title="Удалить выбранную пользовательскую тему"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4.5 6h11M8 6V4h4v2M6 6l.8 10h6.4L14 6M8.5 8.5v5M11.5 8.5v5"></path></svg><span>Удалить выбранную тему</span></button>
+            <p id="theme-delete-help" class="theme-manager-help">Встроенную тему удалить нельзя; удаление доступно только для пользовательских тем.</p>
+            <p id="custom-theme-status" class="theme-manager-status" role="status">Активна встроенная тема. Сохранено тем: 0</p>
           </div>
-          <label class="theme-manager-label" for="saved-themes-select">Текущая тема</label>
-          <select id="saved-themes-select" class="text-field theme-manager-select" aria-label="Выбрать сохранённую тему"><option value="builtin">Стандартная палитра Flowboard</option></select>
-          <button id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-reset-help" title="Восстановить стандартную тему"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 8a6.5 6.5 0 1 1 1.5 6.5M4 3.5V8h4.5"></path></svg><span>Восстановить стандартную тему</span></button>
-          <p id="theme-reset-help" class="theme-manager-help">Доступно, когда выбрана пользовательская тема.</p>
-          <button id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-delete-help" title="Удалить выбранную пользовательскую тему"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4.5 6h11M8 6V4h4v2M6 6l.8 10h6.4L14 6M8.5 8.5v5M11.5 8.5v5"></path></svg><span>Удалить выбранную тему</span></button>
-          <p id="theme-delete-help" class="theme-manager-help">Встроенную тему удалить нельзя; удаление доступно только для пользовательских тем.</p>
-          <p id="custom-theme-status" class="theme-manager-status" role="status">Активна встроенная тема. Сохранено тем: 0</p>
         </section>
-        <section id="settings-panel-other" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-other" data-settings-panel="other" hidden>
-          <h3>Прочее</h3>
-          <p class="settings-panel-description">Дополнительные инструменты Flowboard.</p>
+        <section id="settings-panel-behavior" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-behavior" data-settings-panel="behavior" hidden>
+          <h3>Поведение</h3>
+          <p class="settings-panel-description">Быстрые действия и управление с клавиатуры.</p>
           <div class="settings-option-list">
             <button id="shortcuts-button" class="button button-quiet toolbar-menu-item shortcuts-button" type="button" aria-label="Показать сочетания клавиш" title="Сочетания клавиш (?)"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="2.5" y="4.5" width="15" height="11" rx="1.5"></rect><path d="M5.5 8h1M9.5 8h1M13.5 8h1M5.5 11h9M8 13.5h4"></path></svg><span>Сочетания клавиш</span></button>
-            <button id="open-archive" class="button button-quiet toolbar-menu-item" type="button"><svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14v3H3zM4.5 8v8h11V8M8 11h4"></path></svg><span>Архив задач</span></button>
           </div>
+        </section>
+        <section id="settings-panel-organization" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-organization" data-settings-panel="organization" hidden>
+          <h3>Проекты и организация</h3>
+          <p class="settings-panel-description">Управляйте проектами рабочего пространства и их архивом.</p>
+          <div class="settings-option-list" id="organization-settings-actions"></div>
         </section>
       </div>
     </div>
@@ -568,6 +579,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.2" defer></script>
-  <script src="/static/app.js?v=0.5.38" defer></script>
+  <script src="/static/app.js?v=0.5.39" defer></script>
 </body>
 </html>

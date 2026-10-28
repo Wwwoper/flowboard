@@ -2237,19 +2237,20 @@
     }
   });
 
-  function finishTitleEditing() {
+  function finishTitleEditing(focusDisplay = true) {
     const title = els.taskTitle.value.trim();
     if (!title) {
       els.taskTitle.value = "";
       els.taskTitle.focus({ preventScroll: true });
       toast("У задачи должно быть название", "error");
-      return;
+      return false;
     }
     els.taskTitle.value = title;
     els.taskTitleDisplayText.textContent = title;
     els.taskTitle.hidden = true;
     els.taskTitleDisplay.hidden = false;
-    els.taskTitleDisplay.focus({ preventScroll: true });
+    if (focusDisplay) els.taskTitleDisplay.focus({ preventScroll: true });
+    return true;
   }
 
   function updateTaskResultIndicator() {
@@ -2306,10 +2307,32 @@
     else void requestResultMarkdownPreview();
   }
 
+  let titleEditorClosePending = false;
+
+  async function closeTaskTitleEditorOnOutsidePointerDown() {
+    if (titleEditorClosePending || els.taskTitle.hidden) return;
+    if (!els.taskTitle.value.trim()) {
+      finishTitleEditing(false);
+      return;
+    }
+
+    titleEditorClosePending = true;
+    try {
+      if (!(await saveCurrentTaskDraft())) return;
+      clearTaskDraftSaveTimer();
+      finishTitleEditing(false);
+    } finally {
+      titleEditorClosePending = false;
+    }
+  }
+
   function closeTaskDocumentEditorOnOutsidePointerDown(event) {
     const target = event.target;
     if (!(target instanceof Node)) return;
 
+    if (!els.taskTitle.hidden && !els.taskTitle.contains(target)) {
+      void closeTaskTitleEditorOnOutsidePointerDown();
+    }
     if (state.activeTaskTab === "description" && !state.previewVisible && !els.taskDescription.contains(target)) {
       void setDescriptionEditing(false);
     } else if (state.activeTaskTab === "result" && !state.resultPreviewVisible && !els.taskResult.contains(target)) {
@@ -2409,7 +2432,9 @@
     scheduleTaskDraftSave(180);
   });
   els.taskResult.addEventListener("blur", () => scheduleTaskDraftSave(180));
-  els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180));
+  els.taskTitle.addEventListener("blur", () => {
+    if (!titleEditorClosePending) scheduleTaskDraftSave(180);
+  });
   els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
   els.requireResultToClose.addEventListener("change", () => { void saveTaskSettings(); });
 

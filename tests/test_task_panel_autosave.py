@@ -25,7 +25,8 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert "async function saveCurrentTaskDraft()" in script
     assert "function updateTaskFocusButton()" in script
     assert "function setTaskAutosaveStatus(status, message)" in script
-    assert 'els.taskTitle.addEventListener("blur", () => scheduleTaskDraftSave(180))' in script
+    assert 'els.taskTitle.addEventListener("blur", () => {' in script
+    assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
     assert 'els.taskResult.addEventListener("input", () => {' in script
     assert 'updateTaskResultIndicator();' in script
     assert 'scheduleTaskDraftSave(180);' in script
@@ -84,6 +85,18 @@ def test_task_checkboxes_use_active_theme_colors(client):
     assert "accent-color: var(--accent);" in style
 
 
+def test_task_title_editor_closes_on_outside_pointer_after_successful_save(client):
+    script = client.get("/static/app.js").text
+    assert "let titleEditorClosePending = false;" in script
+    assert "async function closeTaskTitleEditorOnOutsidePointerDown()" in script
+    assert "if (!(await saveCurrentTaskDraft())) return;" in script
+    assert "finishTitleEditing(false);" in script
+    assert 'if (!els.taskTitle.hidden && !els.taskTitle.contains(target))' in script
+    assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
+    assert "function finishTitleEditing(focusDisplay = true)" in script
+    assert "/static/app.js?v=0.5.36" in client.get("/").text
+
+
 def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
     script = client.get("/static/app.js").text
     assert "function closeTaskDocumentEditorOnOutsidePointerDown(event)" in script
@@ -92,4 +105,4 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.35" in client.get("/").text
+    assert "/static/app.js?v=0.5.36" in client.get("/").text

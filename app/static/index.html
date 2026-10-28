@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.21">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.22">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.10">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
@@ -287,6 +287,43 @@
             <button id="density-toggle" class="button button-quiet toolbar-menu-item density-toggle" type="button" aria-label="Переключить плотность карточек" aria-pressed="false" title="Переключить плотность карточек">
               <svg class="toolbar-menu-item-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="12" height="4" rx="1"></rect><rect x="4" y="12" width="12" height="4" rx="1"></rect></svg><span id="density-toggle-label">Плотность: комфортная</span>
             </button>
+          </div>
+          <div class="settings-section toast-position-settings">
+            <h4>Расположение уведомлений</h4>
+            <p class="settings-section-description">Выберите, в какой части экрана будут появляться всплывающие уведомления.</p>
+            <fieldset id="toast-position-options" class="toast-position-options" aria-label="Расположение всплывающих уведомлений">
+              <legend class="visually-hidden">Расположение всплывающих уведомлений</legend>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="top-left">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Сверху слева</span>
+              </label>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="top-center">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Сверху по центру</span>
+              </label>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="top-right">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Сверху справа</span>
+              </label>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="bottom-left">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Снизу слева</span>
+              </label>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="bottom-center">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Снизу по центру</span>
+              </label>
+              <label class="toast-position-option">
+                <input type="radio" name="toast-position" value="bottom-right">
+                <span class="toast-position-preview" aria-hidden="true"><span></span></span>
+                <span>Снизу справа</span>
+              </label>
+            </fieldset>
           </div>
           <div class="settings-section">
             <h4>Пользовательские темы</h4>
@@ -579,6 +616,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.2" defer></script>
-  <script src="/static/app.js?v=0.5.39" defer></script>
+  <script src="/static/app.js?v=0.5.40" defer></script>
 </body>
 </html>

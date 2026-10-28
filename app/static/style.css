@@ -178,10 +178,31 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .footer-pulse { background: var(--green); width: 6px; height: 6px; }
 
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
-.toast-region { position: fixed; z-index: 30; top: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast-region { position: fixed; z-index: 30; top: 18px; right: 18px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: calc(100vw - 36px); pointer-events: none; }
+.toast-region[data-position="top-left"] { top: 18px; right: auto; bottom: auto; left: 18px; align-items: flex-start; }
+.toast-region[data-position="top-center"] { top: 18px; right: auto; bottom: auto; left: 50%; width: min(380px, calc(100vw - 36px)); align-items: center; transform: translateX(-50%); }
+.toast-region[data-position="top-right"] { top: 18px; right: 18px; bottom: auto; left: auto; align-items: flex-end; }
+.toast-region[data-position="bottom-left"] { top: auto; right: auto; bottom: 18px; left: 18px; align-items: flex-start; }
+.toast-region[data-position="bottom-center"] { top: auto; right: auto; bottom: 18px; left: 50%; width: min(380px, calc(100vw - 36px)); align-items: center; transform: translateX(-50%); }
+.toast-region[data-position="bottom-right"] { top: auto; right: 18px; bottom: 18px; left: auto; align-items: flex-end; }
 .toast { max-width: min(380px, calc(100vw - 36px)); color: var(--ink); background: var(--surface); box-shadow: var(--shadow); border-radius: 9px; padding: 12px 15px; font-size: 12px; animation: toast-in .16s ease-out; }
 .toast.error { border-left-color: var(--red); }
+.toast-region[data-position^="bottom"] .toast { animation-name: toast-in-bottom; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-in-bottom { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.toast-position-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.toast-position-option { position: relative; display: flex; min-width: 0; flex-direction: column; align-items: stretch; gap: 7px; padding: 9px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink-soft); background: var(--surface); font-size: 11px; line-height: 1.35; cursor: pointer; }
+.toast-position-option:has(input:checked) { border-color: var(--accent); background: var(--surface-soft); color: var(--ink); }
+.toast-position-option:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toast-position-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.toast-position-preview { display: flex; align-items: flex-start; justify-content: flex-end; height: 38px; padding: 4px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-soft); }
+.toast-position-preview > span { display: block; width: 38%; height: 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); box-shadow: 0 1px 2px #00000012; }
+.toast-position-option:has(input[value="top-left"]) .toast-position-preview,
+.toast-position-option:has(input[value="bottom-left"]) .toast-position-preview { justify-content: flex-start; }
+.toast-position-option:has(input[value="top-center"]) .toast-position-preview,
+.toast-position-option:has(input[value="bottom-center"]) .toast-position-preview { justify-content: center; }
+.toast-position-option:has(input[value^="bottom"]) .toast-position-preview { align-items: flex-end; }
+.toast-position-option:has(input:checked) .toast-position-preview > span { border-color: var(--accent); background: var(--surface-soft); }
 
 /* Theme-aware notifications: override legacy toast colors without relying on their position. */
 .toast-region .toast {

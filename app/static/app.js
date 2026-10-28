@@ -332,6 +332,30 @@
     if (state.selectedTask?.id === taskId) els.taskResult.focus({ preventScroll: true });
   }
 
+  const TOAST_POSITIONS = new Set([
+    "top-left", "top-center", "top-right",
+    "bottom-left", "bottom-center", "bottom-right",
+  ]);
+  const DEFAULT_TOAST_POSITION = "top-right";
+  const TOAST_POSITION_STORAGE_KEY = "flowboard-toast-position";
+
+  function applyToastPosition(position) {
+    const normalized = TOAST_POSITIONS.has(position) ? position : DEFAULT_TOAST_POSITION;
+    els.toastRegion.dataset.position = normalized;
+    const selected = $(`input[name="toast-position"][value="${normalized}"]`);
+    if (selected) selected.checked = true;
+    return normalized;
+  }
+
+  applyToastPosition(readStorage(TOAST_POSITION_STORAGE_KEY, DEFAULT_TOAST_POSITION));
+  const toastPositionOptions = $("#toast-position-options");
+  toastPositionOptions?.addEventListener("change", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.name !== "toast-position" || !TOAST_POSITIONS.has(input.value)) return;
+    const position = applyToastPosition(input.value);
+    writeStorage(TOAST_POSITION_STORAGE_KEY, position);
+  });
+
   function toast(message, type = "success", actionLabel = "", onAction = null) {
     $$(".toast[data-has-undo=\"true\"]", els.toastRegion).forEach((node) => node.remove());
     const node = make("div", `toast${type === "error" ? " error" : ""}`);

@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.40" in html
-    assert "/static/style.css?v=0.5.22" in html
+    assert "/static/app.js?v=0.5.41" in html
+    assert "/static/style.css?v=0.5.23" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -174,8 +174,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.40" in html
-    assert "/static/style.css?v=0.5.22" in html
+    assert "/static/app.js?v=0.5.41" in html
+    assert "/static/style.css?v=0.5.23" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -253,18 +253,25 @@ def test_task_panel_is_reading_first_and_has_compact_attachment_and_action_contr
     assert "@media (max-width: 900px) and (min-width: 641px)" in css
 
 
-def test_main_board_uses_compact_file_and_settings_menus(client):
+def test_main_board_promotes_task_import_and_moves_backup_to_settings(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert 'id="files-menu"' in html
+    assert 'id="files-menu"' not in html
     assert 'id="open-settings"' in html
     assert 'id="settings-dialog"' in html
     assert 'id="settings-menu"' not in html
     assert 'role="tablist" aria-label="Разделы настроек"' in html
     assert 'id="import-button"' in html
-    assert 'id="export-md"' in html
-    assert 'id="export-zip"' in html
+    assert 'id="import-files" class="visually-hidden" type="file" accept=".md,text/markdown" multiple' in html
+    assert 'aria-label="Импорт задач"' in html
+    assert 'Импорт задач</span>' in html
+    assert 'id="export-md"' not in html
+    assert 'id="export-zip"' not in html
+    organization_panel = html.split('id="settings-panel-organization"', 1)[1].split('</section>', 1)[0]
+    assert 'id="backup-export-button"' in organization_panel
+    assert 'Данные и резервные копии' in organization_panel
+    assert 'Скачать резервную копию ZIP' in html
     assert 'id="theme-toggle"' in html
     assert 'id="density-toggle"' in html
     assert 'id="shortcuts-button"' in html
@@ -277,7 +284,7 @@ def test_main_board_uses_compact_file_and_settings_menus(client):
     assert 'id="filter-summary"' not in html
 
     css = client.get("/static/style.css").text
-    assert ".toolbar-menu-panel" in css
+    assert ".topbar-import-button" in css
     assert ".settings-dialog" in css
     assert "@media (max-width: 640px)" in css
     assert ".task-card-title" in css
@@ -289,10 +296,12 @@ def test_main_board_uses_compact_file_and_settings_menus(client):
     assert 'els.filterSummary.textContent' not in script
     assert 'const doingCount = state.tasks.filter((task) => task.status === "doing").length;' in script
     assert 'const overLimit = doingCount > state.wipLimit;' in script
-    assert 'const toolbarMenus = $$(".toolbar-menu");' in script
     assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script
     assert 'els.settingsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));' in script
     assert 'if (els.settingsDialog.open) els.settingsDialog.close();' in script
+    assert 'els.backupExport.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });' in script
+    assert 'els.exportMd' not in script
+    assert 'els.exportZip' not in script
 
 
 def test_archive_and_per_column_filters_are_available_without_adding_a_board_column(client):
@@ -309,8 +318,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.40" in html
-    assert "/static/style.css?v=0.5.22" in html
+    assert "/static/app.js?v=0.5.41" in html
+    assert "/static/style.css?v=0.5.23" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -344,7 +353,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.22" in html
+    assert "/static/style.css?v=0.5.23" in html
     assert '/static/github-theme.css?v=0.2.3' in html
 
     style = client.get("/static/style.css").text
@@ -369,7 +378,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.10" in html
+    assert "/static/themed-controls.css?v=0.1.11" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',

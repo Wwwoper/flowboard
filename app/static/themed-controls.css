@@ -678,7 +678,6 @@
   gap: 0;
   padding: 10px;
 }
-#files-menu .toolbar-menu-panel { width: min(250px, calc(100vw - 24px)); }
 .toolbar-menu-section {
   display: flex;
   flex-direction: column;

@@ -48,8 +48,9 @@ def test_main_screen_uses_shared_typography_and_spacing_tokens(client):
     # Font sizes scale with the root font size; long words and titles can wrap.
     assert "clamp(1.625rem, 2.4vw, 1.875rem)" in css
     assert "overflow-wrap: anywhere;" in css
-    assert 'href="/static/style.css?v=0.5.22"' in html
+    assert 'href="/static/style.css?v=0.5.23"' in html
     assert 'href="/static/board-workspace.css?v=0.1.2"' in html
+    assert ".topbar-import-button { min-height: 36px; padding: 8px 11px; gap: 7px; font-size: var(--type-meta); line-height: var(--line-height-heading); }" in css
 
 
 def test_main_screen_typography_tokens_are_not_overridden_by_small_viewport_rules(client):

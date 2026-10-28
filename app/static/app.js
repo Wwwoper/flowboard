@@ -116,8 +116,7 @@
     focusClear: $("#focus-clear"),
     importButton: $("#import-button"),
     importFiles: $("#import-files"),
-    exportMd: $("#export-md"),
-    exportZip: $("#export-zip"),
+    backupExport: $("#backup-export-button"),
     panel: $("#task-panel"),
     overlay: $("#panel-overlay"),
     closePanel: $("#close-panel"),
@@ -2156,8 +2155,7 @@
   els.focusClear.addEventListener("click", clearFocus);
   els.importButton.addEventListener("click", () => els.importFiles.click());
   els.importFiles.addEventListener("change", () => importMarkdown(els.importFiles.files));
-  els.exportMd.addEventListener("click", () => { window.location.href = "/api/export?format=md"; });
-  els.exportZip.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });
+  els.backupExport.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });
   els.chooseFiles.addEventListener("click", () => els.attachmentInput.click());
   els.toggleAttachmentUpload.addEventListener("click", () => {
     const expanded = els.attachmentDropzone.hidden;
@@ -2533,22 +2531,6 @@
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); els.attachmentInput.click(); }
   });
 
-  const toolbarMenus = $$(".toolbar-menu");
-  toolbarMenus.forEach((menu) => {
-    menu.addEventListener("toggle", () => {
-      if (menu.open) toolbarMenus.forEach((otherMenu) => {
-        if (otherMenu !== menu) otherMenu.open = false;
-      });
-    });
-    menu.addEventListener("click", (event) => {
-      if (!event.target.closest("summary, select, input, textarea, label")) menu.open = false;
-    });
-  });
-  document.addEventListener("click", (event) => {
-    if (event.target.closest(".toolbar-menu")) return;
-    toolbarMenus.forEach((menu) => { menu.open = false; });
-  });
-
   document.addEventListener("keydown", (event) => {
     const tag = event.target && event.target.tagName;
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target?.isContentEditable;
@@ -2558,11 +2540,6 @@
       if (els.attachmentPreviewDialog.open) {
         event.preventDefault();
         closeAttachmentPreview();
-        return;
-      }
-      const openToolbarMenu = toolbarMenus.find((menu) => menu.open);
-      if (openToolbarMenu) {
-        openToolbarMenu.open = false;
         return;
       }
       if (els.shortcutsDialog.open) els.shortcutsDialog.close();

@@ -92,4 +92,4 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.34" in client.get("/").text
+    assert "/static/app.js?v=0.5.35" in client.get("/").text

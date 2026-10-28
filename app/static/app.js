@@ -3199,10 +3199,11 @@
   els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
   els.toggleAttachmentUpload.title = "Добавить вложение или перетащить файлы";
 
-  const attachmentListToggle = make("button", "text-button attachment-list-toggle", "Показать вложения");
+  const attachmentListToggle = make("button", "icon-button attachment-list-toggle");
   attachmentListToggle.type = "button";
   attachmentListToggle.setAttribute("aria-controls", "attachment-list");
   attachmentListToggle.setAttribute("aria-expanded", "false");
+  attachmentListToggle.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg>';
   els.toggleAttachmentUpload.parentElement.insertBefore(attachmentListToggle, els.toggleAttachmentUpload);
 
   function updateAttachmentDisclosure(attachments) {
@@ -3213,9 +3214,9 @@
       state.attachmentsExpanded = count <= 3;
     }
     attachmentListToggle.hidden = count === 0;
-    attachmentListToggle.textContent = state.attachmentsExpanded ? "Свернуть" : `Показать вложения · ${count}`;
     attachmentListToggle.setAttribute("aria-expanded", String(state.attachmentsExpanded));
-    attachmentListToggle.setAttribute("aria-label", state.attachmentsExpanded ? "Свернуть вложения" : `Показать список вложений (${count})`);
+    attachmentListToggle.setAttribute("aria-label", state.attachmentsExpanded ? "Свернуть список вложений" : `Показать все вложения (${count})`);
+    attachmentListToggle.title = state.attachmentsExpanded ? "Свернуть список вложений" : "Показать все вложения";
     els.attachmentList.hidden = count > 0 && !state.attachmentsExpanded;
   }
 

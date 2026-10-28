@@ -50,6 +50,12 @@
       item.setAttribute("aria-selected", String(isSelected));
       item.classList.toggle("is-selected", isSelected);
     });
+    if (instance.select.id === "task-type") {
+      instance.wrapper.classList.remove("task-type-bug", "task-type-feature", "task-type-docs", "task-type-refactor");
+      if (["bug", "feature", "docs", "refactor"].includes(instance.select.value)) {
+        instance.wrapper.classList.add(`task-type-${instance.select.value}`);
+      }
+    }
   }
 
   function renderOptions(instance) {
@@ -59,6 +65,9 @@
       const item = document.createElement("button");
       item.type = "button";
       item.className = "theme-select-option";
+      if (instance.select.id === "task-type" && ["bug", "feature", "docs", "refactor"].includes(option.value)) {
+        item.classList.add(`task-type-${option.value}`);
+      }
       item.id = `${instance.menu.id}-option-${instance.menu.children.length}`;
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", String(option.value === instance.select.value));

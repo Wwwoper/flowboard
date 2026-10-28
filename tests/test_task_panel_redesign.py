@@ -5,9 +5,9 @@ def test_task_panel_redesign_uses_theme_tokens_and_searchable_tag_popover(client
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.34" in html
+    assert "/static/app.js?v=0.5.35" in html
     assert "/static/github-theme.css?v=0.2.3" in html
-    assert "/static/task-editor-redesign.css?v=0.2.4" in html
+    assert "/static/task-editor-redesign.css?v=0.2.5" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -56,6 +56,11 @@ def test_task_panel_redesign_uses_theme_tokens_and_searchable_tag_popover(client
         assert selector in styles
     assert "var(--accent)" in styles
     assert "var(--surface-soft)" in styles
+    assert '.theme-select.task-type-bug .theme-select-trigger' in styles
+    assert '.theme-select.task-type-feature .theme-select-trigger' in styles
+    assert '.theme-select-menu .theme-select-option.task-type-docs' in styles
+    assert '.attachment-list-toggle[aria-expanded="true"] svg' in styles
+    assert 'width: 34px;' in styles
 
 
 def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
@@ -114,8 +119,8 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
 
 def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
     html = client.get("/").text
-    assert "/static/task-editor-redesign.css?v=0.2.4" in html
-    assert "/static/app.js?v=0.5.34" in html
+    assert "/static/task-editor-redesign.css?v=0.2.5" in html
+    assert "/static/app.js?v=0.5.35" in html
 
     script = client.get("/static/app.js").text
     for fragment in (
@@ -127,7 +132,9 @@ def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(cl
         'function setTaskTagPopoverOpen(open, restoreFocus = false)',
         'document.addEventListener("pointerdown", (event) => {',
         'document.addEventListener("keydown", (event) => {',
-        'make("button", "text-button attachment-list-toggle"',
+        'make("button", "icon-button attachment-list-toggle")',
+        'attachmentListToggle.setAttribute("aria-expanded", String(state.attachmentsExpanded))',
+        'Показать все вложения',
         'function updateAttachmentDisclosure(attachments)',
         'els.attachmentList.hidden = count > 0 && !state.attachmentsExpanded',
     ):

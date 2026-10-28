@@ -4,7 +4,7 @@ from __future__ import annotations
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
     assert '/static/themed-controls.css?v=0.1.9' in html
-    assert '/static/themed-selects.js?v=0.1.1' in html
+    assert '/static/themed-selects.js?v=0.1.2' in html
 
     css_response = client.get("/static/themed-controls.css")
     assert css_response.status_code == 200
@@ -55,5 +55,7 @@ def test_theme_aware_controls_assets_are_loaded(client):
         'event.key === "ArrowDown"',
         'new Event("change", { bubbles: true })',
         'new MutationObserver',
+        'instance.wrapper.classList.remove("task-type-bug", "task-type-feature", "task-type-docs", "task-type-refactor")',
+        'item.classList.add(`task-type-${option.value}`)',
     ):
         assert fragment in script

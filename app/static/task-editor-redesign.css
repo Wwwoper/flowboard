@@ -1282,3 +1282,74 @@
   .task-panel .task-tag-create-button { min-height: 40px; }
   .task-panel .task-tag-chip-remove { opacity: 1; }
 }
+
+
+/* Restore the board's task-type colors in the task properties selector. */
+.task-panel .task-properties-sidebar .theme-select.task-type-bug .theme-select-trigger {
+  color: var(--gh-red-fg, var(--red));
+  background: var(--gh-red-bg, var(--accent-pale));
+  border-color: color-mix(in srgb, var(--gh-red-fg, var(--red)) 28%, var(--line));
+}
+.task-panel .task-properties-sidebar .theme-select.task-type-feature .theme-select-trigger {
+  color: var(--gh-green-fg, var(--green));
+  background: var(--gh-green-bg, var(--accent-pale));
+  border-color: color-mix(in srgb, var(--gh-green-fg, var(--green)) 28%, var(--line));
+}
+.task-panel .task-properties-sidebar .theme-select.task-type-docs .theme-select-trigger {
+  color: var(--gh-yellow-fg, var(--orange));
+  background: var(--gh-yellow-bg, var(--accent-pale));
+  border-color: color-mix(in srgb, var(--gh-yellow-fg, var(--orange)) 28%, var(--line));
+}
+.task-panel .task-properties-sidebar .theme-select.task-type-refactor .theme-select-trigger {
+  color: var(--gh-purple-fg, var(--accent-dark));
+  background: var(--gh-purple-bg, var(--accent-pale));
+  border-color: color-mix(in srgb, var(--gh-purple-fg, var(--accent-dark)) 28%, var(--line));
+}
+.theme-select-menu .theme-select-option.task-type-bug { color: var(--gh-red-fg, var(--red)); background: var(--gh-red-bg, var(--accent-pale)); }
+.theme-select-menu .theme-select-option.task-type-feature { color: var(--gh-green-fg, var(--green)); background: var(--gh-green-bg, var(--accent-pale)); }
+.theme-select-menu .theme-select-option.task-type-docs { color: var(--gh-yellow-fg, var(--orange)); background: var(--gh-yellow-bg, var(--accent-pale)); }
+.theme-select-menu .theme-select-option.task-type-refactor { color: var(--gh-purple-fg, var(--accent-dark)); background: var(--gh-purple-bg, var(--accent-pale)); }
+.theme-select-menu .theme-select-option.task-type-bug:hover,
+.theme-select-menu .theme-select-option.task-type-bug.is-active,
+.theme-select-menu .theme-select-option.task-type-feature:hover,
+.theme-select-menu .theme-select-option.task-type-feature.is-active,
+.theme-select-menu .theme-select-option.task-type-docs:hover,
+.theme-select-menu .theme-select-option.task-type-docs.is-active,
+.theme-select-menu .theme-select-option.task-type-refactor:hover,
+.theme-select-menu .theme-select-option.task-type-refactor.is-active {
+  border-color: currentColor;
+  filter: saturate(1.08);
+}
+.task-panel .task-properties-sidebar .attachment-list-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  height: 32px;
+  margin-left: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  line-height: 1;
+}
+.task-panel .task-properties-sidebar .attachment-list-toggle svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  transition: transform .15s ease;
+}
+.task-panel .task-properties-sidebar .attachment-list-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.task-panel .task-properties-sidebar .attachment-list-toggle:hover,
+.task-panel .task-properties-sidebar .attachment-list-toggle:focus-visible,
+.task-panel .task-properties-sidebar .attachment-list-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+.task-panel .task-properties-sidebar .attachment-list-toggle[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .task-panel .task-properties-sidebar .attachment-list-toggle svg { transition: none; }
+}

@@ -82,3 +82,14 @@ def test_task_checkboxes_use_active_theme_colors(client):
     style = client.get("/static/style.css").text
     assert ".markdown-preview input[data-task-checkbox]" in style
     assert "accent-color: var(--accent);" in style
+
+
+def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
+    script = client.get("/static/app.js").text
+    assert "function closeTaskDocumentEditorOnOutsidePointerDown(event)" in script
+    assert 'state.activeTaskTab === "description" && !state.previewVisible && !els.taskDescription.contains(target)' in script
+    assert 'state.activeTaskTab === "result" && !state.resultPreviewVisible && !els.taskResult.contains(target)' in script
+    assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
+    assert "void setDescriptionEditing(false);" in script
+    assert "void setResultEditing(false);" in script
+    assert "/static/app.js?v=0.5.33" in client.get("/").text

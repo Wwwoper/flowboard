@@ -2384,6 +2384,17 @@
     else void requestResultMarkdownPreview();
   }
 
+  function closeTaskDocumentEditorOnOutsidePointerDown(event) {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    if (state.activeTaskTab === "description" && !state.previewVisible && !els.taskDescription.contains(target)) {
+      void setDescriptionEditing(false);
+    } else if (state.activeTaskTab === "result" && !state.resultPreviewVisible && !els.taskResult.contains(target)) {
+      void setResultEditing(false);
+    }
+  }
+
   let copyFeedbackTimer = null;
 
   function showDescriptionCopiedFeedback() {
@@ -2433,6 +2444,7 @@
     scheduleTaskDraftSave(0);
   }
 
+  document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown);
   els.taskDescriptionTab.addEventListener("click", () => setTaskWorkspaceTab("description"));
   els.taskResultTab.addEventListener("click", () => setTaskWorkspaceTab("result"));
   els.taskDescriptionTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);

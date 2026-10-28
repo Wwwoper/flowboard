@@ -5,9 +5,9 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.29" in html
+    assert "/static/app.js?v=0.5.30" in html
     assert "/static/github-theme.css?v=0.2.3" in html
-    assert "/static/task-editor-redesign.css?v=0.2.0" in html
+    assert "/static/task-editor-redesign.css?v=0.2.1" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -29,7 +29,7 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
         'setTaskTagError("Введите название тега.")',
         'setTaskTagError(`Тег «${duplicate}» уже добавлен.`)',
         "Проект выбирается в группе «Проект»",
-        "Нажмите «Добавить» или перетащите файлы сюда.",
+        'emptyState.textContent = "Нет вложений. Нажмите «Добавить», чтобы прикрепить файл.";',
         'els.taskTitleReference.setAttribute("aria-label", `Номер задачи ${actualId}`)',
     ):
         assert fragment in script
@@ -59,12 +59,19 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     assert 'aria-selected="false" aria-controls="task-result-panel" tabindex="-1"' in html
     assert 'id="task-result-panel" class="task-workspace-panel task-result-panel" role="tabpanel" aria-labelledby="task-result-tab" hidden' in html
     assert 'id="task-result-indicator" class="task-result-indicator" aria-hidden="true" hidden' in html
-    assert 'id="task-result" class="text-field result-field" maxlength="5000" rows="8"' in html
+    assert 'id="task-result" class="text-field result-field" maxlength="5000" rows="8" placeholder=' in html
+    assert 'id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview"' in html
+    assert html.count('class="task-workspace-heading"') == 1
+    assert 'class="result-heading"' not in html
+    assert '<span class="field-label">Теги</span>' not in html
 
     script = client.get("/static/app.js").text
     for fragment in (
         'activeTaskTab: "description"',
         'function updateTaskResultIndicator()',
+        'function updateTaskWorkspaceHeading()',
+        'function setResultEditing(editing)',
+        'function requestResultMarkdownPreview()',
         'function setTaskWorkspaceTab(tab, focus = false)',
         'function handleTaskWorkspaceTabKeydown(event)',
         'else tab = state.activeTaskTab === "description" ? "result" : "description"',
@@ -79,6 +86,8 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     for fragment in (
         "height: 100dvh",
         ".task-workspace-tabs",
+        ".task-workspace-heading",
+        ".task-result-preview:empty::before",
         '.task-workspace-tab[aria-selected="true"]',
         ".task-editor-workspace",
         ".task-properties-sidebar",

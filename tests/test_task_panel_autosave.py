@@ -12,7 +12,8 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert 'class="panel-actions"' not in html
     assert 'id="export-task"' in html
     assert 'id="task-result"' in html
-    assert "Результат выполнения" in html
+    assert 'id="task-result-tab"' in html
+    assert 'id="task-workspace-title" class="field-label" for="task-description">Описание</label>' in html
 
     style = client.get("/static/style.css").text
     assert ".task-header-action" in style
@@ -42,6 +43,10 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     )[0]
     assert 'id="copy-description"' in action_group
     assert 'id="toggle-preview"' in action_group
+    assert html.index('class="task-workspace-heading"') < html.index('id="task-description-panel"')
+    assert html.index('class="task-workspace-heading"') < html.index('id="task-result-panel"')
+    assert 'id="task-workspace-title" class="field-label" for="task-description">Описание</label>' in html
+    assert 'id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview"' in html
 
     style = client.get("/static/style.css").text
     assert ".description-actions { display: flex; align-items: center;" in style
@@ -50,22 +55,26 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     assert 'copyDescription: $("#copy-description")' in script
     assert "async function copyTaskDescription()" in script
     assert "navigator.clipboard?.writeText" in script
-    assert "await navigator.clipboard.writeText(els.taskDescription.value)" in script
+    assert 'await navigator.clipboard.writeText(isResult ? els.taskResult.value : els.taskDescription.value)' in script
+    assert 'function updateTaskWorkspaceHeading()' in script
+    assert 'function setResultEditing(editing)' in script
+    assert 'function requestResultMarkdownPreview()' in script
     assert (
         'els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });'
         in script
     )
     assert "function showDescriptionCopiedFeedback()" in script
     assert 'els.copyDescription.classList.add("is-copied")' in script
-    assert 'els.copyDescription.title = "Описание скопировано"' in script
+    assert 'els.copyDescription.title = `${subject} скопирован${subject === "Описание" ? "о" : ""}`' in script
     assert "}, 1200);" in script
-    assert 'toast("Не удалось скопировать описание.' in script
+    assert 'toast(`Не удалось скопировать ${isResult ? "результат" : "описание"}.' in script
 
 
 def test_task_description_checklists_toggle_without_entering_edit_mode(client):
     script = client.get("/static/app.js").text
-    assert "function toggleDescriptionChecklistItem(input)" in script
+    assert "function toggleMarkdownChecklistItem(input, textarea, isPreviewVisible, refreshPreview)" in script
     assert 'els.descriptionPreview.addEventListener("change"' in script
+    assert 'els.resultPreview.addEventListener("change"' in script
     assert 'input[data-task-checkbox], a, button' in script
     assert "scheduleTaskDraftSave(0)" in script
 

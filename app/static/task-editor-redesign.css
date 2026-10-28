@@ -780,6 +780,23 @@
   background: var(--surface);
 }
 .task-panel .task-workspace-tab:focus-visible { z-index: 1; outline-offset: -3px; }
+.task-panel .task-workspace-heading {
+  display: flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 15px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.task-panel .task-workspace-heading-copy { display: flex; flex-direction: column; min-width: 0; }
+.task-panel .task-workspace-heading .field-label { margin: 0; color: var(--ink); font-size: 12px; font-weight: 680; line-height: 1.35; }
+.task-panel .task-workspace-heading .section-helper { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-panel .task-workspace-heading .description-actions { flex: 0 0 auto; }
+.task-panel .task-workspace-heading .inline-edit-button { flex-basis: 32px; width: 32px; min-width: 32px; height: 32px; border-radius: 8px; }
 .task-panel .task-result-indicator {
   flex: 0 0 7px;
   width: 7px;
@@ -826,7 +843,13 @@
   margin: 0;
   resize: none;
   overflow: auto;
+  border: 1px solid var(--line);
   border-radius: 9px;
+  padding: 14px 15px;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  font-family: inherit;
+  font-size: 13px;
   line-height: 1.6;
 }
 .task-panel .task-workspace-panel .markdown-preview {
@@ -837,12 +860,27 @@
   max-height: none;
   margin: 0;
   padding: 14px 15px;
+  border-color: var(--line);
+  border-radius: 9px;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
   overflow: auto;
   overscroll-behavior: contain;
 }
 .task-panel .task-workspace-panel .description-field[hidden],
 .task-panel .task-workspace-panel .markdown-preview[hidden] { display: none; }
-.task-panel .task-workspace-panel .result-field { padding: 13px 14px; }
+.task-panel .task-workspace-panel .result-field { padding: 14px 15px; }
+.task-panel .task-result-preview:empty::before {
+  content: "Результат пока не добавлен. Нажмите «Редактировать», чтобы добавить итог.";
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.55;
+}
 .task-panel .task-properties-sidebar {
   grid-column: 2;
   grid-row: 1;
@@ -892,6 +930,14 @@
 .task-panel .task-properties-sidebar .attachment-heading-title { min-width: 0; }
 .task-panel .task-properties-sidebar .attachment-heading h3 { overflow-wrap: anywhere; }
 .task-panel .task-properties-sidebar .attachment-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; }
+.task-panel .task-properties-sidebar .attachment-empty {
+  min-height: 0;
+  padding: 10px 9px;
+  border-radius: 8px;
+  text-align: left;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .task-panel .task-properties-sidebar .attachment-item { min-width: 0; }
 .task-panel .task-properties-sidebar .attachment-preview-trigger { min-width: 0; }
 .task-panel .task-properties-sidebar .attachment-file-details { min-width: 0; overflow-wrap: anywhere; }
@@ -912,6 +958,7 @@
   .task-panel { width: 100vw; padding-right: 20px; padding-left: 20px; }
   .task-panel .task-form-content { grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr); gap: 0 16px; }
   .task-panel .task-workspace-panel { padding: 12px; }
+  .task-panel .task-workspace-heading { padding-inline: 12px; }
   .task-panel .task-properties-sidebar { gap: 15px; }
 }
 @media (max-width: 700px) {
@@ -951,8 +998,8 @@
   .task-panel .task-header-action,
   .task-panel .task-panel-close { flex-basis: 32px; width: 32px; min-width: 32px; height: 32px; }
   .task-panel .task-workspace-panel { padding: 8px; }
-  .task-panel .description-heading { gap: 5px; }
-  .task-panel .description-heading .section-helper { max-width: 170px; }
+  .task-panel .task-workspace-heading { padding-inline: 8px; gap: 5px; }
+  .task-panel .task-workspace-heading .section-helper { max-width: 170px; }
 }
 .task-panel .task-panel-footer {
   display: grid;

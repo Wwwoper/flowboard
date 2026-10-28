@@ -81,8 +81,10 @@
     wipLimit: 3,
     maxFileSizeMb: 20,
     previewVisible: false,
+    resultPreviewVisible: true,
     activeTaskTab: "description",
     previewRequest: 0,
+    resultPreviewRequest: 0,
     draftSaveTimer: null,
     draftSavePromise: null,
     attachmentPreviewUrl: null,
@@ -138,8 +140,11 @@
     taskDescriptionPanel: $("#task-description-panel"),
     taskResultPanel: $("#task-result-panel"),
     taskResultIndicator: $("#task-result-indicator"),
+    taskWorkspaceTitle: $("#task-workspace-title"),
+    taskWorkspaceHelper: $("#task-workspace-helper"),
     copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
+    resultPreview: $("#result-preview"),
     togglePreview: $("#toggle-preview"),
     toggleAttachmentUpload: $("#toggle-attachment-upload"),
     taskMoreToggle: $("#task-more-toggle"),
@@ -1019,10 +1024,13 @@
     document.body.style.overflow = "";
     state.selectedTask = null;
     state.previewVisible = false;
+    state.resultPreviewVisible = true;
     setTaskWorkspaceTab("description");
     updateTaskResultIndicator();
     els.descriptionPreview.hidden = true;
     els.taskDescription.hidden = false;
+    els.resultPreview.hidden = false;
+    els.taskResult.hidden = true;
     els.togglePreview.textContent = "✎";
     els.togglePreview.setAttribute("aria-label", "Редактировать описание");
     els.togglePreview.title = "Редактировать описание";
@@ -1054,15 +1062,22 @@
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.taskResult.value = task.result || "";
+      state.resultPreviewVisible = true;
       setTaskWorkspaceTab("description");
       updateTaskResultIndicator();
       els.descriptionPreview.replaceChildren();
+      els.resultPreview.replaceChildren();
+      els.descriptionPreview.scrollTop = 0;
+      els.resultPreview.scrollTop = 0;
       els.descriptionPreview.hidden = false;
       els.taskDescription.hidden = true;
+      els.resultPreview.hidden = false;
+      els.taskResult.hidden = true;
       els.togglePreview.textContent = "✎";
       els.togglePreview.setAttribute("aria-label", "Редактировать описание");
       els.togglePreview.title = "Редактировать описание";
       state.previewVisible = true;
+      void requestResultMarkdownPreview();
       els.attachmentDropzone.hidden = true;
       els.toggleAttachmentUpload.setAttribute("aria-expanded", "false");
       els.toggleAttachmentUpload.setAttribute("aria-label", "Добавить вложение");
@@ -1443,12 +1458,25 @@
 
   async function requestMarkdownPreview() {
     const requestId = ++state.previewRequest;
+    const taskId = state.selectedTask?.id;
     try {
       const result = await api("/api/preview-markdown", { method: "POST", body: { text: els.taskDescription.value } });
-      if (requestId !== state.previewRequest || !state.previewVisible) return;
+      if (requestId !== state.previewRequest || !state.previewVisible || state.selectedTask?.id !== taskId) return;
       els.descriptionPreview.innerHTML = result.html;
     } catch (error) {
-      toast(`Не удалось построить предпросмотр: ${error.message}`, "error");
+      if (requestId === state.previewRequest) toast(`Не удалось построить предпросмотр: ${error.message}`, "error");
+    }
+  }
+
+  async function requestResultMarkdownPreview() {
+    const requestId = ++state.resultPreviewRequest;
+    const taskId = state.selectedTask?.id;
+    try {
+      const result = await api("/api/preview-markdown", { method: "POST", body: { text: els.taskResult.value } });
+      if (requestId !== state.resultPreviewRequest || !state.resultPreviewVisible || state.selectedTask?.id !== taskId) return;
+      els.resultPreview.innerHTML = result.html;
+    } catch (error) {
+      if (requestId === state.resultPreviewRequest) toast(`Не удалось построить предпросмотр результата: ${error.message}`, "error");
     }
   }
 
@@ -2311,6 +2339,21 @@
     els.taskResultIndicator.hidden = !els.taskResult.value.trim();
   }
 
+  function updateTaskWorkspaceHeading() {
+    const isResult = state.activeTaskTab === "result";
+    const isEditing = isResult ? !state.resultPreviewVisible : !state.previewVisible;
+    els.taskWorkspaceTitle.textContent = isResult ? "Результат" : "Описание";
+    els.taskWorkspaceTitle.htmlFor = isResult ? "task-result" : "task-description";
+    els.taskWorkspaceHelper.textContent = isResult
+      ? "Итог работы с форматированием Markdown"
+      : "Текст с форматированием Markdown";
+    const subject = isResult ? "результат" : "описание";
+    els.copyDescription.setAttribute("aria-label", `Копировать ${subject}`);
+    els.copyDescription.title = `Копировать ${subject}`;
+    els.togglePreview.setAttribute("aria-label", `${isEditing ? "Показать" : "Редактировать"} ${subject}`);
+    els.togglePreview.title = isEditing ? "Завершить редактирование" : `Редактировать ${subject}`;
+  }
+
   function setTaskWorkspaceTab(tab, focus = false) {
     const activeTab = tab === "result" ? "result" : "description";
     state.activeTaskTab = activeTab;
@@ -2321,6 +2364,8 @@
     els.taskResultTab.setAttribute("aria-selected", String(!descriptionSelected));
     els.taskResultTab.tabIndex = descriptionSelected ? -1 : 0;
     els.taskResultPanel.hidden = descriptionSelected;
+    updateTaskWorkspaceHeading();
+    updateDescriptionActionIcon();
     if (focus) (descriptionSelected ? els.taskDescriptionTab : els.taskResultTab).focus({ preventScroll: true });
   }
 
@@ -2339,24 +2384,34 @@
     state.previewVisible = !editing;
     els.descriptionPreview.hidden = editing;
     els.taskDescription.hidden = !editing;
-    els.togglePreview.textContent = editing ? "✓" : "✎";
-    els.togglePreview.setAttribute("aria-label", editing ? "Показать предпросмотр описания" : "Редактировать описание");
-    els.togglePreview.title = editing ? "Завершить редактирование" : "Редактировать описание";
+    updateTaskWorkspaceHeading();
+    updateDescriptionActionIcon();
     if (editing) els.taskDescription.focus({ preventScroll: true });
     else void requestMarkdownPreview();
+  }
+
+  async function setResultEditing(editing) {
+    if (!editing && !(await saveCurrentTaskDraft())) return;
+    state.resultPreviewVisible = !editing;
+    els.resultPreview.hidden = editing;
+    els.taskResult.hidden = !editing;
+    updateTaskWorkspaceHeading();
+    updateDescriptionActionIcon();
+    if (editing) els.taskResult.focus({ preventScroll: true });
+    else void requestResultMarkdownPreview();
   }
 
   let copyFeedbackTimer = null;
 
   function showDescriptionCopiedFeedback() {
     if (copyFeedbackTimer !== null) window.clearTimeout(copyFeedbackTimer);
+    const subject = state.activeTaskTab === "result" ? "Результат" : "Описание";
     els.copyDescription.classList.add("is-copied");
-    els.copyDescription.setAttribute("aria-label", "Описание скопировано");
-    els.copyDescription.title = "Описание скопировано";
+    els.copyDescription.setAttribute("aria-label", `${subject} скопирован${subject === "Описание" ? "о" : ""}`);
+    els.copyDescription.title = `${subject} скопирован${subject === "Описание" ? "о" : ""}`;
     copyFeedbackTimer = window.setTimeout(() => {
       els.copyDescription.classList.remove("is-copied");
-      els.copyDescription.setAttribute("aria-label", "Копировать");
-      els.copyDescription.title = "Копировать";
+      updateTaskWorkspaceHeading();
       copyFeedbackTimer = null;
     }, 1200);
   }
@@ -2366,31 +2421,32 @@
       toast("Копирование недоступно в этом браузере", "error");
       return;
     }
+    const isResult = state.activeTaskTab === "result";
     try {
-      await navigator.clipboard.writeText(els.taskDescription.value);
+      await navigator.clipboard.writeText(isResult ? els.taskResult.value : els.taskDescription.value);
       showDescriptionCopiedFeedback();
     } catch {
-      toast("Не удалось скопировать описание. Проверьте разрешение браузера и защищённое соединение.", "error");
+      toast(`Не удалось скопировать ${isResult ? "результат" : "описание"}. Проверьте разрешение браузера и защищённое соединение.`, "error");
     }
   }
 
-  function toggleDescriptionChecklistItem(input) {
-    if (!state.previewVisible || !state.selectedTask) return;
+  function toggleMarkdownChecklistItem(input, textarea, isPreviewVisible, refreshPreview) {
+    if (!isPreviewVisible || !state.selectedTask) return;
     const lineNumber = Number(input.dataset.taskCheckbox);
     if (!Number.isInteger(lineNumber) || lineNumber < 0) return;
-    const lines = els.taskDescription.value.split("\n");
+    const lines = textarea.value.split("\n");
     const line = lines[lineNumber];
     const match = typeof line === "string"
       ? line.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/)
       : null;
     if (!match) {
-      void requestMarkdownPreview();
+      void refreshPreview();
       return;
     }
     lines[lineNumber] = `${match[1]}[${input.checked ? "x" : " "}]${line.slice(match[0].length)}`;
-    els.taskDescription.value = lines.join("\n");
+    textarea.value = lines.join("\n");
     input.setAttribute("aria-label", input.checked ? "Снять отметку" : "Отметить пункт списка");
-    void requestMarkdownPreview();
+    void refreshPreview();
     scheduleTaskDraftSave(0);
   }
 
@@ -2400,7 +2456,8 @@
   els.taskResultTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
   els.togglePreview.addEventListener("click", () => {
-    void setDescriptionEditing(state.previewVisible);
+    if (state.activeTaskTab === "result") void setResultEditing(state.resultPreviewVisible);
+    else void setDescriptionEditing(state.previewVisible);
   });
   els.descriptionPreview.addEventListener("click", (event) => {
     if (!state.previewVisible || event.target.closest("input[data-task-checkbox], a, button")) return;
@@ -2414,7 +2471,21 @@
   });
   els.descriptionPreview.addEventListener("change", (event) => {
     const checkbox = event.target.closest("input[data-task-checkbox]");
-    if (checkbox) toggleDescriptionChecklistItem(checkbox);
+    if (checkbox) toggleMarkdownChecklistItem(checkbox, els.taskDescription, state.previewVisible, requestMarkdownPreview);
+  });
+  els.resultPreview.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("input[data-task-checkbox]");
+    if (checkbox) toggleMarkdownChecklistItem(checkbox, els.taskResult, state.resultPreviewVisible, requestResultMarkdownPreview);
+  });
+  els.resultPreview.addEventListener("click", (event) => {
+    if (!state.resultPreviewVisible || event.target.closest("input[data-task-checkbox], a, button")) return;
+    void setResultEditing(true);
+  });
+  els.resultPreview.addEventListener("keydown", (event) => {
+    if (!state.resultPreviewVisible || !["Enter", " "].includes(event.key)) return;
+    if (event.target.closest("input[data-task-checkbox], a, button")) return;
+    event.preventDefault();
+    void setResultEditing(true);
   });
   els.taskDescription.addEventListener("input", () => {
     if (state.previewVisible) requestMarkdownPreview();
@@ -3060,7 +3131,10 @@
 
   els.taskTagInput.addEventListener("input", () => setTaskTagError(""));
 
-  function updateDescriptionActionIcon(isEditing = !state.previewVisible) {
+  function updateDescriptionActionIcon() {
+    const isEditing = state.activeTaskTab === "result"
+      ? !state.resultPreviewVisible
+      : !state.previewVisible;
     const icon = isEditing
       ? ["M3.5 10.5 8 15l8.5-9"]
       : [
@@ -3068,6 +3142,7 @@
         "m12.1 5.6 2.6 2.6",
       ];
     els.togglePreview.replaceChildren(createTaskPanelIcon(icon, 16));
+    updateTaskWorkspaceHeading();
   }
 
   const setDescriptionEditingBeforeRedesign = setDescriptionEditing;
@@ -3087,7 +3162,7 @@
     renderAttachmentsBeforeRedesign(attachments);
     const emptyState = $(".attachment-empty", els.attachmentList);
     if (emptyState) {
-      emptyState.textContent = "Пока нет вложений. Нажмите «Добавить» или перетащите файлы сюда. Изображение можно вставить из буфера обмена: ⌘/Ctrl+V.";
+      emptyState.textContent = "Нет вложений. Нажмите «Добавить», чтобы прикрепить файл.";
     }
   };
 

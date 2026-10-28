@@ -5,9 +5,9 @@ def test_task_panel_redesign_uses_theme_tokens_and_grouped_tag_editor(client):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.31" in html
+    assert "/static/app.js?v=0.5.32" in html
     assert "/static/github-theme.css?v=0.2.3" in html
-    assert "/static/task-editor-redesign.css?v=0.2.2" in html
+    assert "/static/task-editor-redesign.css?v=0.2.3" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -61,7 +61,10 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     assert 'id="task-result-indicator" class="task-result-indicator" aria-hidden="true" hidden' in html
     assert 'id="task-result" class="text-field result-field" maxlength="5000" rows="8" placeholder=' in html
     assert 'id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview"' in html
-    assert html.count('class="task-workspace-heading"') == 1
+    assert html.count('class="task-workspace-heading"') == 0
+    tabs = html.split('class="task-workspace-tabs"', 1)[1].split('</div>', 1)[0]
+    assert 'id="copy-description" class="icon-button workspace-copy-button"' in tabs
+    assert 'id="toggle-preview"' not in html
     assert 'class="result-heading"' not in html
     assert '<span class="field-label">Теги</span>' not in html
 
@@ -86,10 +89,11 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     for fragment in (
         "height: 100dvh",
         ".task-workspace-tabs",
-        ".task-workspace-heading",
+        ".workspace-copy-button",
         ".task-result-preview:empty::before",
         '.task-workspace-tab[aria-selected="true"]',
         ".task-editor-workspace",
+        ".task-workspace-panel .result-field[hidden]",
         ".task-properties-sidebar",
         "grid-template-columns: minmax(0, 1fr) auto",
         "overflow-y: auto",
@@ -101,8 +105,8 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
 
 def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
     html = client.get("/").text
-    assert "/static/task-editor-redesign.css?v=0.2.2" in html
-    assert "/static/app.js?v=0.5.31" in html
+    assert "/static/task-editor-redesign.css?v=0.2.3" in html
+    assert "/static/app.js?v=0.5.32" in html
 
     script = client.get("/static/app.js").text
     for fragment in (

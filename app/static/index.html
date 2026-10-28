@@ -19,10 +19,10 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.18">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.19">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.9">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.2">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.3">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.2">
 </head>
 <body>
@@ -482,19 +482,10 @@
           <button id="task-result-tab" class="task-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="task-result-panel" tabindex="-1">
             <span>Результат</span><span id="task-result-indicator" class="task-result-indicator" aria-hidden="true" hidden></span>
           </button>
-        </div>
-        <div class="task-workspace-heading">
-          <div class="task-workspace-heading-copy">
-            <label id="task-workspace-title" class="field-label" for="task-description">Описание</label>
-            <span id="task-workspace-helper" class="section-helper">Текст с форматированием Markdown</span>
-          </div>
-          <div class="description-actions">
-            <button id="copy-description" class="icon-button inline-edit-button" type="button" aria-label="Копировать описание" title="Копировать описание">
-              <svg class="copy-description-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
-              <svg class="copy-description-check" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
-            </button>
-            <button id="toggle-preview" class="icon-button inline-edit-button" type="button" aria-label="Редактировать описание" title="Редактировать описание">✎</button>
-          </div>
+          <button id="copy-description" class="icon-button workspace-copy-button" type="button" aria-label="Копировать описание" title="Копировать описание">
+            <svg class="copy-description-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            <svg class="copy-description-check" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+          </button>
         </div>
         <div id="task-description-panel" class="task-workspace-panel task-description-panel" role="tabpanel" aria-labelledby="task-description-tab">
           <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown." hidden></textarea>
@@ -533,6 +524,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.0" defer></script>
-  <script src="/static/app.js?v=0.5.31" defer></script>
+  <script src="/static/app.js?v=0.5.32" defer></script>
 </body>
 </html>

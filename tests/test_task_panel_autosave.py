@@ -13,7 +13,7 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert 'id="export-task"' in html
     assert 'id="task-result"' in html
     assert 'id="task-result-tab"' in html
-    assert 'id="task-workspace-title" class="field-label" for="task-description">Описание</label>' in html
+    assert 'id="task-workspace-title"' not in html
 
     style = client.get("/static/style.css").text
     assert ".task-header-action" in style
@@ -37,19 +37,16 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     assert 'id="copy-description"' in html
     assert 'aria-label="Копировать описание"' in html
     assert 'title="Копировать описание"' in html
-    assert '<div class="description-actions">' in html
-    action_group = html.split('<div class="description-actions">', 1)[1].split(
-        "</div>", 1
-    )[0]
-    assert 'id="copy-description"' in action_group
-    assert 'id="toggle-preview"' in action_group
-    assert html.index('class="task-workspace-heading"') < html.index('id="task-description-panel"')
-    assert html.index('class="task-workspace-heading"') < html.index('id="task-result-panel"')
-    assert 'id="task-workspace-title" class="field-label" for="task-description">Описание</label>' in html
+    tabs = html.split('class="task-workspace-tabs"', 1)[1].split('</div>', 1)[0]
+    assert 'id="copy-description"' in tabs
+    assert 'id="toggle-preview"' not in html
+    assert 'class="task-workspace-heading"' not in html
     assert 'id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview"' in html
 
     style = client.get("/static/style.css").text
-    assert ".description-actions { display: flex; align-items: center;" in style
+    redesign_style = client.get("/static/task-editor-redesign.css").text
+    assert ".workspace-copy-button" in redesign_style
+    assert "padding: 8px 3px;" in redesign_style
 
     script = client.get("/static/app.js").text
     assert 'copyDescription: $("#copy-description")' in script
@@ -57,6 +54,8 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     assert "navigator.clipboard?.writeText" in script
     assert 'await navigator.clipboard.writeText(isResult ? els.taskResult.value : els.taskDescription.value)' in script
     assert 'function updateTaskWorkspaceHeading()' in script
+    assert 'els.copyDescription.setAttribute("aria-label", `Копировать ${subject}`)' in script
+    assert 'togglePreview' not in script
     assert 'function setResultEditing(editing)' in script
     assert 'function requestResultMarkdownPreview()' in script
     assert (

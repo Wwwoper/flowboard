@@ -144,12 +144,9 @@
     taskDescriptionPanel: $("#task-description-panel"),
     taskResultPanel: $("#task-result-panel"),
     taskResultIndicator: $("#task-result-indicator"),
-    taskWorkspaceTitle: $("#task-workspace-title"),
-    taskWorkspaceHelper: $("#task-workspace-helper"),
     copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
     resultPreview: $("#result-preview"),
-    togglePreview: $("#toggle-preview"),
     toggleAttachmentUpload: $("#toggle-attachment-upload"),
     taskMoreToggle: $("#task-more-toggle"),
     taskMoreMenu: $("#task-more-menu"),
@@ -1035,9 +1032,6 @@
     els.taskDescription.hidden = false;
     els.resultPreview.hidden = false;
     els.taskResult.hidden = true;
-    els.togglePreview.textContent = "✎";
-    els.togglePreview.setAttribute("aria-label", "Редактировать описание");
-    els.togglePreview.title = "Редактировать описание";
     els.taskTitle.hidden = true;
     els.taskTitleDisplay.hidden = false;
     els.attachmentDropzone.hidden = true;
@@ -1077,9 +1071,6 @@
       els.taskDescription.hidden = true;
       els.resultPreview.hidden = false;
       els.taskResult.hidden = true;
-      els.togglePreview.textContent = "✎";
-      els.togglePreview.setAttribute("aria-label", "Редактировать описание");
-      els.togglePreview.title = "Редактировать описание";
       state.previewVisible = true;
       void requestResultMarkdownPreview();
       els.attachmentDropzone.hidden = true;
@@ -2344,18 +2335,9 @@
   }
 
   function updateTaskWorkspaceHeading() {
-    const isResult = state.activeTaskTab === "result";
-    const isEditing = isResult ? !state.resultPreviewVisible : !state.previewVisible;
-    els.taskWorkspaceTitle.textContent = isResult ? "Результат" : "Описание";
-    els.taskWorkspaceTitle.htmlFor = isResult ? "task-result" : "task-description";
-    els.taskWorkspaceHelper.textContent = isResult
-      ? "Итог работы с форматированием Markdown"
-      : "Текст с форматированием Markdown";
-    const subject = isResult ? "результат" : "описание";
+    const subject = state.activeTaskTab === "result" ? "результат" : "описание";
     els.copyDescription.setAttribute("aria-label", `Копировать ${subject}`);
     els.copyDescription.title = `Копировать ${subject}`;
-    els.togglePreview.setAttribute("aria-label", `${isEditing ? "Показать" : "Редактировать"} ${subject}`);
-    els.togglePreview.title = isEditing ? "Завершить редактирование" : `Редактировать ${subject}`;
   }
 
   function setTaskWorkspaceTab(tab, focus = false) {
@@ -2369,7 +2351,6 @@
     els.taskResultTab.tabIndex = descriptionSelected ? -1 : 0;
     els.taskResultPanel.hidden = descriptionSelected;
     updateTaskWorkspaceHeading();
-    updateDescriptionActionIcon();
     if (focus) (descriptionSelected ? els.taskDescriptionTab : els.taskResultTab).focus({ preventScroll: true });
   }
 
@@ -2389,7 +2370,6 @@
     els.descriptionPreview.hidden = editing;
     els.taskDescription.hidden = !editing;
     updateTaskWorkspaceHeading();
-    updateDescriptionActionIcon();
     if (editing) els.taskDescription.focus({ preventScroll: true });
     else void requestMarkdownPreview();
   }
@@ -2400,7 +2380,6 @@
     els.resultPreview.hidden = editing;
     els.taskResult.hidden = !editing;
     updateTaskWorkspaceHeading();
-    updateDescriptionActionIcon();
     if (editing) els.taskResult.focus({ preventScroll: true });
     else void requestResultMarkdownPreview();
   }
@@ -2459,10 +2438,6 @@
   els.taskDescriptionTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.taskResultTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
-  els.togglePreview.addEventListener("click", () => {
-    if (state.activeTaskTab === "result") void setResultEditing(state.resultPreviewVisible);
-    else void setDescriptionEditing(state.previewVisible);
-  });
   els.descriptionPreview.addEventListener("click", (event) => {
     if (!state.previewVisible || event.target.closest("input[data-task-checkbox], a, button")) return;
     void setDescriptionEditing(true);
@@ -2941,12 +2916,6 @@
     taskMoreIcon.replaceWith(createTaskPanelIcon(["M4 10h.01M10 10h.01M16 10h.01"], 17));
     $("svg", els.taskMoreToggle).setAttribute("stroke-width", "2.8");
   }
-  if (!$("svg", els.togglePreview)) {
-    els.togglePreview.replaceChildren(createTaskPanelIcon([
-      "m4 14.8-.7 2.8 2.8-.7 9.8-9.8a1.8 1.8 0 0 0-2.6-2.6Z",
-      "m12.1 5.6 2.6 2.6",
-    ], 16));
-  }
 
   const taskTagError = make("p", "task-tag-error");
   taskTagError.id = "task-tag-error";
@@ -3197,30 +3166,9 @@
 
   els.taskTagInput.addEventListener("input", () => setTaskTagError(""));
 
-  function updateDescriptionActionIcon() {
-    const isEditing = state.activeTaskTab === "result"
-      ? !state.resultPreviewVisible
-      : !state.previewVisible;
-    const icon = isEditing
-      ? ["M3.5 10.5 8 15l8.5-9"]
-      : [
-        "m4 14.8-.7 2.8 2.8-.7 9.8-9.8a1.8 1.8 0 0 0-2.6-2.6Z",
-        "m12.1 5.6 2.6 2.6",
-      ];
-    els.togglePreview.replaceChildren(createTaskPanelIcon(icon, 16));
-    updateTaskWorkspaceHeading();
-  }
-
-  const setDescriptionEditingBeforeRedesign = setDescriptionEditing;
-  setDescriptionEditing = async function setDescriptionEditingWithStableIcon(editing) {
-    await setDescriptionEditingBeforeRedesign(editing);
-    updateDescriptionActionIcon();
-  };
-
   const closePanelBeforeRedesign = closePanel;
   closePanel = function closePanelWithStableEditorIcon() {
     closePanelBeforeRedesign();
-    updateDescriptionActionIcon(false);
   };
 
   const renderAttachmentsBeforeRedesign = renderAttachments;
@@ -3277,7 +3225,6 @@
   openTaskPanel = async function openTaskPanelWithAccessibleReference(taskId) {
     await openTaskPanelBeforeRedesign(taskId);
     const actualId = state.selectedTask?.id;
-    updateDescriptionActionIcon();
     if (actualId !== undefined && String(actualId) === String(taskId)) {
       els.taskTitleReference.setAttribute("aria-label", `Номер задачи ${actualId}`);
       els.taskTitleReference.title = `Номер задачи ${actualId}`;

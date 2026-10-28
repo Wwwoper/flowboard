@@ -744,26 +744,26 @@
   display: flex;
   flex: 0 0 auto;
   align-items: stretch;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  padding: 5px 7px 0;
+  padding: 4px 8px 0;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-soft);
+  background: var(--surface);
 }
 .task-panel .task-workspace-tab {
   position: relative;
   display: inline-flex;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
-  min-height: 39px;
+  min-height: 35px;
   margin-bottom: -1px;
-  padding: 7px 12px 9px;
+  padding: 6px 11px 7px;
   border: 1px solid transparent;
-  border-bottom-color: var(--line);
-  border-radius: 8px 8px 0 0;
+  border-bottom-color: transparent;
+  border-radius: 7px 7px 0 0;
   color: var(--muted);
   background: transparent;
   font: inherit;
@@ -772,7 +772,7 @@
   line-height: 1.3;
   cursor: pointer;
 }
-.task-panel .task-workspace-tab:hover { color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.task-panel .task-workspace-tab:hover { color: var(--ink); background: var(--surface-soft); }
 .task-panel .task-workspace-tab[aria-selected="true"] {
   color: var(--ink);
   border-color: var(--line);
@@ -780,23 +780,33 @@
   background: var(--surface);
 }
 .task-panel .task-workspace-tab:focus-visible { z-index: 1; outline-offset: -3px; }
-.task-panel .task-workspace-heading {
-  display: flex;
-  flex: 0 0 44px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  height: 44px;
-  padding: 0 15px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+.task-panel .workspace-copy-button {
+  display: inline-grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  margin: 2px 0 2px auto;
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+  opacity: .76;
 }
-.task-panel .task-workspace-heading-copy { display: flex; flex-direction: column; min-width: 0; }
-.task-panel .task-workspace-heading .field-label { margin: 0; color: var(--ink); font-size: 12px; font-weight: 680; line-height: 1.35; }
-.task-panel .task-workspace-heading .section-helper { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-panel .task-workspace-heading .description-actions { flex: 0 0 auto; }
-.task-panel .task-workspace-heading .inline-edit-button { flex-basis: 32px; width: 32px; min-width: 32px; height: 32px; border-radius: 8px; }
+.task-panel .workspace-copy-button:hover,
+.task-panel .workspace-copy-button:focus-visible {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface-soft);
+  opacity: 1;
+}
+.task-panel .workspace-copy-button.is-copied {
+  color: var(--green);
+  border-color: transparent;
+  background: transparent;
+  opacity: 1;
+}
 .task-panel .task-result-indicator {
   flex: 0 0 7px;
   width: 7px;
@@ -812,7 +822,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 15px;
+  padding: 12px 14px 14px;
 }
 .task-panel .task-workspace-panel[hidden] { display: none; }
 .task-panel .description-heading,
@@ -859,11 +869,11 @@
   min-height: 0;
   max-height: none;
   margin: 0;
-  padding: 14px 15px;
-  border-color: var(--line);
-  border-radius: 9px;
-  color: var(--ink-soft);
-  background: var(--surface-soft);
+  padding: 8px 3px;
+  border: 0;
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--surface);
   font-family: inherit;
   font-size: 13px;
   line-height: 1.6;
@@ -871,10 +881,11 @@
   overscroll-behavior: contain;
 }
 .task-panel .task-workspace-panel .description-field[hidden],
+.task-panel .task-workspace-panel .result-field[hidden],
 .task-panel .task-workspace-panel .markdown-preview[hidden] { display: none; }
 .task-panel .task-workspace-panel .result-field { padding: 14px 15px; }
 .task-panel .task-result-preview:empty::before {
-  content: "Результат пока не добавлен. Нажмите «Редактировать», чтобы добавить итог.";
+  content: "Результат пока не добавлен. Нажмите здесь, чтобы добавить итог.";
   display: block;
   color: var(--muted);
   font-size: 12px;
@@ -958,7 +969,6 @@
   .task-panel { width: 100vw; padding-right: 20px; padding-left: 20px; }
   .task-panel .task-form-content { grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr); gap: 0 16px; }
   .task-panel .task-workspace-panel { padding: 12px; }
-  .task-panel .task-workspace-heading { padding-inline: 12px; }
   .task-panel .task-properties-sidebar { gap: 15px; }
 }
 @media (max-width: 700px) {
@@ -998,8 +1008,6 @@
   .task-panel .task-header-action,
   .task-panel .task-panel-close { flex-basis: 32px; width: 32px; min-width: 32px; height: 32px; }
   .task-panel .task-workspace-panel { padding: 8px; }
-  .task-panel .task-workspace-heading { padding-inline: 8px; gap: 5px; }
-  .task-panel .task-workspace-heading .section-helper { max-width: 170px; }
 }
 .task-panel .task-panel-footer {
   display: grid;

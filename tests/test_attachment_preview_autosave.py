@@ -13,8 +13,8 @@ def test_image_attachments_open_preview_with_a_separate_download_action(client):
         "attachment-preview-close",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.31" in html
-    assert "/static/style.css?v=0.5.18" in html
+    assert "/static/app.js?v=0.5.32" in html
+    assert "/static/style.css?v=0.5.19" in html
 
     script = client.get("/static/app.js").text
     assert "function openAttachmentPreview(attachment)" in script

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sqlite3
 import tempfile
@@ -16,7 +17,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.config import STATUSES
-from app.db import initialize_database
+from app.db import connect, initialize_database
 
 
 def _safe_member_name(name: str) -> str:
@@ -85,7 +86,7 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
             db_path = staging / "tracker.db"
             attachments_root = staging / "attachments"
             initialize_database(db_path)
-            connection = sqlite3.connect(db_path)
+            connection = connect(db_path)
             try:
                 for task in task_items:
                     connection.execute(
@@ -146,6 +147,126 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                                 attachment["created_at"],
                             ),
                         )
+                workset_items = manifest.get("worksets", [])
+                membership_items = manifest.get("workset_memberships", [])
+                event_items = manifest.get("workset_events", [])
+                if not all(
+                    isinstance(items, list)
+                    for items in (workset_items, membership_items, event_items)
+                ):
+                    raise ValueError("Некорректные данные рабочих наборов в резервной копии")
+                workset_ids: set[int] = set()
+                for workset in workset_items:
+                    workset_id = workset.get("id")
+                    project_slug = workset.get("project_slug")
+                    name = workset.get("name")
+                    status = workset.get("status")
+                    if (
+                        not isinstance(workset_id, int)
+                        or isinstance(workset_id, bool)
+                        or workset_id <= 0
+                        or workset_id in workset_ids
+                        or not isinstance(project_slug, str)
+                        or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", project_slug)
+                        or not isinstance(name, str)
+                        or not name.strip()
+                        or len(name) > 100
+                        or status not in {"active", "completed"}
+                    ):
+                        raise ValueError(
+                            "В резервной копии обнаружен некорректный рабочий набор"
+                        )
+                    workset_ids.add(workset_id)
+                    connection.execute(
+                        """
+                        INSERT INTO worksets (
+                            id, project_slug, name, status, created_at, updated_at, completed_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            workset_id,
+                            project_slug,
+                            name.strip(),
+                            status,
+                            workset.get("created_at", ""),
+                            workset.get("updated_at", ""),
+                            workset.get("completed_at"),
+                        ),
+                    )
+                for membership in membership_items:
+                    workset_id = membership.get("workset_id")
+                    task_id = membership.get("task_id")
+                    if (
+                        not isinstance(workset_id, int)
+                        or isinstance(workset_id, bool)
+                        or not isinstance(task_id, int)
+                        or isinstance(task_id, bool)
+                        or workset_id not in workset_ids
+                        or task_id not in seen_ids
+                    ):
+                        raise ValueError("Некорректная связь задачи с рабочим набором")
+                    connection.execute(
+                        """
+                        INSERT INTO workset_memberships (workset_id, task_id, added_at)
+                        VALUES (?, ?, ?)
+                        """,
+                        (workset_id, task_id, membership.get("added_at", "")),
+                    )
+                event_ids: set[int] = set()
+                for event in event_items:
+                    event_id = event.get("id")
+                    workset_id = event.get("workset_id")
+                    task_id = event.get("task_id")
+                    if (
+                        not isinstance(event_id, int)
+                        or isinstance(event_id, bool)
+                        or event_id <= 0
+                        or event_id in event_ids
+                        or (
+                            workset_id is not None
+                            and (
+                                not isinstance(workset_id, int)
+                                or isinstance(workset_id, bool)
+                                or workset_id not in workset_ids
+                            )
+                        )
+                        or (
+                            task_id is not None
+                            and (
+                                not isinstance(task_id, int)
+                                or isinstance(task_id, bool)
+                                or task_id not in seen_ids
+                            )
+                        )
+                        or not isinstance(event.get("project_slug"), str)
+                        or not re.fullmatch(
+                            r"[a-z0-9]+(?:-[a-z0-9]+)*", event["project_slug"]
+                        )
+                        or not isinstance(event.get("workset_name"), str)
+                        or not isinstance(event.get("event_type"), str)
+                    ):
+                        raise ValueError(
+                            "В резервной копии обнаружено некорректное событие рабочего набора"
+                        )
+                    event_ids.add(event_id)
+                    connection.execute(
+                        """
+                        INSERT INTO workset_events (
+                            id, workset_id, project_slug, workset_name, task_id,
+                            task_title, event_type, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            event_id,
+                            workset_id,
+                            event["project_slug"],
+                            event["workset_name"],
+                            task_id,
+                            event.get("task_title", ""),
+                            event["event_type"],
+                            event.get("created_at", ""),
+                        ),
+                    )
                 connection.commit()
             except Exception:
                 connection.rollback()

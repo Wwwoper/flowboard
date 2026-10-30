@@ -72,6 +72,8 @@
     search: "",
     tag: "",
     project: readStorage("flowboard-last-project"),
+    worksetId: null,
+    worksets: [],
     projects: readStoredProjects(),
     quickTaskType: "",
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
@@ -106,6 +108,20 @@
     search: $("#search-input"),
     searchShortcut: $("#search-shortcut"),
     projectFilter: $("#project-filter"),
+    worksetFilter: $("#workset-filter"),
+    createWorkset: $("#create-workset"),
+    renameWorkset: $("#rename-workset"),
+    worksetHistory: $("#workset-history"),
+    worksetHistoryDialog: $("#workset-history-dialog"),
+    closeWorksetHistory: $("#close-workset-history"),
+    worksetHistoryContent: $("#workset-history-content"),
+    worksetEditorDialog: $("#workset-editor-dialog"),
+    worksetEditorForm: $("#workset-editor-form"),
+    worksetEditorHeading: $("#workset-editor-heading"),
+    worksetEditorName: $("#workset-editor-name"),
+    worksetEditorError: $("#workset-editor-error"),
+    cancelWorksetEditor: $("#cancel-workset-editor"),
+    saveWorksetEditor: $("#save-workset-editor"),
     addProject: $("#add-project"),
     tagFilter: $("#tag-filter"),
     focusBar: $("#focus-bar"),
@@ -129,6 +145,7 @@
     taskStatus: $("#task-status"),
     taskType: $("#task-type"),
     taskProject: $("#task-project"),
+    taskWorkset: $("#task-workset"),
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
     taskTagInput: $("#task-tag-input"),
@@ -471,6 +488,249 @@
     writeStorage("flowboard-last-project", state.project);
   }
 
+  function persistWorksetState() {
+    if (state.project) writeStorage(`flowboard-workset:${state.project}`, state.worksetId ? String(state.worksetId) : "");
+  }
+
+  function populateWorksetFilter() {
+    const selected = state.worksetId ? String(state.worksetId) : "";
+    els.worksetFilter.replaceChildren(new Option(state.project ? "Все задачи проекта" : "Все задачи", ""));
+    state.worksets.filter((workset) => workset.status === "active").forEach((workset) => {
+      els.worksetFilter.appendChild(new Option(
+        `${workset.name} · ${workset.done_count}/${workset.task_count}`,
+        String(workset.id),
+      ));
+    });
+    const selectedWorkset = state.worksets.find((workset) => String(workset.id) === selected);
+    if (selectedWorkset?.status === "completed") {
+      els.worksetFilter.appendChild(new Option(`История: ${selectedWorkset.name}`, selected));
+    }
+    els.worksetFilter.value = selectedWorkset ? selected : "";
+    els.renameWorkset.disabled = !selectedWorkset;
+    const historicalView = selectedWorkset?.status === "completed";
+    els.quickTitle.disabled = historicalView;
+    els.quickForm.querySelector('button[type="submit"]').disabled = historicalView;
+    $(".quick-add-icon").disabled = historicalView;
+    els.quickTitle.placeholder = historicalView
+      ? "Завершённый набор доступен только для просмотра"
+      : "Добавить задачу… и нажать Enter";
+  }
+
+  async function loadWorksets() {
+    if (!state.project) {
+      state.worksets = [];
+      state.worksetId = null;
+      populateWorksetFilter();
+      return;
+    }
+    const previous = state.worksets.find((item) => item.id === state.worksetId);
+    const saved = Number(readStorage(`flowboard-workset:${state.project}`, "0")) || null;
+    const requestedId = state.worksetId || saved;
+    state.worksets = await api(`/api/worksets?project=${encodeURIComponent(state.project)}`);
+    const selected = state.worksets.find((item) => item.id === requestedId);
+    if (!selected || (previous?.status === "active" && selected.status === "completed")) {
+      state.worksetId = null;
+    } else {
+      state.worksetId = selected.id;
+    }
+    persistWorksetState();
+    populateWorksetFilter();
+    if (state.selectedTask) populateTaskWorksetSelect(state.selectedTask);
+  }
+
+  function clearWorksetContextAfterError() {
+    state.worksets = [];
+    state.worksetId = null;
+    persistWorksetState();
+    populateWorksetFilter();
+    if (state.selectedTask) populateTaskWorksetSelect(state.selectedTask);
+  }
+
+  function populateTaskWorksetSelect(task) {
+    if (!els.taskWorkset) return;
+    const sameProject = Boolean(state.project) && projectForTask(task) === state.project;
+    const currentId = task.workset_id ? String(task.workset_id) : "";
+    els.taskWorkset.replaceChildren(new Option("Без рабочего набора", ""));
+    state.worksets.filter((item) => sameProject && (item.status === "active" || String(item.id) === currentId))
+      .forEach((item) => {
+        const suffix = item.status === "completed" ? " · завершён" : "";
+        els.taskWorkset.appendChild(new Option(item.name + suffix, String(item.id)));
+      });
+    els.taskWorkset.value = currentId;
+    els.taskWorkset.disabled = !sameProject || (!state.worksets.length && !currentId);
+  }
+
+  let worksetEditorMode = "create";
+  let worksetEditorTarget = null;
+
+  function openWorksetEditor(mode, workset = null) {
+    if (!state.project) {
+      toast("Сначала выберите проект", "error");
+      return;
+    }
+    worksetEditorMode = mode;
+    worksetEditorTarget = workset;
+    els.worksetEditorHeading.textContent = mode === "create" ? "Новый рабочий набор" : "Переименовать рабочий набор";
+    els.saveWorksetEditor.textContent = mode === "create" ? "Создать" : "Сохранить";
+    els.worksetEditorName.value = workset?.name || "";
+    els.worksetEditorError.hidden = true;
+    els.worksetEditorError.textContent = "";
+    els.worksetEditorDialog.showModal();
+    els.worksetEditorName.focus({ preventScroll: true });
+  }
+
+  async function submitWorksetEditor(event) {
+    event.preventDefault();
+    const name = els.worksetEditorName.value.trim();
+    if (!name) {
+      els.worksetEditorError.textContent = "Введите название рабочего набора.";
+      els.worksetEditorError.hidden = false;
+      els.worksetEditorName.focus();
+      return;
+    }
+    els.saveWorksetEditor.disabled = true;
+    try {
+      if (worksetEditorMode === "create") {
+        const created = await api("/api/worksets", {
+          method: "POST",
+          body: { project_slug: state.project, name },
+        });
+        state.worksetId = created.id;
+      } else if (worksetEditorTarget) {
+        await api(`/api/worksets/${worksetEditorTarget.id}`, { method: "PATCH", body: { name } });
+      }
+      els.worksetEditorDialog.close();
+      try {
+        await loadWorksets();
+      } catch (error) {
+        clearWorksetContextAfterError();
+        toast(`Изменения сохранены, но список наборов не обновился: ${error.message}`, "error");
+        return;
+      }
+      renderBoard();
+      toast(worksetEditorMode === "create" ? "Рабочий набор создан" : "Название рабочего набора обновлено");
+    } catch (error) {
+      els.worksetEditorError.textContent = error.message;
+      els.worksetEditorError.hidden = false;
+    } finally {
+      els.saveWorksetEditor.disabled = false;
+    }
+  }
+
+  function createWorkset() {
+    openWorksetEditor("create");
+  }
+
+  function renameSelectedWorkset() {
+    const workset = state.worksets.find((item) => item.id === state.worksetId);
+    if (!workset) return;
+    openWorksetEditor("rename", workset);
+  }
+
+  function worksetEventLabel(event) {
+    const labels = {
+      created: "создан",
+      renamed: "переименован",
+      task_added: "добавлена задача",
+      task_removed: "задача удалена из набора",
+      task_deleted: "задача удалена из проекта",
+      completed: "завершён",
+      reactivated: "возвращён в активные",
+      deleted_empty: "удалён после удаления последней задачи",
+    };
+    const task = event.task_title ? `: ${event.task_title}` : "";
+    return `${event.workset_name} — ${labels[event.event_type] || event.event_type}${task}`;
+  }
+
+  async function openWorksetHistory() {
+    if (!state.project) {
+      toast("Выберите проект, чтобы открыть его историю рабочих наборов", "error");
+      return;
+    }
+    try {
+      const events = await api(`/api/worksets/history?project=${encodeURIComponent(state.project)}`);
+      const completed = state.worksets.filter((item) => item.status === "completed");
+      els.worksetHistoryContent.replaceChildren();
+      const completedSection = make("section", "workset-history-section");
+      completedSection.appendChild(make("h3", "workset-history-section-title", "Завершённые наборы"));
+      if (!completed.length) {
+        completedSection.appendChild(make("p", "workset-history-empty", "Завершённых наборов пока нет."));
+      }
+      completed.forEach((workset) => {
+        const row = make("div", "workset-history-row");
+        const details = make("div", "workset-history-copy");
+        details.append(
+          make("strong", "workset-history-name", workset.name),
+          make("span", "workset-history-meta", `${workset.done_count}/${workset.task_count} задач · ${formatDate(workset.completed_at)}`),
+        );
+        const view = make("button", "button button-small button-quiet", "Показать");
+        view.type = "button";
+        view.addEventListener("click", () => {
+          state.worksetId = workset.id;
+          persistWorksetState();
+          populateWorksetFilter();
+          renderBoard();
+          els.worksetHistoryDialog.close();
+        });
+        row.append(details, view);
+        completedSection.appendChild(row);
+      });
+      els.worksetHistoryContent.appendChild(completedSection);
+
+      const eventsSection = make("section", "workset-history-section");
+      eventsSection.appendChild(make("h3", "workset-history-section-title", "События"));
+      if (!events.length) {
+        eventsSection.appendChild(make("p", "workset-history-empty", "Событий пока нет."));
+      }
+      events.forEach((event) => {
+        const row = make("div", "workset-history-event");
+        row.append(
+          make("span", "workset-history-event-copy", worksetEventLabel(event)),
+          make("time", "workset-history-meta", formatDateTime(event.created_at)),
+        );
+        eventsSection.appendChild(row);
+      });
+      els.worksetHistoryContent.appendChild(eventsSection);
+      els.worksetHistoryDialog.showModal();
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function updateTaskWorkset() {
+    const task = state.selectedTask;
+    if (!task) return;
+    const previousId = task.workset_id;
+    const nextId = Number(els.taskWorkset.value) || null;
+    if (previousId === nextId) return;
+    if (previousId && nextId) {
+      populateTaskWorksetSelect(task);
+      toast("Сначала удалите задачу из прежнего набора, затем добавьте её в новый", "error");
+      return;
+    }
+    els.taskWorkset.disabled = true;
+    try {
+      await api(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        body: { workset_id: nextId },
+      });
+      await loadTasks();
+      await openTaskPanel(task.id);
+      toast(nextId ? "Задача добавлена в рабочий набор" : "Задача удалена из рабочего набора");
+    } catch (error) {
+      try {
+        await loadTasks();
+        await openTaskPanel(task.id);
+      } catch {
+        // Keep the original error visible; a subsequent refresh can retry the state read.
+      }
+      if (state.selectedTask) populateTaskWorksetSelect(state.selectedTask);
+      toast(error.message, "error");
+    } finally {
+      if (state.selectedTask) populateTaskWorksetSelect(state.selectedTask);
+    }
+  }
+
   function renderProjectCommands(query = "") {
     const normalizedQuery = normalizeSearch(query);
     const projects = [{ slug: "", label: "Все проекты" }, ...state.projects.map((slug) => ({ slug, label: projectLabel(slug) }))]
@@ -488,9 +748,14 @@
       button.appendChild(make("span", "project-command-mark", project.slug === state.project ? "✓" : "↵"));
       button.addEventListener("click", () => {
         state.project = project.slug;
+        state.worksetId = null;
         els.projectFilter.value = project.slug;
         persistProjectState();
-        renderBoard();
+        void loadWorksets().then(renderBoard).catch((error) => {
+          clearWorksetContextAfterError();
+          renderBoard();
+          toast(error.message, "error");
+        });
         els.projectDialog.close();
         els.quickTitle.focus();
       });
@@ -532,6 +797,7 @@
     if (terms.some((term) => !searchable.includes(term))) return false;
     if (state.tag && !taskTags(task).includes(state.tag)) return false;
     if (state.project && !taskTags(task).some((tag) => projectFromTag(tag) === state.project)) return false;
+    if (state.worksetId && task.workset_id !== state.worksetId) return false;
     return true;
   }
 
@@ -843,6 +1109,12 @@
   async function loadTasks() {
     state.tasks = await api("/api/tasks");
     populateProjectFilter();
+    try {
+      await loadWorksets();
+    } catch (error) {
+      clearWorksetContextAfterError();
+      toast(`Не удалось загрузить рабочие наборы: ${error.message}`, "error");
+    }
     populateTagFilter();
     populateColumnFilters();
     renderBoard();
@@ -1078,6 +1350,7 @@
     try {
       const task = await api(`/api/tasks/${taskId}`);
       state.selectedTask = task;
+      populateTaskWorksetSelect(task);
       els.taskId.value = String(task.id);
       els.taskTitle.value = task.title;
       els.taskTitleDisplayText.textContent = task.title || "Без названия";
@@ -1447,7 +1720,14 @@
       inheritedTag,
       taskType,
     ].filter(Boolean))].join(", ");
-    let task = await api("/api/tasks", { method: "POST", body: { title: title.trim(), tags } });
+    let task = await api("/api/tasks", {
+      method: "POST",
+      body: {
+        title: title.trim(),
+        tags,
+        ...(state.worksetId ? { workset_id: state.worksetId } : {}),
+      },
+    });
     if (status !== "todo") {
       task = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status } });
     }
@@ -2018,10 +2298,18 @@
     if (!state.projects.includes(slug)) state.projects.push(slug);
     state.projects.sort((a, b) => a.localeCompare(b, "ru"));
     state.project = slug;
+    state.worksetId = null;
+    state.worksets = [];
     populateProjectFilter();
+    populateWorksetFilter();
     renderBoard();
     els.quickTitle.focus();
     persistProjectState();
+    void loadWorksets().then(renderBoard).catch((error) => {
+      clearWorksetContextAfterError();
+      renderBoard();
+      toast(error.message, "error");
+    });
     toast(`Проект «${projectLabel(slug)}» выбран. Новые задачи получат тег ${projectTag(slug)}.`);
   }
 
@@ -2090,12 +2378,40 @@
     state.search = els.search.value;
     renderBoard();
   });
-  els.projectFilter.addEventListener("change", () => {
+  els.projectFilter.addEventListener("change", async () => {
     state.project = els.projectFilter.value;
+    state.worksetId = null;
     persistProjectState();
+    try {
+      await loadWorksets();
+    } catch (error) {
+      clearWorksetContextAfterError();
+      toast(error.message, "error");
+    }
     renderBoard();
     els.quickTitle.focus();
   });
+  els.worksetFilter.addEventListener("change", () => {
+    state.worksetId = Number(els.worksetFilter.value) || null;
+    persistWorksetState();
+    populateWorksetFilter();
+    renderBoard();
+  });
+  els.createWorkset.addEventListener("click", createWorkset);
+  els.renameWorkset.addEventListener("click", renameSelectedWorkset);
+  els.worksetHistory.addEventListener("click", openWorksetHistory);
+  els.closeWorksetHistory.addEventListener("click", () => els.worksetHistoryDialog.close());
+  els.worksetHistoryDialog.addEventListener("click", (event) => {
+    if (event.target === els.worksetHistoryDialog) els.worksetHistoryDialog.close();
+  });
+  els.worksetEditorForm.addEventListener("submit", submitWorksetEditor);
+  els.cancelWorksetEditor.addEventListener("click", () => els.worksetEditorDialog.close());
+  els.worksetEditorDialog.addEventListener("close", () => {
+    els.worksetEditorForm.reset();
+    els.worksetEditorError.hidden = true;
+    worksetEditorTarget = null;
+  });
+  els.taskWorkset.addEventListener("change", updateTaskWorkset);
   els.addProject.addEventListener("click", openCreateProjectDialog);
   createProjectForm.addEventListener("submit", createProjectFromDialog);
   createProjectCancel.addEventListener("click", closeCreateProjectDialog);

@@ -38,6 +38,40 @@ CREATE TABLE IF NOT EXISTS attachments (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
+
+CREATE TABLE IF NOT EXISTS worksets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_slug TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_worksets_project_status
+    ON worksets(project_slug, status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS workset_memberships (
+    workset_id INTEGER NOT NULL REFERENCES worksets(id) ON DELETE CASCADE,
+    task_id INTEGER NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (workset_id, task_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workset_memberships_workset
+    ON workset_memberships(workset_id, task_id);
+
+CREATE TABLE IF NOT EXISTS workset_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workset_id INTEGER NULL REFERENCES worksets(id) ON DELETE SET NULL,
+    project_slug TEXT NOT NULL,
+    workset_name TEXT NOT NULL,
+    task_id INTEGER NULL REFERENCES tasks(id) ON DELETE SET NULL,
+    task_title TEXT NOT NULL DEFAULT '',
+    event_type TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workset_events_project_created
+    ON workset_events(project_slug, created_at DESC, id DESC);
 """
 
 

@@ -38,6 +38,12 @@ def test_initialize_database_adds_result_to_existing_tasks(tmp_path):
     connection = sqlite3.connect(db_path)
     try:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(tasks)")}
+        workset_tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
         task = connection.execute(
             "SELECT title, description, result, status, tags FROM tasks WHERE id = 1"
         ).fetchone()
@@ -45,4 +51,5 @@ def test_initialize_database_adds_result_to_existing_tasks(tmp_path):
         connection.close()
 
     assert "result" in columns
+    assert {"worksets", "workset_memberships", "workset_events"} <= workset_tables
     assert task == ("Legacy task", "Existing description", "", "done", "legacy")

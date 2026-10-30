@@ -69,6 +69,9 @@ def test_restore_accepts_legacy_manifest_without_result(client, tmp_path):
         manifest = json.loads(original.read("tasks.json"))
         for item in manifest["tasks"]:
             item.pop("result", None)
+        manifest.pop("worksets", None)
+        manifest.pop("workset_memberships", None)
+        manifest.pop("workset_events", None)
         backup.writestr("tasks.json", json.dumps(manifest))
         for name in original.namelist():
             if name != "tasks.json":
@@ -84,3 +87,72 @@ def test_restore_accepts_legacy_manifest_without_result(client, tmp_path):
     finally:
         connection.close()
     assert result == ("",)
+
+
+def test_zip_backup_preserves_history_for_a_deleted_empty_workset(client, tmp_path):
+    task = client.post(
+        "/api/tasks", json={"title": "Removed member", "tags": "project:history"}
+    ).json()
+    workset = client.post(
+        "/api/worksets", json={"project_slug": "history", "name": "Temporary"}
+    ).json()
+    client.post(f"/api/worksets/{workset['id']}/tasks", json={"task_id": task["id"]})
+    client.delete(f"/api/worksets/{workset['id']}/tasks/{task['id']}")
+
+    archive_path = tmp_path / "deleted-workset.zip"
+    archive_path.write_bytes(client.get("/api/export?format=zip").content)
+    target = tmp_path / "deleted-workset-restored"
+    restore_backup(archive_path, target)
+
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        worksets = connection.execute("SELECT COUNT(*) FROM worksets").fetchone()[0]
+        events = connection.execute(
+            "SELECT workset_id, workset_name, event_type FROM workset_events ORDER BY id"
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert worksets == 0
+    assert events == [
+        (None, "Temporary", "created"),
+        (None, "Temporary", "task_added"),
+        (None, "Temporary", "task_removed"),
+        (None, "Temporary", "deleted_empty"),
+    ]
+
+
+def test_zip_backup_restores_worksets_memberships_and_history(client, tmp_path):
+    task = client.post(
+        "/api/tasks", json={"title": "Workset backup", "tags": "project:release"}
+    ).json()
+    workset = client.post(
+        "/api/worksets", json={"project_slug": "release", "name": "Release prep"}
+    ).json()
+    added = client.post(
+        f"/api/worksets/{workset['id']}/tasks", json={"task_id": task["id"]}
+    )
+    assert added.status_code == 200
+
+    archive_path = tmp_path / "worksets.zip"
+    archive_path.write_bytes(client.get("/api/export?format=zip").content)
+    target = tmp_path / "worksets-restored"
+    assert restore_backup(archive_path, target) == 1
+
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        restored_workset = connection.execute(
+            "SELECT project_slug, name, status FROM worksets WHERE id = ?", (workset["id"],)
+        ).fetchone()
+        membership = connection.execute(
+            "SELECT workset_id, task_id FROM workset_memberships"
+        ).fetchone()
+        events = connection.execute(
+            "SELECT event_type, task_title FROM workset_events ORDER BY id"
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert restored_workset == ("release", "Release prep", "active")
+    assert membership == (workset["id"], task["id"])
+    assert events == [("created", ""), ("task_added", "Workset backup")]

@@ -58,12 +58,19 @@ def build_markdown_export(
 def build_zip_export(
     tasks: list[dict[str, Any]],
     attachments_by_task: dict[int, list[dict[str, Any]]],
+    *,
+    worksets: list[dict[str, Any]] | None = None,
+    workset_memberships: list[dict[str, Any]] | None = None,
+    workset_events: list[dict[str, Any]] | None = None,
 ) -> bytes:
     """Package JSON task data and every attachment into one portable archive."""
     manifest = {
         "format_version": 1,
         "exported_at": utc_now(),
         "tasks": [],
+        "worksets": worksets or [],
+        "workset_memberships": workset_memberships or [],
+        "workset_events": workset_events or [],
     }
     for task in tasks:
         item = dict(task)

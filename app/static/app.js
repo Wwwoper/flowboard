@@ -65,6 +65,12 @@
 
   const doneColumnCollapseQuery = window.matchMedia("(max-width: 1180px)");
 
+  let worksetHistoryOffset = 0;
+  let worksetHistoryLoading = false;
+  let worksetHistoryHasMore = false;
+  let worksetHistoryWorksets = [];
+  let worksetHistoryEvents = [];
+
   const state = {
     tasks: [],
     selectedTask: null,
@@ -573,7 +579,12 @@
         els.taskWorkset.appendChild(new Option(item.name + suffix, String(item.id)));
       });
     els.taskWorkset.value = currentId;
-    els.taskWorkset.disabled = !sameProject || (!state.worksets.length && !currentId);
+    const currentWorkset = state.worksets.find((item) => String(item.id) === currentId);
+    const membershipLocked = currentWorkset?.status === "completed";
+    els.taskWorkset.disabled = !sameProject || membershipLocked || (!state.worksets.length && !currentId);
+    els.taskWorkset.title = membershipLocked
+      ? "Состав завершённого рабочего набора нельзя менять"
+      : "Рабочий набор задачи";
   }
 
   let worksetEditorMode = "create";
@@ -643,19 +654,236 @@
     openWorksetEditor("rename", workset);
   }
 
-  function worksetEventLabel(event) {
-    const labels = {
-      created: "создан",
-      renamed: "переименован",
-      task_added: "добавлена задача",
-      task_removed: "задача удалена из набора",
-      task_deleted: "задача удалена из проекта",
-      completed: "завершён",
-      reactivated: "возвращён в активные",
-      deleted_empty: "удалён после удаления последней задачи",
-    };
-    const task = event.task_title ? `: ${event.task_title}` : "";
-    return `${event.workset_name} — ${labels[event.event_type] || event.event_type}${task}`;
+  function worksetHistoryStatusLabel(status) {
+    return ({ active: "Активен", completed: "Завершён", deleted: "Удалён" })[status] || status;
+  }
+
+  function worksetHistoryTaskRow(task, { removed = false } = {}) {
+    const row = make("div", "workset-history-task");
+    if (task.exists) {
+      const link = make("button", "workset-history-task-link", task.task_title || `Задача #${task.task_id}`);
+      link.type = "button";
+      link.addEventListener("click", () => {
+        els.worksetHistoryDialog.close();
+        void openTaskPanel(task.task_id);
+      });
+      row.appendChild(link);
+    } else {
+      row.append(
+        make("span", "workset-history-task-title", task.task_title || `Задача #${task.task_id}`),
+        make("span", "workset-history-deleted", "Задача удалена"),
+      );
+    }
+    const status = task.status ? STATUS_LABELS[task.status] : "Статус неизвестен";
+    const meta = [status];
+    if (task.closed_at) meta.push(`завершена ${formatHistoryDateTime(task.closed_at)}`);
+    if (removed && task.removed_at) {
+      const action = task.removal_reason === "deleted" ? "удалена из проекта" : "убрана из набора";
+      meta.push(`${action} ${formatHistoryDateTime(task.removed_at)}`);
+    }
+    row.appendChild(make("span", "workset-history-task-meta", meta.join(" · ")));
+    return row;
+  }
+
+  function formatHistoryDateTime(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("ru-RU", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).format(date).replace(" г.", "");
+  }
+
+  function worksetHistoryEventLabel(event) {
+    return ({
+      created: ["＋", "Создан"],
+      renamed: ["✎", "Переименован"],
+      task_added: ["＋", "Добавлена задача"],
+      task_removed: ["−", "Убрана из набора"],
+      task_deleted: ["×", "Удалена из проекта"],
+      task_status_changed: ["↻", "Статус изменён"],
+      task_completed: ["✓", "Задача завершена"],
+      task_reopened: ["↶", "Задача открыта заново"],
+      completed: ["✓", "Набор завершён"],
+      reactivated: ["↻", "Набор снова активен · состав не изменился"],
+      deleted_empty: ["×", "Набор удалён"],
+    })[event.event_type] || ["•", event.event_type];
+  }
+
+  function renderWorksetHistory() {
+    const content = els.worksetHistoryContent;
+    content.replaceChildren();
+
+    const sections = [
+      { status: "active", title: "Активные наборы" },
+      { status: "completed", title: "Завершённые наборы" },
+      { status: "deleted", title: "Удалённые наборы" },
+    ];
+    for (const sectionInfo of sections) {
+      const items = worksetHistoryWorksets.filter((item) => item.status === sectionInfo.status);
+      const section = make("section", "workset-history-section");
+      section.appendChild(make("h3", "workset-history-section-title", sectionInfo.title));
+      if (!items.length) {
+        section.appendChild(make("p", "workset-history-empty", ` ${sectionInfo.status === "active" ? "Активных" : sectionInfo.status === "completed" ? "Завершённых" : "Удалённых"} наборов пока нет.`.trim()));
+      }
+      for (const workset of items) {
+        const card = make("article", "workset-history-card");
+        const header = make("div", "workset-history-card-header");
+        const copy = make("div", "workset-history-copy");
+        copy.append(
+          make("strong", "workset-history-name", workset.name),
+          make("span", "workset-history-meta", `Создан ${formatHistoryDateTime(workset.created_at)}${workset.completed_at ? ` → ${workset.status === "active" ? "последнее завершение" : "завершён"} ${formatHistoryDateTime(workset.completed_at)}` : ""}`),
+        );
+        const status = make("span", `workset-history-status is-${workset.status}`, worksetHistoryStatusLabel(workset.status));
+        header.append(copy, status);
+        card.appendChild(header);
+
+        const stats = workset.status === "completed"
+          ? `${workset.done_count}/${workset.task_count} задач при завершении`
+          : workset.status === "deleted"
+            ? `${workset.task_count} задач на момент удаления`
+            : `${workset.task_count} задач сейчас`;
+        const activity = `${workset.added_count} добавлено · ${workset.removed_count} убрано из набора${workset.deleted_count ? ` · ${workset.deleted_count} удалено из проекта` : ""}`;
+        const duration = workset.duration_seconds == null
+          ? ""
+          : ` · ${Math.floor(workset.duration_seconds / 60)} мин`;
+        card.appendChild(make("p", "workset-history-meta workset-history-stats", `${stats} · ${activity}${duration}`));
+
+        const details = make("details", "workset-history-details");
+        details.appendChild(make("summary", "workset-history-details-summary", "Состав"));
+        const memberTitle = workset.status === "completed"
+          ? "В наборе при завершении"
+          : workset.status === "deleted" ? "В наборе на момент удаления" : "Сейчас в наборе";
+        details.appendChild(make("h4", "workset-history-subtitle", memberTitle));
+        if (workset.members.length) {
+          const list = make("div", "workset-history-task-list");
+          workset.members.forEach((task) => list.appendChild(worksetHistoryTaskRow(task)));
+          details.appendChild(list);
+        } else {
+          details.appendChild(make("p", "workset-history-empty", "В наборе нет задач."));
+        }
+        details.appendChild(make("h4", "workset-history-subtitle", "Убраны из набора"));
+        if (workset.removed_tasks.length) {
+          const list = make("div", "workset-history-task-list");
+          workset.removed_tasks.forEach((task) => list.appendChild(worksetHistoryTaskRow(task, { removed: true })));
+          details.appendChild(list);
+        } else {
+          details.appendChild(make("p", "workset-history-empty", "Таких задач нет."));
+        }
+        details.appendChild(make("h4", "workset-history-subtitle", "Удалены из проекта"));
+        if (workset.deleted_tasks.length) {
+          const list = make("div", "workset-history-task-list");
+          workset.deleted_tasks.forEach((task) => list.appendChild(worksetHistoryTaskRow(task, { removed: true })));
+          details.appendChild(list);
+        } else {
+          details.appendChild(make("p", "workset-history-empty", "Таких задач нет."));
+        }
+        card.appendChild(details);
+        section.appendChild(card);
+      }
+      content.appendChild(section);
+    }
+
+    const eventsSection = make("section", "workset-history-section");
+    eventsSection.appendChild(make("h3", "workset-history-section-title", "Хронология"));
+    if (!worksetHistoryEvents.length) {
+      eventsSection.appendChild(make("p", "workset-history-empty", "Событий пока нет."));
+    } else {
+      const grouped = new Map();
+      for (const event of worksetHistoryEvents) {
+        const key = event.workset_id == null
+          ? `legacy:${event.project_slug}:${event.workset_name}`
+          : `id:${event.workset_id}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(event);
+      }
+      for (const events of grouped.values()) {
+        const details = make("details", "workset-history-event-group");
+        const workset = worksetHistoryWorksets.find((item) =>
+          eventGroupMatchesWorkset(events[0], item)
+        );
+        const summary = make("summary", "workset-history-event-group-summary");
+        summary.append(
+          make("strong", "workset-history-name", workset?.name || events[0].workset_name),
+          make("span", `workset-history-status is-${workset?.status || "deleted"}`, worksetHistoryStatusLabel(workset?.status || "deleted")),
+        );
+        details.appendChild(summary);
+        for (const event of events) {
+          const row = make("div", "workset-history-event");
+          const copy = make("div", "workset-history-event-copy");
+          const [symbol, label] = worksetHistoryEventLabel(event);
+          copy.appendChild(make("span", "workset-history-event-type", `${symbol} ${label}`));
+          if (event.task_title) {
+            if (event.task_id && event.task_exists) {
+              const link = make("button", "workset-history-task-link", event.task_title);
+              link.type = "button";
+              link.addEventListener("click", () => {
+                els.worksetHistoryDialog.close();
+                void openTaskPanel(event.task_id);
+              });
+              copy.appendChild(link);
+            } else {
+              copy.append(
+                make("span", "workset-history-task-title", event.task_title),
+                make("span", "workset-history-deleted", "Задача удалена"),
+              );
+            }
+          }
+          row.append(
+            copy,
+            make("time", "workset-history-meta", formatHistoryDateTime(event.created_at)),
+          );
+          details.appendChild(row);
+        }
+        eventsSection.appendChild(details);
+      }
+    }
+    content.appendChild(eventsSection);
+
+    if (worksetHistoryHasMore) {
+      const more = make("button", "button button-small button-quiet workset-history-more", worksetHistoryLoading ? "Загрузка…" : "Показать ещё");
+      more.type = "button";
+      more.disabled = worksetHistoryLoading;
+      more.addEventListener("click", () => {
+        more.disabled = true;
+        more.textContent = "Загрузка…";
+        void loadWorksetHistoryPage().catch((error) => {
+          more.disabled = false;
+          more.textContent = "Показать ещё";
+          toast(`Не удалось загрузить следующие события: ${error.message}`, "error");
+        });
+      });
+      content.appendChild(more);
+    }
+  }
+
+  function eventGroupMatchesWorkset(event, workset) {
+    if (event.workset_id != null) return workset.id === event.workset_id;
+    return workset.name === event.workset_name && workset.project_slug === event.project_slug;
+  }
+
+  async function loadWorksetHistoryPage({ reset = false } = {}) {
+    if (worksetHistoryLoading) return;
+    if (reset) {
+      worksetHistoryOffset = 0;
+      worksetHistoryHasMore = false;
+      worksetHistoryWorksets = [];
+      worksetHistoryEvents = [];
+    }
+    worksetHistoryLoading = true;
+    try {
+      const response = await api(
+        `/api/worksets/history?project=${encodeURIComponent(state.project)}&limit=100&offset=${worksetHistoryOffset}`
+      );
+      worksetHistoryWorksets = response.worksets;
+      worksetHistoryEvents.push(...response.events);
+      worksetHistoryHasMore = response.has_more;
+      worksetHistoryOffset = response.next_offset ?? worksetHistoryOffset;
+    } finally {
+      worksetHistoryLoading = false;
+    }
+    renderWorksetHistory();
   }
 
   async function openWorksetHistory() {
@@ -663,53 +891,17 @@
       toast("Выберите проект, чтобы открыть его историю рабочих наборов", "error");
       return;
     }
+    els.worksetHistoryContent.replaceChildren(make("p", "workset-history-empty", "Загрузка истории…"));
+    if (!els.worksetHistoryDialog.open) els.worksetHistoryDialog.showModal();
     try {
-      const events = await api(`/api/worksets/history?project=${encodeURIComponent(state.project)}`);
-      const completed = state.worksets.filter((item) => item.status === "completed");
-      els.worksetHistoryContent.replaceChildren();
-      const completedSection = make("section", "workset-history-section");
-      completedSection.appendChild(make("h3", "workset-history-section-title", "Завершённые наборы"));
-      if (!completed.length) {
-        completedSection.appendChild(make("p", "workset-history-empty", "Завершённых наборов пока нет."));
-      }
-      completed.forEach((workset) => {
-        const row = make("div", "workset-history-row");
-        const details = make("div", "workset-history-copy");
-        details.append(
-          make("strong", "workset-history-name", workset.name),
-          make("span", "workset-history-meta", `${workset.done_count}/${workset.task_count} задач · ${formatDate(workset.completed_at)}`),
-        );
-        const view = make("button", "button button-small button-quiet", "Показать");
-        view.type = "button";
-        view.addEventListener("click", () => {
-          state.worksetId = workset.id;
-          persistWorksetState();
-          populateWorksetFilter();
-          renderBoard();
-          els.worksetHistoryDialog.close();
-        });
-        row.append(details, view);
-        completedSection.appendChild(row);
-      });
-      els.worksetHistoryContent.appendChild(completedSection);
-
-      const eventsSection = make("section", "workset-history-section");
-      eventsSection.appendChild(make("h3", "workset-history-section-title", "События"));
-      if (!events.length) {
-        eventsSection.appendChild(make("p", "workset-history-empty", "Событий пока нет."));
-      }
-      events.forEach((event) => {
-        const row = make("div", "workset-history-event");
-        row.append(
-          make("span", "workset-history-event-copy", worksetEventLabel(event)),
-          make("time", "workset-history-meta", formatDateTime(event.created_at)),
-        );
-        eventsSection.appendChild(row);
-      });
-      els.worksetHistoryContent.appendChild(eventsSection);
-      els.worksetHistoryDialog.showModal();
+      await loadWorksetHistoryPage({ reset: true });
     } catch (error) {
-      toast(error.message, "error");
+      els.worksetHistoryContent.replaceChildren();
+      const message = make("p", "workset-history-error", `Не удалось загрузить историю: ${error.message}`);
+      const retry = make("button", "button button-small button-quiet", "Повторить");
+      retry.type = "button";
+      retry.addEventListener("click", () => void openWorksetHistory());
+      els.worksetHistoryContent.append(message, retry);
     }
   }
 

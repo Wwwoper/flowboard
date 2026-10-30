@@ -31,6 +31,13 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.43" in html
-    assert "/static/style.css?v=0.5.26" in html
+    assert "/static/app.js?v=0.5.44" in html
+    assert "/static/style.css?v=0.5.27" in html
+    assert 'aria-modal="true"' in html
+    assert 'aria-label="Закрыть"' in html
+    assert "Показать ещё" in script
+    assert "task_reopened" in script
+    assert "Состав" in script
+    assert 'membershipLocked = currentWorkset?.status === "completed"' in script
+    assert "Состав завершённого рабочего набора нельзя менять" in script
     assert "/static/board-workspace.css?v=0.1.3" in html

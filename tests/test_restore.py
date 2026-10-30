@@ -115,10 +115,10 @@ def test_zip_backup_preserves_history_for_a_deleted_empty_workset(client, tmp_pa
 
     assert worksets == 0
     assert events == [
-        (None, "Temporary", "created"),
-        (None, "Temporary", "task_added"),
-        (None, "Temporary", "task_removed"),
-        (None, "Temporary", "deleted_empty"),
+        (workset["id"], "Temporary", "created"),
+        (workset["id"], "Temporary", "task_added"),
+        (workset["id"], "Temporary", "task_removed"),
+        (workset["id"], "Temporary", "deleted_empty"),
     ]
 
 
@@ -156,3 +156,78 @@ def test_zip_backup_restores_worksets_memberships_and_history(client, tmp_path):
     assert restored_workset == ("release", "Release prep", "active")
     assert membership == (workset["id"], task["id"])
     assert events == [("created", ""), ("task_added", "Workset backup")]
+
+
+def test_zip_restore_keeps_historical_ids_for_deleted_tasks_and_sets(client, tmp_path):
+    deleted_task = client.post(
+        "/api/tasks", json={"title": "Removed later", "tags": "project:history"}
+    ).json()
+    remaining_task = client.post(
+        "/api/tasks", json={"title": "Still present", "tags": "project:history"}
+    ).json()
+    workset = client.post(
+        "/api/worksets", json={"project_slug": "history", "name": "History"}
+    ).json()
+    for task in (deleted_task, remaining_task):
+        client.post(f"/api/worksets/{workset['id']}/tasks", json={"task_id": task["id"]})
+    for task in (deleted_task, remaining_task):
+        client.patch(f"/api/tasks/{task['id']}", json={"status": "done"})
+    client.delete(f"/api/tasks/{deleted_task['id']}")
+
+    archive_path = tmp_path / "historical-ids.zip"
+    archive_path.write_bytes(client.get("/api/export?format=zip").content)
+    target = tmp_path / "historical-ids-restored"
+    restore_backup(archive_path, target)
+
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        event = connection.execute(
+            """
+            SELECT workset_id, task_id, task_title, task_status
+            FROM workset_events
+            WHERE event_type = 'task_deleted'
+            """
+        ).fetchone()
+        foreign_keys = connection.execute("PRAGMA foreign_key_list(workset_events)").fetchall()
+    finally:
+        connection.close()
+
+    assert event == (workset["id"], deleted_task["id"], "Removed later", "done")
+    assert foreign_keys == []
+
+
+def test_restore_accepts_legacy_workset_events_without_new_snapshot_fields(client, tmp_path):
+    task = client.post(
+        "/api/tasks", json={"title": "Legacy event", "tags": "project:legacy"}
+    ).json()
+    workset = client.post(
+        "/api/worksets", json={"project_slug": "legacy", "name": "Legacy set"}
+    ).json()
+    client.post(f"/api/worksets/{workset['id']}/tasks", json={"task_id": task["id"]})
+
+    source = tmp_path / "current.zip"
+    source.write_bytes(client.get("/api/export?format=zip").content)
+    legacy = tmp_path / "legacy-events.zip"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(legacy, "w") as backup:
+        manifest = json.loads(original.read("tasks.json"))
+        for event in manifest["workset_events"]:
+            for field in ("task_status", "task_closed_at", "task_count", "done_count"):
+                event.pop(field, None)
+        backup.writestr("tasks.json", json.dumps(manifest))
+        for name in original.namelist():
+            if name != "tasks.json":
+                backup.writestr(name, original.read(name))
+
+    target = tmp_path / "legacy-events-restored"
+    restore_backup(legacy, target)
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        snapshots = connection.execute(
+            """
+            SELECT task_status, task_closed_at, task_count, done_count
+            FROM workset_events ORDER BY id
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+    assert snapshots == [(None, None, None, None), (None, None, None, None)]

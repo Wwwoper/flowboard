@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.26">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.27">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.12">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
@@ -519,10 +519,10 @@
   </dialog>
 
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
-  <dialog id="workset-history-dialog" class="shortcuts-dialog workset-history-dialog" aria-labelledby="workset-history-heading">
-    <div class="shortcuts-heading">
+  <dialog id="workset-history-dialog" class="shortcuts-dialog workset-history-dialog" aria-labelledby="workset-history-heading" aria-modal="true">
+    <div class="shortcuts-dialog-header workset-history-dialog-header">
       <div><span class="shortcuts-eyebrow">ПРОЕКТ</span><h2 id="workset-history-heading">История рабочих наборов</h2></div>
-      <button id="close-workset-history" class="icon-button" type="button" aria-label="Закрыть историю">×</button>
+      <button id="close-workset-history" class="icon-button" type="button" aria-label="Закрыть">×</button>
     </div>
     <div id="workset-history-content" class="workset-history-content"></div>
   </dialog>
@@ -669,6 +669,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.3" defer></script>
-  <script src="/static/app.js?v=0.5.43" defer></script>
+  <script src="/static/app.js?v=0.5.44" defer></script>
 </body>
 </html>

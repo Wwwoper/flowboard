@@ -227,7 +227,7 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                             and (
                                 not isinstance(workset_id, int)
                                 or isinstance(workset_id, bool)
-                                or workset_id not in workset_ids
+                                or workset_id <= 0
                             )
                         )
                         or (
@@ -235,8 +235,34 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                             and (
                                 not isinstance(task_id, int)
                                 or isinstance(task_id, bool)
-                                or task_id not in seen_ids
+                                or task_id <= 0
                             )
+                        )
+                        or (
+                            event.get("task_status") is not None
+                            and (
+                                not isinstance(event.get("task_status"), str)
+                                or event["task_status"] not in {"todo", "doing", "waiting", "done"}
+                            )
+                        )
+                        or not isinstance(event.get("task_title", ""), str)
+                        or (
+                            event.get("task_closed_at") is not None
+                            and not isinstance(event.get("task_closed_at"), str)
+                        )
+                        or any(
+                            event.get(field) is not None
+                            and (
+                                not isinstance(event[field], int)
+                                or isinstance(event[field], bool)
+                                or event[field] < 0
+                            )
+                            for field in ("task_count", "done_count")
+                        )
+                        or (
+                            event.get("task_count") is not None
+                            and event.get("done_count") is not None
+                            and event["done_count"] > event["task_count"]
                         )
                         or not isinstance(event.get("project_slug"), str)
                         or not re.fullmatch(
@@ -253,8 +279,9 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                         """
                         INSERT INTO workset_events (
                             id, workset_id, project_slug, workset_name, task_id,
-                            task_title, event_type, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            task_title, task_status, task_closed_at, task_count, done_count,
+                            event_type, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             event_id,
@@ -263,6 +290,10 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                             event["workset_name"],
                             task_id,
                             event.get("task_title", ""),
+                            event.get("task_status"),
+                            event.get("task_closed_at"),
+                            event.get("task_count"),
+                            event.get("done_count"),
                             event["event_type"],
                             event.get("created_at", ""),
                         ),

@@ -167,5 +167,46 @@ class WorksetEventRead(BaseModel):
     workset_name: str
     task_id: int | None
     task_title: str
+    task_status: TaskStatus | None = None
+    task_closed_at: str | None = None
+    task_count: int | None = None
+    done_count: int | None = None
+    task_exists: bool = False
     event_type: str
     created_at: str
+
+
+class WorksetHistoryTaskRead(BaseModel):
+    task_id: int
+    task_title: str
+    status: TaskStatus | None = None
+    closed_at: str | None = None
+    added_at: str
+    removed_at: str | None = None
+    removal_reason: Literal["removed", "deleted"] | None = None
+    exists: bool
+
+
+class WorksetHistoryItemRead(BaseModel):
+    id: int
+    project_slug: str
+    name: str
+    status: Literal["active", "completed", "deleted"]
+    created_at: str | None = None
+    completed_at: str | None = None
+    duration_seconds: int | None = None
+    task_count: int
+    done_count: int
+    added_count: int
+    removed_count: int
+    deleted_count: int
+    members: list[WorksetHistoryTaskRead]
+    removed_tasks: list[WorksetHistoryTaskRead]
+    deleted_tasks: list[WorksetHistoryTaskRead]
+
+
+class WorksetHistoryRead(BaseModel):
+    worksets: list[WorksetHistoryItemRead]
+    events: list[WorksetEventRead]
+    has_more: bool
+    next_offset: int | None = None

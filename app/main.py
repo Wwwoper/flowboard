@@ -37,6 +37,9 @@ from app.models import (
     TaskSummary,
     WorksetCreate,
     WorksetEventRead,
+    WorksetHistoryItemRead,
+    WorksetHistoryRead,
+    WorksetHistoryTaskRead,
     WorksetPatch,
     WorksetRead,
     WorksetTaskAdd,
@@ -244,12 +247,15 @@ def _record_workset_event(
     event_type: str,
     *,
     task: dict[str, Any] | None = None,
+    task_count: int | None = None,
+    done_count: int | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO workset_events (
-            workset_id, project_slug, workset_name, task_id, task_title, event_type, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            workset_id, project_slug, workset_name, task_id, task_title,
+            task_status, task_closed_at, task_count, done_count, event_type, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             workset["id"],
@@ -257,6 +263,10 @@ def _record_workset_event(
             workset["name"],
             task["id"] if task else None,
             task["title"] if task else "",
+            task.get("status") if task else None,
+            task.get("closed_at") if task else None,
+            task_count,
+            done_count,
             event_type,
             utc_now(),
         ),
@@ -318,6 +328,8 @@ def _sync_workset_state(connection: sqlite3.Connection, workset_id: int) -> None
         connection,
         dict(workset),
         "completed" if completed else "reactivated",
+        task_count=task_count,
+        done_count=int(counts["done_count"] or 0),
     )
 
 
@@ -354,6 +366,202 @@ def _add_task_to_workset(
         ) from exc
     _record_workset_event(connection, workset, "task_added", task=task)
     _sync_workset_state(connection, workset_id)
+
+
+def _history_timestamp_seconds(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return int(parsed.timestamp())
+
+
+def _workset_history_items(
+    connection: sqlite3.Connection, events: list[dict[str, Any]]
+) -> list[WorksetHistoryItemRead]:
+    groups: dict[tuple[str, int | str], list[dict[str, Any]]] = {}
+    for event in events:
+        workset_id = event["workset_id"]
+        key: tuple[str, int | str] = (
+            "id",
+            int(workset_id),
+        ) if workset_id is not None else (
+            "legacy",
+            f"{event['project_slug']}:{event['workset_name']}",
+        )
+        groups.setdefault(key, []).append(event)
+
+    task_rows = connection.execute(
+        "SELECT id, title, status, closed_at FROM tasks"
+    ).fetchall()
+    tasks_by_id = {int(row["id"]): dict(row) for row in task_rows}
+
+    result: list[WorksetHistoryItemRead] = []
+    for key, group in groups.items():
+        ordered = sorted(group, key=lambda item: int(item["id"]))
+        workset_id = int(key[1]) if key[0] == "id" else None
+        current_workset = None
+        if workset_id is not None:
+            row = connection.execute(
+                "SELECT * FROM worksets WHERE id = ?", (workset_id,)
+            ).fetchone()
+            current_workset = dict(row) if row is not None else None
+
+        completion_events = [item for item in ordered if item["event_type"] == "completed"]
+        latest_completion = completion_events[-1] if completion_events else None
+        deleted = any(item["event_type"] == "deleted_empty" for item in ordered)
+        status = (
+            current_workset["status"]
+            if current_workset is not None
+            else "deleted" if deleted else "active"
+        )
+        cutoff_id = (
+            int(latest_completion["id"])
+            if status == "completed" and latest_completion is not None
+            else int(ordered[-1]["id"])
+        )
+        if status == "deleted":
+            deleted_events = [item for item in ordered if item["event_type"] == "deleted_empty"]
+            if deleted_events:
+                cutoff_id = int(deleted_events[-1]["id"])
+
+        episodes: list[dict[str, Any]] = []
+        active: dict[int, dict[str, Any]] = {}
+        for event in ordered:
+            if int(event["id"]) > cutoff_id:
+                break
+            task_id = event["task_id"]
+            if task_id is None:
+                continue
+            task_id = int(task_id)
+            event_type = event["event_type"]
+            if event_type == "task_added":
+                episode = {
+                    "task_id": task_id,
+                    "task_title": event["task_title"],
+                    "status": event["task_status"],
+                    "closed_at": event["task_closed_at"],
+                    "added_at": event["created_at"],
+                    "removed_at": None,
+                    "removal_reason": None,
+                    "exists": bool(event.get("task_exists")),
+                }
+                episodes.append(episode)
+                active[task_id] = episode
+            elif task_id in active and event_type in {
+                "task_status_changed", "task_completed", "task_reopened"
+            }:
+                episode = active[task_id]
+                episode["task_title"] = event["task_title"] or episode["task_title"]
+                episode["status"] = event["task_status"] or episode["status"]
+                episode["closed_at"] = event["task_closed_at"]
+            elif task_id in active and event_type in {"task_removed", "task_deleted"}:
+                episode = active.pop(task_id)
+                episode["task_title"] = event["task_title"] or episode["task_title"]
+                episode["status"] = event["task_status"] or episode["status"]
+                episode["closed_at"] = event["task_closed_at"]
+                episode["removed_at"] = event["created_at"]
+                episode["removal_reason"] = "deleted" if event_type == "task_deleted" else "removed"
+                episode["exists"] = bool(event.get("task_exists"))
+
+        active_episode_ids = {id(episode) for episode in active.values()}
+        members: list[WorksetHistoryTaskRead] = []
+        removed_tasks: list[WorksetHistoryTaskRead] = []
+        deleted_tasks: list[WorksetHistoryTaskRead] = []
+        for episode in episodes:
+            task_row = tasks_by_id.get(episode["task_id"])
+            exists = task_row is not None
+            item = dict(episode)
+            item["exists"] = exists
+            is_active_episode = id(episode) in active_episode_ids
+            if exists and is_active_episode and (status == "active" or item["status"] is None):
+                item["task_title"] = task_row["title"]
+                item["status"] = task_row["status"]
+                item["closed_at"] = task_row["closed_at"]
+            elif status == "completed" and is_active_episode and item["status"] is None:
+                # Older events predate status snapshots; completion guarantees that
+                # every member in this snapshot was done, although its close date
+                # cannot be recovered when the task itself has since been deleted.
+                item["status"] = "done"
+            history_task = WorksetHistoryTaskRead(**item)
+            if is_active_episode:
+                members.append(history_task)
+            elif item["removal_reason"] == "deleted":
+                deleted_tasks.append(history_task)
+            else:
+                removed_tasks.append(history_task)
+
+        created_event = next((item for item in ordered if item["event_type"] == "created"), None)
+        created_at = (
+            current_workset["created_at"] if current_workset else
+            created_event["created_at"] if created_event else ordered[0]["created_at"]
+        )
+        completed_at = latest_completion["created_at"] if latest_completion else None
+        if current_workset and current_workset["status"] == "completed":
+            completed_at = current_workset["completed_at"] or completed_at
+        cycle_start_at = created_at
+        if latest_completion is not None:
+            prior_reactivations = [
+                item
+                for item in ordered
+                if item["event_type"] == "reactivated"
+                and int(item["id"]) < int(latest_completion["id"])
+            ]
+            if prior_reactivations:
+                cycle_start_at = prior_reactivations[-1]["created_at"]
+        duration_start = _history_timestamp_seconds(cycle_start_at)
+        duration_end = _history_timestamp_seconds(completed_at)
+        duration_seconds = (
+            max(0, duration_end - duration_start)
+            if duration_start is not None and duration_end is not None
+            else None
+        )
+        snapshot_count = (
+            latest_completion.get("task_count") if latest_completion else None
+        )
+        snapshot_done = latest_completion.get("done_count") if latest_completion else None
+        if status == "completed" and snapshot_count is not None:
+            task_count = int(snapshot_count)
+            done_count = int(snapshot_done or 0)
+        else:
+            task_count = len(members)
+            done_count = sum(item.status == "done" for item in members)
+        # These counters describe the complete membership history, not only the
+        # snapshot used to render the last completion cycle.
+        added_count = sum(item["event_type"] == "task_added" for item in ordered)
+        removed_count = sum(item["event_type"] == "task_removed" for item in ordered)
+        deleted_count = sum(item["event_type"] == "task_deleted" for item in ordered)
+        latest_event = ordered[-1]
+        result.append(
+            WorksetHistoryItemRead(
+                id=workset_id or int(created_event["id"] if created_event else ordered[0]["id"]),
+                project_slug=latest_event["project_slug"],
+                name=current_workset["name"] if current_workset else latest_event["workset_name"],
+                status=status,
+                created_at=created_at,
+                completed_at=completed_at,
+                duration_seconds=duration_seconds,
+                task_count=task_count,
+                done_count=done_count,
+                added_count=added_count,
+                removed_count=removed_count,
+                deleted_count=deleted_count,
+                members=members,
+                removed_tasks=removed_tasks,
+                deleted_tasks=deleted_tasks,
+            )
+        )
+    status_order = {"active": 0, "completed": 1, "deleted": 2}
+    result.sort(
+        key=lambda item: (
+            status_order[item.status],
+            -(_history_timestamp_seconds(item.completed_at or item.created_at) or 0),
+            -item.id,
+        )
+    )
+    return result
 
 
 def _attachments_for_task(connection: sqlite3.Connection, task_id: int) -> list[dict[str, Any]]:
@@ -519,6 +727,10 @@ def remove_workset_task(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, bool]:
     workset = _require_workset(connection, workset_id)
+    if workset["status"] == "completed":
+        raise HTTPException(
+            status_code=409, detail="Нельзя менять состав завершённого рабочего набора"
+        )
     task = _require_task(connection, task_id)
     membership = connection.execute(
         "SELECT 1 FROM workset_memberships WHERE workset_id = ? AND task_id = ?",
@@ -547,18 +759,41 @@ def remove_workset_task(
     return {"deleted": deleted}
 
 
-@app.get("/api/worksets/history", response_model=list[WorksetEventRead])
+@app.get("/api/worksets/history", response_model=WorksetHistoryRead)
 def workset_history(
-    project: str, connection: sqlite3.Connection = Depends(get_db)
-) -> list[WorksetEventRead]:
+    project: str,
+    limit: int = 100,
+    offset: int = 0,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> WorksetHistoryRead:
     if not PROJECT_SLUG_RE.fullmatch(project):
         raise HTTPException(status_code=422, detail="Некорректный ключ проекта")
-    rows = connection.execute(
-        "SELECT * FROM workset_events WHERE project_slug = ? "
-        "ORDER BY created_at DESC, id DESC LIMIT 300",
-        (project,),
-    ).fetchall()
-    return [WorksetEventRead(**dict(row)) for row in rows]
+    if not 1 <= limit <= 100 or offset < 0:
+        raise HTTPException(status_code=422, detail="Некорректные параметры пагинации")
+    all_rows = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT e.*, CASE WHEN t.id IS NULL THEN 0 ELSE 1 END AS task_exists
+            FROM workset_events AS e
+            LEFT JOIN tasks AS t ON t.id = e.task_id
+            WHERE e.project_slug = ?
+            ORDER BY e.id
+            """,
+            (project,),
+        ).fetchall()
+    ]
+    page_rows = sorted(
+        all_rows, key=lambda item: (item["created_at"], int(item["id"])), reverse=True
+    )[offset : offset + limit + 1]
+    has_more = len(page_rows) > limit
+    page_rows = page_rows[:limit]
+    return WorksetHistoryRead(
+        worksets=_workset_history_items(connection, all_rows),
+        events=[WorksetEventRead(**item) for item in page_rows],
+        has_more=has_more,
+        next_offset=offset + limit if has_more else None,
+    )
 
 
 @app.get("/api/archive/settings", response_model=ArchiveSettingsRead)
@@ -735,6 +970,12 @@ def patch_task(
     requested_workset_id = changes.get("workset_id", current_workset_id)
     workset_changed = "workset_id" in changes and requested_workset_id != current_workset_id
     new_workset = None
+    if workset_changed and current_workset_id is not None:
+        current_workset = _require_workset(connection, int(current_workset_id))
+        if current_workset["status"] == "completed":
+            raise HTTPException(
+                status_code=409, detail="Нельзя менять состав завершённого рабочего набора"
+            )
     if requested_workset_id is not None and workset_changed:
         new_workset = _require_workset(connection, int(requested_workset_id))
         if new_workset["status"] != "active":
@@ -818,10 +1059,23 @@ def patch_task(
     update_fields.extend(["updated_at = ?", "closed_at = ?"])
     values.extend([now, closed_at, task_id])
     connection.execute(f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?", values)
+    updated_task = _require_task(connection, task_id)
     if new_workset is not None:
-        updated_task = _require_task(connection, task_id)
         _add_task_to_workset(connection, int(requested_workset_id), updated_task)
-    elif not workset_changed and "status" in changes and current_workset_id is not None:
+    elif (
+        not workset_changed
+        and "status" in changes
+        and new_status != current["status"]
+        and current_workset_id is not None
+    ):
+        if current["status"] == "done" and new_status != "done":
+            event_type = "task_reopened"
+        elif current["status"] != "done" and new_status == "done":
+            event_type = "task_completed"
+        else:
+            event_type = "task_status_changed"
+        current_workset = _require_workset(connection, int(current_workset_id))
+        _record_workset_event(connection, current_workset, event_type, task=updated_task)
         _sync_workset_state(connection, int(current_workset_id))
     connection.commit()
     if blocked_close:

@@ -201,7 +201,7 @@ def test_deleting_one_task_from_project_keeps_other_workset_members(client):
     assert deleted_event["task_title"] == "Deleted member"
 
 
-def test_task_must_be_removed_before_adding_to_another_workset(client):
+def test_task_can_be_transferred_directly_between_worksets(client):
     task = create_task(client, "Move between sets")
     first = create_workset(client, "First")
     second = create_workset(client, "Second")
@@ -210,27 +210,23 @@ def test_task_must_be_removed_before_adding_to_another_workset(client):
     direct_move = client.patch(
         f"/api/tasks/{task['id']}", json={"workset_id": second["id"]}
     )
-    assert direct_move.status_code == 409
-    assert client.get(f"/api/tasks/{task['id']}").json()["workset_id"] == first["id"]
+    assert direct_move.status_code == 200, direct_move.text
+    assert direct_move.json()["workset_id"] == second["id"]
+    assert client.get(f"/api/tasks/{task['id']}").json()["workset_id"] == second["id"]
 
-    removed = client.patch(f"/api/tasks/{task['id']}", json={"workset_id": None})
-    assert removed.status_code == 200, removed.text
-    added = client.patch(
-        f"/api/tasks/{task['id']}", json={"workset_id": second["id"]}
-    )
-    assert added.status_code == 200, added.text
-    assert added.json()["workset_id"] == second["id"]
     listed = client.get("/api/worksets?project=flowboard").json()
     assert len(listed) == 1
     assert listed[0]["id"] == second["id"]
     assert listed[0]["task_count"] == 1
-
-    removed_again = client.patch(f"/api/tasks/{task['id']}", json={"workset_id": None})
-    assert removed_again.status_code == 200, removed_again.text
-    assert removed_again.json()["workset_id"] is None
-    assert client.get("/api/worksets?project=flowboard").json() == []
     events = client.get("/api/worksets/history?project=flowboard").json()
-    assert any(event["event_type"] == "task_removed" for event in events)
+    assert any(
+        event["event_type"] == "task_removed" and event["workset_name"] == "First"
+        for event in events
+    )
+    assert any(
+        event["event_type"] == "task_added" and event["workset_name"] == "Second"
+        for event in events
+    )
 
 
 def test_failed_move_keeps_original_workset_membership(client):

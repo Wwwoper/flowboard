@@ -18,8 +18,8 @@ def test_create_project_uses_themed_dialog_with_inline_validation_and_no_browser
         'Используйте латинские буквы, цифры и дефис. Например: storefront.',
     ):
         assert fragment in html
-    assert "/static/themed-controls.css?v=0.1.11" in html
-    assert "/static/app.js?v=0.5.42" in html
+    assert "/static/themed-controls.css?v=0.1.12" in html
+    assert "/static/app.js?v=0.5.43" in html
 
     script = client.get("/static/app.js").text
     assert "window.prompt(" not in script

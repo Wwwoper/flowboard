@@ -734,15 +734,6 @@ def patch_task(
     current_workset_id = current.get("workset_id")
     requested_workset_id = changes.get("workset_id", current_workset_id)
     workset_changed = "workset_id" in changes and requested_workset_id != current_workset_id
-    if (
-        current_workset_id is not None
-        and requested_workset_id is not None
-        and workset_changed
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail="Сначала удалите задачу из прежнего рабочего набора",
-        )
     new_workset = None
     if requested_workset_id is not None and workset_changed:
         new_workset = _require_workset(connection, int(requested_workset_id))

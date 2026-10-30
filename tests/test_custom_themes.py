@@ -60,8 +60,8 @@ def test_custom_theme_controls_and_script_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert '/static/theme-manager.js?v=0.2.1' in html
-    assert '/static/app.js?v=0.5.42' in html
-    assert '/static/github-theme.css?v=0.2.3' in html
+    assert '/static/app.js?v=0.5.43' in html
+    assert '/static/github-theme.css?v=0.2.4' in html
     assert 'id="saved-themes-select"' in html
     assert 'id="delete-theme-button"' in html
 

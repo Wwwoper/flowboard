@@ -9,6 +9,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
         "create-workset",
         "rename-workset",
         "workset-history",
+        "workset-context",
         "task-workset",
         "workset-history-dialog",
         "workset-editor-dialog",
@@ -16,6 +17,20 @@ def test_workset_controls_and_per_project_context_are_present(client):
         assert f'id="{element_id}"' in html
     assert "flowboard-workset:${state.project}" in script
     assert "task.workset_id !== state.worksetId" in script
+    assert "Перенести задачу из набора" in script
+    assert "previousDetails.workset_id || updated.workset_id" in script
+    assert "doingCount > state.wipLimit" in script
+    assert "workset-actions-menu" in html
+    assert 'class="toolbar-group project-toolbar-group"' in html
+    assert 'class="toolbar-group workset-toolbar-group"' in html
+    assert html.index('id="project-filter"') < html.index('id="add-project"')
+    assert html.index('id="add-project"') < html.index('id="workset-filter"')
+    assert html.index('id="workset-filter"') < html.index('id="tag-filter"')
+    assert 'els.taskWorkset.closest(".task-workset-field")' in script
+    assert "#task-workset" in client.get("/static/themed-selects.js").text
+    assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
+    assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.42" in html
-    assert "/static/style.css?v=0.5.25" in html
+    assert "/static/app.js?v=0.5.43" in html
+    assert "/static/style.css?v=0.5.26" in html
+    assert "/static/board-workspace.css?v=0.1.3" in html

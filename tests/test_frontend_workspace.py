@@ -4,7 +4,7 @@ from __future__ import annotations
 def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_rendered(client):
     html = client.get("/").text
     assert 'class="board-toolbar" aria-label="Поиск и фильтры"' in html
-    assert html.count('class="toolbar-icon"') == 4
+    assert html.count('class="toolbar-icon"') == 5
     assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
     assert 'aria-label="Создать проект" title="Создать проект"' in html
     toolbar_html, _, shortcuts_html = html.partition('<dialog id="shortcuts-dialog"')
@@ -14,8 +14,8 @@ def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_ren
     css = client.get("/static/themed-controls.css").text
     for selector in (
         ".board-toolbar > .search-box",
-        ".board-toolbar > .filter-box",
-        ".board-toolbar > .add-project-button",
+        ".board-toolbar .filter-box",
+        ".board-toolbar .add-project-button",
         ".board-toolbar > .search-box:focus-within",
         ".board-toolbar .search-shortcut-keycap",
         ".board-toolbar .toolbar-icon",
@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.42" in html
-    assert "/static/style.css?v=0.5.25" in html
+    assert "/static/app.js?v=0.5.43" in html
+    assert "/static/style.css?v=0.5.26" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -174,8 +174,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.42" in html
-    assert "/static/style.css?v=0.5.25" in html
+    assert "/static/app.js?v=0.5.43" in html
+    assert "/static/style.css?v=0.5.26" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -294,7 +294,8 @@ def test_main_board_promotes_task_import_and_moves_backup_to_settings(client):
     assert 'els.activeCount.textContent' not in script
     assert 'els.doingCount.textContent' not in script
     assert 'els.filterSummary.textContent' not in script
-    assert 'const doingCount = state.tasks.filter((task) => task.status === "doing").length;' in script
+    assert 'let doingCount = 0;' in script
+    assert 'if (status === "doing") doingCount = statusTasks.length;' in script
     assert 'const overLimit = doingCount > state.wipLimit;' in script
     assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script
     assert 'els.settingsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));' in script
@@ -318,8 +319,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.42" in html
-    assert "/static/style.css?v=0.5.25" in html
+    assert "/static/app.js?v=0.5.43" in html
+    assert "/static/style.css?v=0.5.26" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -353,8 +354,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.25" in html
-    assert '/static/github-theme.css?v=0.2.3' in html
+    assert "/static/style.css?v=0.5.26" in html
+    assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -378,7 +379,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.11" in html
+    assert "/static/themed-controls.css?v=0.1.12" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',

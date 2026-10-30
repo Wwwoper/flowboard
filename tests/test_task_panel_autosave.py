@@ -94,7 +94,7 @@ def test_task_title_editor_closes_on_outside_pointer_after_successful_save(clien
     assert 'if (!els.taskTitle.hidden && !els.taskTitle.contains(target))' in script
     assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
     assert "function finishTitleEditing(focusDisplay = true)" in script
-    assert "/static/app.js?v=0.5.42" in client.get("/").text
+    assert "/static/app.js?v=0.5.43" in client.get("/").text
 
 
 def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
@@ -105,4 +105,4 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.42" in client.get("/").text
+    assert "/static/app.js?v=0.5.43" in client.get("/").text

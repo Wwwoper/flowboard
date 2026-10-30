@@ -19,11 +19,11 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.25">
-  <link rel="stylesheet" href="/static/github-theme.css?v=0.2.3">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.11">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.26">
+  <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.12">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.2">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.3">
 </head>
 <body>
   <div class="app-shell">
@@ -92,25 +92,38 @@
           <input id="search-input" type="search" placeholder="Найти задачу…" autocomplete="off">
           <kbd id="search-shortcut" class="quick-add-keycap search-shortcut-keycap" aria-label="Сочетание клавиш для поиска">Ctrl K</kbd>
         </label>
-        <label class="filter-box project-filter-box">
-          <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4H8l2 2h5.5A1.5 1.5 0 0 1 17 7.5v7A1.5 1.5 0 0 1 15.5 16h-11A1.5 1.5 0 0 1 3 14.5Z"></path></svg>
-          <span class="visually-hidden">Представление по проекту</span>
-          <select id="project-filter" aria-label="Проект"><option value="">Все проекты</option></select>
-        </label>
-        <label class="filter-box workset-filter-box">
-          <span class="visually-hidden">Рабочий набор</span>
-          <select id="workset-filter" aria-label="Рабочий набор"><option value="">Все задачи проекта</option></select>
-        </label>
-        <button id="create-workset" class="button button-small button-quiet workset-action" type="button">＋ Набор</button>
-        <button id="rename-workset" class="button button-small button-quiet workset-action" type="button" disabled>Переименовать</button>
-        <button id="workset-history" class="button button-small button-quiet workset-action" type="button">История</button>
-        <button id="add-project" class="button button-small button-quiet add-project-button" type="button" aria-label="Создать проект" title="Создать проект"><svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4.5v11"></path><path d="M4.5 10h11"></path></svg><span class="add-project-label">Создать проект</span></button>
+        <div class="toolbar-group project-toolbar-group" aria-label="Проект">
+          <label class="filter-box project-filter-box">
+            <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4H8l2 2h5.5A1.5 1.5 0 0 1 17 7.5v7A1.5 1.5 0 0 1 15.5 16h-11A1.5 1.5 0 0 1 3 14.5Z"></path></svg>
+            <span class="visually-hidden">Представление по проекту</span>
+            <select id="project-filter" aria-label="Проект"><option value="">Все проекты</option></select>
+          </label>
+          <button id="add-project" class="button button-small button-quiet add-project-button" type="button" aria-label="Создать проект" title="Создать проект"><svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4.5v11"></path><path d="M4.5 10h11"></path></svg><span class="add-project-label">Создать проект</span></button>
+        </div>
+        <span class="toolbar-divider" aria-hidden="true"></span>
+        <div class="toolbar-group workset-toolbar-group" aria-label="Рабочий набор">
+          <label class="filter-box workset-filter-box">
+            <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 4.5h12v11H4zM7 8h6M7 11h4"></path></svg>
+            <span class="visually-hidden">Рабочий набор</span>
+            <select id="workset-filter" aria-label="Рабочий набор"><option value="">Все задачи проекта</option></select>
+          </label>
+          <details class="workset-actions-menu">
+            <summary class="icon-button" aria-label="Действия с рабочим набором" title="Действия с рабочим набором">⋯</summary>
+            <div class="workset-actions-popover">
+              <button id="create-workset" class="workset-menu-item" type="button">＋ Создать набор</button>
+              <button id="rename-workset" class="workset-menu-item" type="button" disabled>Переименовать набор</button>
+              <button id="workset-history" class="workset-menu-item" type="button">История наборов</button>
+            </div>
+          </details>
+        </div>
+        <span class="toolbar-divider" aria-hidden="true"></span>
         <label class="filter-box tag-filter-box">
           <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.5 10V4.5h5.8l7.2 7.2-4.3 4.3Z"></path><circle cx="6.5" cy="7.2" r=".8"></circle></svg>
           <span class="visually-hidden">Фильтр по тегу</span>
           <select id="tag-filter"><option value="">Все теги</option></select>
         </label>
       </section>
+      <div id="workset-context" class="workset-context" hidden aria-live="polite"></div>
 
       <section id="board" class="board" aria-label="Канбан-доска">
         <section class="board-column" data-column="todo">
@@ -143,7 +156,7 @@
             </div>
           </div>
           <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
-          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
+          <p class="column-empty">Перетащите задачу сюда</p>
         </section>
 
         <section class="board-column" data-column="doing">
@@ -151,6 +164,7 @@
             <span class="column-marker marker-doing"></span>
             <h2>В работе</h2>
             <span class="column-count" id="count-doing">0</span>
+            <span class="wip-warning" id="wip-warning" title="Мягкий лимит задач в работе" hidden></span>
             <button class="column-add" data-add-status="doing" type="button" aria-label="Добавить задачу в колонку «В работе»" title="Добавить задачу в колонку «В работе»">＋</button>
           </header>
           <div class="column-options" data-column-options="doing">
@@ -175,9 +189,8 @@
               <button class="column-options-reset" type="button" data-column-reset="doing">Сбросить настройки</button>
             </div>
           </div>
-          <div class="wip-warning" id="wip-warning" hidden>Мягкий лимит: стоит сфокусироваться на текущих задачах</div>
           <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
-          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
+          <p class="column-empty">Перетащите задачу сюда</p>
         </section>
 
         <section class="board-column" data-column="waiting">
@@ -210,7 +223,7 @@
             </div>
           </div>
           <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
-          <p class="column-empty">Перетащите сюда задачу, чтобы начать работу</p>
+          <p class="column-empty">Нет задач в ожидании</p>
         </section>
 
         <section class="board-column board-column-done" data-column="done">
@@ -655,7 +668,7 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
-  <script src="/static/themed-selects.js?v=0.1.2" defer></script>
-  <script src="/static/app.js?v=0.5.42" defer></script>
+  <script src="/static/themed-selects.js?v=0.1.3" defer></script>
+  <script src="/static/app.js?v=0.5.43" defer></script>
 </body>
 </html>

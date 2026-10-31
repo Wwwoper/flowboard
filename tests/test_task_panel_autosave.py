@@ -30,7 +30,8 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     assert 'els.taskResult.addEventListener("input", () => {' in script
     assert 'updateTaskResultIndicator();' in script
     assert 'scheduleTaskDraftSave(180);' in script
-    assert 'els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180))' in script
+    assert 'els.taskStatus.addEventListener("change", () => {' in script
+    assert 'if (state.pendingCloseTaskId && els.taskStatus.value !== "done")' in script
 
 
 def test_task_description_can_be_copied_with_clipboard_api(client):
@@ -94,7 +95,7 @@ def test_task_title_editor_closes_on_outside_pointer_after_successful_save(clien
     assert 'if (!els.taskTitle.hidden && !els.taskTitle.contains(target))' in script
     assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
     assert "function finishTitleEditing(focusDisplay = true)" in script
-    assert "/static/app.js?v=0.5.41" in client.get("/").text
+    assert "/static/app.js?v=0.5.46" in client.get("/").text
 
 
 def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
@@ -105,4 +106,35 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.41" in client.get("/").text
+    assert "/static/app.js?v=0.5.46" in client.get("/").text
+
+
+def test_project_change_error_is_rendered_next_to_project_field(client):
+    html = client.get("/").text
+    script = client.get("/static/app.js").text
+    assert 'id="task-project-error"' in html
+    assert 'aria-describedby="task-project-error"' in html
+    assert "Задача входит в рабочий набор этого проекта." in script
+    assert "Сначала уберите её из набора, затем измените проект." in script
+
+
+def test_required_result_prompt_opens_result_editor_and_retries_close_after_input(client):
+    html = client.get("/").text
+    script = client.get("/static/app.js").text
+    assert 'id="task-result-required-hint"' in html
+    assert "Перед завершением задачи добавьте результат." in html
+    assert 'setTaskWorkspaceTab("result")' in script
+    assert 'state.pendingCloseTaskId === task?.id && String(els.taskResult.value || "").trim()' in script
+    assert "state.pendingCloseTaskId = null" in script
+
+
+def test_project_change_in_workset_keeps_saved_project_selected(client):
+    script = client.get("/static/app.js").text
+    handler = script.split('els.taskProject.addEventListener("change", () => {', 1)[1].split('});', 1)[0]
+    assert "if (task?.workset_id)" in handler
+    assert "const project = projectForTask(task);" in handler
+    assert 'els.taskProject.value = project ? projectTag(project) : "";' in handler
+    assert 'els.taskProjectError.hidden = false;' in handler
+    assert 'return;' in handler
+    assert 'updateReservedTaskTag("project", els.taskProject.value);' in handler
+    assert handler.index("if (task?.workset_id)") < handler.index('updateReservedTaskTag("project", els.taskProject.value)')

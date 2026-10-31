@@ -18,7 +18,7 @@ def test_task_card_information_order_and_optional_sections(client):
         'top.appendChild(make("div", "task-card-title", task.title));',
         'const excerpt = taskDescriptionExcerpt(task.description, task.title);',
         'if (excerpt) card.appendChild(make("p", "task-card-excerpt", excerpt));',
-        "if ((project && project !== state.project) || typeTag) {",
+        "if ((project && project !== state.project) || typeTag || (!state.worksetId && workset)) {",
         "if (hiddenTags.length) {",
         'const footer = make("div", "task-card-footer");',
     )
@@ -27,7 +27,7 @@ def test_task_card_information_order_and_optional_sections(client):
 
     # Missing projects and types must not leave a blank metadata row or placeholder chip.
     assert 'project ? projectLabel(project) : "Без проекта"' not in card_builder
-    assert "if ((project && project !== state.project) || typeTag) {" in card_builder
+    assert "if ((project && project !== state.project) || typeTag || (!state.worksetId && workset)) {" in card_builder
     assert "if (project && project !== state.project) {" in card_builder
 
     # The metrics wrapper is created only when at least one attachment exists.

@@ -35,10 +35,19 @@ from app.models import (
     TaskSettingsPatch,
     TaskSettingsRead,
     TaskSummary,
+    WorksetCreate,
+    WorksetEventRead,
+    WorksetHistoryItemRead,
+    WorksetHistoryRead,
+    WorksetHistoryTaskRead,
+    WorksetPatch,
+    WorksetRead,
+    WorksetTaskAdd,
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ATTACHMENT_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,10}$")
+PROJECT_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 ARCHIVE_SETTING_DEFAULTS = {"archive_enabled": "true", "archive_after_days": "30"}
@@ -181,9 +190,10 @@ def _task_rows(
     )
     rows = connection.execute(
         f"""
-        SELECT t.*, COUNT(a.id) AS attachments_count
+        SELECT t.*, COUNT(a.id) AS attachments_count, wm.workset_id
         FROM tasks AS t
         LEFT JOIN attachments AS a ON a.task_id = t.id
+        LEFT JOIN workset_memberships AS wm ON wm.task_id = t.id
         {where_clause}
         GROUP BY t.id
         {order_clause}
@@ -195,9 +205,10 @@ def _task_rows(
 def _task_row(connection: sqlite3.Connection, task_id: int) -> dict[str, Any] | None:
     row = connection.execute(
         """
-        SELECT t.*, COUNT(a.id) AS attachments_count
+        SELECT t.*, COUNT(a.id) AS attachments_count, wm.workset_id
         FROM tasks AS t
         LEFT JOIN attachments AS a ON a.task_id = t.id
+        LEFT JOIN workset_memberships AS wm ON wm.task_id = t.id
         WHERE t.id = ?
         GROUP BY t.id
         """,
@@ -211,6 +222,346 @@ def _require_task(connection: sqlite3.Connection, task_id: int) -> dict[str, Any
     if task is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
     return task
+
+
+def _project_slug(tags: str) -> str:
+    for tag in str(tags or "").split(","):
+        match = re.fullmatch(
+            r"project:([a-z0-9]+(?:-[a-z0-9]+)*)", tag.strip(), re.IGNORECASE
+        )
+        if match:
+            return match.group(1).lower()
+    return ""
+
+
+def _require_workset(connection: sqlite3.Connection, workset_id: int) -> dict[str, Any]:
+    row = connection.execute("SELECT * FROM worksets WHERE id = ?", (workset_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Рабочий набор не найден")
+    return dict(row)
+
+
+def _record_workset_event(
+    connection: sqlite3.Connection,
+    workset: dict[str, Any],
+    event_type: str,
+    *,
+    task: dict[str, Any] | None = None,
+    task_count: int | None = None,
+    done_count: int | None = None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO workset_events (
+            workset_id, project_slug, workset_name, task_id, task_title,
+            task_status, task_closed_at, task_count, done_count, event_type, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            workset["id"],
+            workset["project_slug"],
+            workset["name"],
+            task["id"] if task else None,
+            task["title"] if task else "",
+            task.get("status") if task else None,
+            task.get("closed_at") if task else None,
+            task_count,
+            done_count,
+            event_type,
+            utc_now(),
+        ),
+    )
+
+
+def _workset_summary(connection: sqlite3.Connection, workset_id: int) -> WorksetRead:
+    workset = _require_workset(connection, workset_id)
+    counts = connection.execute(
+        """
+        SELECT COUNT(*) AS task_count,
+               SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) AS done_count
+        FROM workset_memberships AS wm
+        JOIN tasks AS t ON t.id = wm.task_id
+        WHERE wm.workset_id = ?
+        """,
+        (workset_id,),
+    ).fetchone()
+    return WorksetRead(
+        **workset,
+        task_count=int(counts["task_count"] or 0),
+        done_count=int(counts["done_count"] or 0),
+    )
+
+
+def _sync_workset_state(connection: sqlite3.Connection, workset_id: int) -> None:
+    workset = connection.execute("SELECT * FROM worksets WHERE id = ?", (workset_id,)).fetchone()
+    if workset is None:
+        return
+    counts = connection.execute(
+        """
+        SELECT COUNT(*) AS task_count,
+               SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) AS done_count
+        FROM workset_memberships AS wm
+        JOIN tasks AS t ON t.id = wm.task_id
+        WHERE wm.workset_id = ?
+        """,
+        (workset_id,),
+    ).fetchone()
+    task_count = int(counts["task_count"] or 0)
+    # Empty sets created intentionally stay active. Explicitly removing their final
+    # member deletes them; deleting a task from the project is handled separately.
+    if task_count == 0:
+        return
+    completed = int(counts["done_count"] or 0) == task_count
+    new_status = "completed" if completed else "active"
+    updated_at = utc_now()
+    if new_status == workset["status"]:
+        connection.execute(
+            "UPDATE worksets SET updated_at = ? WHERE id = ?", (updated_at, workset_id)
+        )
+        return
+    completed_at = utc_now() if completed else None
+    connection.execute(
+        "UPDATE worksets SET status = ?, completed_at = ?, updated_at = ? WHERE id = ?",
+        (new_status, completed_at, updated_at, workset_id),
+    )
+    _record_workset_event(
+        connection,
+        dict(workset),
+        "completed" if completed else "reactivated",
+        task_count=task_count,
+        done_count=int(counts["done_count"] or 0),
+    )
+
+
+def _add_task_to_workset(
+    connection: sqlite3.Connection, workset_id: int, task: dict[str, Any]
+) -> None:
+    workset = _require_workset(connection, workset_id)
+    if workset["status"] != "active":
+        raise HTTPException(
+            status_code=409, detail="В завершённый набор нельзя добавлять задачи"
+        )
+    if not workset["project_slug"] or _project_slug(task["tags"]) != workset["project_slug"]:
+        raise HTTPException(
+            status_code=409, detail="Задача должна принадлежать проекту рабочего набора"
+        )
+    existing = connection.execute(
+        "SELECT workset_id FROM workset_memberships WHERE task_id = ?", (task["id"],)
+    ).fetchone()
+    if existing:
+        if int(existing["workset_id"]) == workset_id:
+            return
+        raise HTTPException(
+            status_code=409,
+            detail="Задача уже входит в другой рабочий набор",
+        )
+    try:
+        connection.execute(
+            "INSERT INTO workset_memberships (workset_id, task_id, added_at) VALUES (?, ?, ?)",
+            (workset_id, task["id"], utc_now()),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(
+            status_code=409, detail="Не удалось добавить задачу в набор"
+        ) from exc
+    _record_workset_event(connection, workset, "task_added", task=task)
+    _sync_workset_state(connection, workset_id)
+
+
+def _history_timestamp_seconds(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return int(parsed.timestamp())
+
+
+def _workset_history_items(
+    connection: sqlite3.Connection, events: list[dict[str, Any]]
+) -> list[WorksetHistoryItemRead]:
+    groups: dict[tuple[str, int | str], list[dict[str, Any]]] = {}
+    for event in events:
+        workset_id = event["workset_id"]
+        key: tuple[str, int | str] = (
+            "id",
+            int(workset_id),
+        ) if workset_id is not None else (
+            "legacy",
+            f"{event['project_slug']}:{event['workset_name']}",
+        )
+        groups.setdefault(key, []).append(event)
+
+    task_rows = connection.execute(
+        "SELECT id, title, status, closed_at FROM tasks"
+    ).fetchall()
+    tasks_by_id = {int(row["id"]): dict(row) for row in task_rows}
+
+    result: list[WorksetHistoryItemRead] = []
+    for key, group in groups.items():
+        ordered = sorted(group, key=lambda item: int(item["id"]))
+        workset_id = int(key[1]) if key[0] == "id" else None
+        current_workset = None
+        if workset_id is not None:
+            row = connection.execute(
+                "SELECT * FROM worksets WHERE id = ?", (workset_id,)
+            ).fetchone()
+            current_workset = dict(row) if row is not None else None
+
+        completion_events = [item for item in ordered if item["event_type"] == "completed"]
+        latest_completion = completion_events[-1] if completion_events else None
+        deleted = any(item["event_type"] == "deleted_empty" for item in ordered)
+        status = (
+            current_workset["status"]
+            if current_workset is not None
+            else "deleted" if deleted else "active"
+        )
+        cutoff_id = (
+            int(latest_completion["id"])
+            if status == "completed" and latest_completion is not None
+            else int(ordered[-1]["id"])
+        )
+        if status == "deleted":
+            deleted_events = [item for item in ordered if item["event_type"] == "deleted_empty"]
+            if deleted_events:
+                cutoff_id = int(deleted_events[-1]["id"])
+
+        episodes: list[dict[str, Any]] = []
+        active: dict[int, dict[str, Any]] = {}
+        for event in ordered:
+            if int(event["id"]) > cutoff_id:
+                break
+            task_id = event["task_id"]
+            if task_id is None:
+                continue
+            task_id = int(task_id)
+            event_type = event["event_type"]
+            if event_type == "task_added":
+                episode = {
+                    "task_id": task_id,
+                    "task_title": event["task_title"],
+                    "status": event["task_status"],
+                    "closed_at": event["task_closed_at"],
+                    "added_at": event["created_at"],
+                    "removed_at": None,
+                    "removal_reason": None,
+                    "exists": bool(event.get("task_exists")),
+                }
+                episodes.append(episode)
+                active[task_id] = episode
+            elif task_id in active and event_type in {
+                "task_status_changed", "task_completed", "task_reopened"
+            }:
+                episode = active[task_id]
+                episode["task_title"] = event["task_title"] or episode["task_title"]
+                episode["status"] = event["task_status"] or episode["status"]
+                episode["closed_at"] = event["task_closed_at"]
+            elif task_id in active and event_type in {"task_removed", "task_deleted"}:
+                episode = active.pop(task_id)
+                episode["task_title"] = event["task_title"] or episode["task_title"]
+                episode["status"] = event["task_status"] or episode["status"]
+                episode["closed_at"] = event["task_closed_at"]
+                episode["removed_at"] = event["created_at"]
+                episode["removal_reason"] = "deleted" if event_type == "task_deleted" else "removed"
+                episode["exists"] = bool(event.get("task_exists"))
+
+        active_episode_ids = {id(episode) for episode in active.values()}
+        members: list[WorksetHistoryTaskRead] = []
+        removed_tasks: list[WorksetHistoryTaskRead] = []
+        deleted_tasks: list[WorksetHistoryTaskRead] = []
+        for episode in episodes:
+            task_row = tasks_by_id.get(episode["task_id"])
+            exists = task_row is not None
+            item = dict(episode)
+            item["exists"] = exists
+            is_active_episode = id(episode) in active_episode_ids
+            if exists and is_active_episode and (status == "active" or item["status"] is None):
+                item["task_title"] = task_row["title"]
+                item["status"] = task_row["status"]
+                item["closed_at"] = task_row["closed_at"]
+            elif status == "completed" and is_active_episode and item["status"] is None:
+                # Older events predate status snapshots; completion guarantees that
+                # every member in this snapshot was done, although its close date
+                # cannot be recovered when the task itself has since been deleted.
+                item["status"] = "done"
+            history_task = WorksetHistoryTaskRead(**item)
+            if is_active_episode:
+                members.append(history_task)
+            elif item["removal_reason"] == "deleted":
+                deleted_tasks.append(history_task)
+            else:
+                removed_tasks.append(history_task)
+
+        created_event = next((item for item in ordered if item["event_type"] == "created"), None)
+        created_at = (
+            current_workset["created_at"] if current_workset else
+            created_event["created_at"] if created_event else ordered[0]["created_at"]
+        )
+        completed_at = latest_completion["created_at"] if latest_completion else None
+        if current_workset and current_workset["status"] == "completed":
+            completed_at = current_workset["completed_at"] or completed_at
+        cycle_start_at = created_at
+        if latest_completion is not None:
+            prior_reactivations = [
+                item
+                for item in ordered
+                if item["event_type"] == "reactivated"
+                and int(item["id"]) < int(latest_completion["id"])
+            ]
+            if prior_reactivations:
+                cycle_start_at = prior_reactivations[-1]["created_at"]
+        duration_start = _history_timestamp_seconds(cycle_start_at)
+        duration_end = _history_timestamp_seconds(completed_at)
+        duration_seconds = (
+            max(0, duration_end - duration_start)
+            if duration_start is not None and duration_end is not None
+            else None
+        )
+        snapshot_count = (
+            latest_completion.get("task_count") if latest_completion else None
+        )
+        snapshot_done = latest_completion.get("done_count") if latest_completion else None
+        if status == "completed" and snapshot_count is not None:
+            task_count = int(snapshot_count)
+            done_count = int(snapshot_done or 0)
+        else:
+            task_count = len(members)
+            done_count = sum(item.status == "done" for item in members)
+        # These counters describe the complete membership history, not only the
+        # snapshot used to render the last completion cycle.
+        added_count = sum(item["event_type"] == "task_added" for item in ordered)
+        removed_count = sum(item["event_type"] == "task_removed" for item in ordered)
+        deleted_count = sum(item["event_type"] == "task_deleted" for item in ordered)
+        latest_event = ordered[-1]
+        result.append(
+            WorksetHistoryItemRead(
+                id=workset_id or int(created_event["id"] if created_event else ordered[0]["id"]),
+                project_slug=latest_event["project_slug"],
+                name=current_workset["name"] if current_workset else latest_event["workset_name"],
+                status=status,
+                created_at=created_at,
+                completed_at=completed_at,
+                duration_seconds=duration_seconds,
+                task_count=task_count,
+                done_count=done_count,
+                added_count=added_count,
+                removed_count=removed_count,
+                deleted_count=deleted_count,
+                members=members,
+                removed_tasks=removed_tasks,
+                deleted_tasks=deleted_tasks,
+            )
+        )
+    status_order = {"active": 0, "completed": 1, "deleted": 2}
+    result.sort(
+        key=lambda item: (
+            status_order[item.status],
+            -(_history_timestamp_seconds(item.completed_at or item.created_at) or 0),
+            -item.id,
+        )
+    )
+    return result
 
 
 def _attachments_for_task(connection: sqlite3.Connection, task_id: int) -> list[dict[str, Any]]:
@@ -309,6 +660,142 @@ def list_archived_tasks(connection: sqlite3.Connection = Depends(get_db)) -> lis
     return [_task_summary(task) for task in _task_rows(connection, archived=True)]
 
 
+@app.get("/api/worksets", response_model=list[WorksetRead])
+def list_worksets(
+    project: str, connection: sqlite3.Connection = Depends(get_db)
+) -> list[WorksetRead]:
+    if not PROJECT_SLUG_RE.fullmatch(project):
+        raise HTTPException(status_code=422, detail="Некорректный ключ проекта")
+    rows = connection.execute(
+        "SELECT id FROM worksets WHERE project_slug = ? "
+        "ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, updated_at DESC, id DESC",
+        (project,),
+    ).fetchall()
+    return [_workset_summary(connection, int(row["id"])) for row in rows]
+
+
+@app.post("/api/worksets", response_model=WorksetRead, status_code=201)
+def create_workset(
+    payload: WorksetCreate, connection: sqlite3.Connection = Depends(get_db)
+) -> WorksetRead:
+    now = utc_now()
+    cursor = connection.execute(
+        "INSERT INTO worksets (project_slug, name, status, created_at, updated_at) "
+        "VALUES (?, ?, 'active', ?, ?)",
+        (payload.project_slug, payload.name, now, now),
+    )
+    workset = _require_workset(connection, int(cursor.lastrowid))
+    _record_workset_event(connection, workset, "created")
+    connection.commit()
+    return _workset_summary(connection, int(cursor.lastrowid))
+
+
+@app.patch("/api/worksets/{workset_id}", response_model=WorksetRead)
+def rename_workset(
+    workset_id: int,
+    payload: WorksetPatch,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> WorksetRead:
+    workset = _require_workset(connection, workset_id)
+    if workset["name"] != payload.name:
+        connection.execute(
+            "UPDATE worksets SET name = ?, updated_at = ? WHERE id = ?",
+            (payload.name, utc_now(), workset_id),
+        )
+        updated = _require_workset(connection, workset_id)
+        _record_workset_event(connection, updated, "renamed")
+    connection.commit()
+    return _workset_summary(connection, workset_id)
+
+
+@app.post("/api/worksets/{workset_id}/tasks", response_model=WorksetRead, status_code=200)
+def add_workset_task(
+    workset_id: int,
+    payload: WorksetTaskAdd,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> WorksetRead:
+    task = _require_task(connection, payload.task_id)
+    _add_task_to_workset(connection, workset_id, task)
+    connection.commit()
+    return _workset_summary(connection, workset_id)
+
+
+@app.delete("/api/worksets/{workset_id}/tasks/{task_id}")
+def remove_workset_task(
+    workset_id: int,
+    task_id: int,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> dict[str, bool]:
+    workset = _require_workset(connection, workset_id)
+    if workset["status"] == "completed":
+        raise HTTPException(
+            status_code=409, detail="Нельзя менять состав завершённого рабочего набора"
+        )
+    task = _require_task(connection, task_id)
+    membership = connection.execute(
+        "SELECT 1 FROM workset_memberships WHERE workset_id = ? AND task_id = ?",
+        (workset_id, task_id),
+    ).fetchone()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Задача не входит в этот рабочий набор")
+    _record_workset_event(connection, workset, "task_removed", task=task)
+    connection.execute(
+        "DELETE FROM workset_memberships WHERE workset_id = ? AND task_id = ?",
+        (workset_id, task_id),
+    )
+    remaining = connection.execute(
+        "SELECT COUNT(*) FROM workset_memberships WHERE workset_id = ?", (workset_id,)
+    ).fetchone()[0]
+    if remaining == 0:
+        # An intentionally emptied set is no longer useful; event snapshots remain
+        # available in the project's history after the set row is removed.
+        _record_workset_event(connection, workset, "deleted_empty")
+        connection.execute("DELETE FROM worksets WHERE id = ?", (workset_id,))
+        deleted = True
+    else:
+        _sync_workset_state(connection, workset_id)
+        deleted = False
+    connection.commit()
+    return {"deleted": deleted}
+
+
+@app.get("/api/worksets/history", response_model=WorksetHistoryRead)
+def workset_history(
+    project: str,
+    limit: int = 100,
+    offset: int = 0,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> WorksetHistoryRead:
+    if not PROJECT_SLUG_RE.fullmatch(project):
+        raise HTTPException(status_code=422, detail="Некорректный ключ проекта")
+    if not 1 <= limit <= 100 or offset < 0:
+        raise HTTPException(status_code=422, detail="Некорректные параметры пагинации")
+    all_rows = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT e.*, CASE WHEN t.id IS NULL THEN 0 ELSE 1 END AS task_exists
+            FROM workset_events AS e
+            LEFT JOIN tasks AS t ON t.id = e.task_id
+            WHERE e.project_slug = ?
+            ORDER BY e.id
+            """,
+            (project,),
+        ).fetchall()
+    ]
+    page_rows = sorted(
+        all_rows, key=lambda item: (item["created_at"], int(item["id"])), reverse=True
+    )[offset : offset + limit + 1]
+    has_more = len(page_rows) > limit
+    page_rows = page_rows[:limit]
+    return WorksetHistoryRead(
+        worksets=_workset_history_items(connection, all_rows),
+        events=[WorksetEventRead(**item) for item in page_rows],
+        has_more=has_more,
+        next_offset=offset + limit if has_more else None,
+    )
+
+
 @app.get("/api/archive/settings", response_model=ArchiveSettingsRead)
 def get_archive_settings(connection: sqlite3.Connection = Depends(get_db)) -> ArchiveSettingsRead:
     return ArchiveSettingsRead(**_archive_settings(connection))
@@ -404,6 +891,14 @@ def restore_archived_task(
 def create_task(
     payload: TaskCreate, connection: sqlite3.Connection = Depends(get_db)
 ) -> TaskSummary:
+    if payload.workset_id is not None:
+        workset = _require_workset(connection, payload.workset_id)
+        if workset["status"] != "active":
+            raise HTTPException(status_code=409, detail="В завершённый набор нельзя добавлять задачи")
+        if _project_slug(payload.tags) != workset["project_slug"]:
+            raise HTTPException(
+                status_code=409, detail="Задача должна принадлежать проекту рабочего набора"
+            )
     title = payload.title
     now = utc_now()
     position_row = connection.execute(
@@ -425,8 +920,11 @@ def create_task(
             now,
         ),
     )
-    connection.commit()
     task = _require_task(connection, int(cursor.lastrowid))
+    if payload.workset_id is not None:
+        _add_task_to_workset(connection, payload.workset_id, task)
+        task = _require_task(connection, int(cursor.lastrowid))
+    connection.commit()
     return _task_summary(task)
 
 
@@ -468,20 +966,49 @@ def patch_task(
     if "position" in changes and not math.isfinite(changes["position"]):
         raise HTTPException(status_code=400, detail="Позиция должна быть конечным числом")
 
+    current_workset_id = current.get("workset_id")
+    requested_workset_id = changes.get("workset_id", current_workset_id)
+    workset_changed = "workset_id" in changes and requested_workset_id != current_workset_id
+    new_workset = None
+    if workset_changed and current_workset_id is not None:
+        current_workset = _require_workset(connection, int(current_workset_id))
+        if current_workset["status"] == "completed":
+            raise HTTPException(
+                status_code=409, detail="Нельзя менять состав завершённого рабочего набора"
+            )
+    if requested_workset_id is not None and workset_changed:
+        new_workset = _require_workset(connection, int(requested_workset_id))
+        if new_workset["status"] != "active":
+            raise HTTPException(
+                status_code=409,
+                detail="В завершённый набор нельзя добавлять задачи",
+            )
+        new_tags = changes.get("tags", current["tags"])
+        if _project_slug(new_tags or "") != new_workset["project_slug"]:
+            raise HTTPException(
+                status_code=409,
+                detail="Задача должна принадлежать проекту рабочего набора",
+            )
+
     new_status = changes.get("status", current["status"])
-    blocked_close = False
+    if "tags" in changes and current_workset_id is not None:
+        workset = _require_workset(connection, int(current_workset_id))
+        if (
+            not workset_changed
+            and _project_slug(changes["tags"] or "") != workset["project_slug"]
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Сначала удалите задачу из рабочего набора, чтобы изменить её проект",
+            )
     if current["status"] != "done" and new_status == "done":
         if _task_settings(connection)["require_result_to_close"]:
             result = changes.get("result", current["result"] or "")
             if not str(result or "").strip():
-                blocked_close = True
-                changes.pop("status", None)
-                new_status = current["status"]
-                if not changes:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Перед закрытием задачи заполните поле «Результат выполнения».",
-                    )
+                raise HTTPException(
+                    status_code=409,
+                    detail="Перед закрытием задачи заполните поле «Результат выполнения».",
+                )
     assignments: dict[str, Any] = {}
     for field in ("title", "description", "result", "status", "position", "tags"):
         if field in changes:
@@ -505,24 +1032,67 @@ def patch_task(
         if current.get("archived_at"):
             assignments["archived_at"] = None
 
+    if workset_changed and current_workset_id is not None:
+        old_workset = _require_workset(connection, int(current_workset_id))
+        _record_workset_event(connection, old_workset, "task_removed", task=current)
+        connection.execute(
+            "DELETE FROM workset_memberships WHERE workset_id = ? AND task_id = ?",
+            (current_workset_id, task_id),
+        )
+        remaining = connection.execute(
+            "SELECT COUNT(*) FROM workset_memberships WHERE workset_id = ?",
+            (current_workset_id,),
+        ).fetchone()[0]
+        if remaining == 0:
+            _record_workset_event(connection, old_workset, "deleted_empty")
+            connection.execute("DELETE FROM worksets WHERE id = ?", (current_workset_id,))
+        else:
+            _sync_workset_state(connection, int(current_workset_id))
+
     update_fields = [f"{field} = ?" for field in assignments]
     values = list(assignments.values())
     update_fields.extend(["updated_at = ?", "closed_at = ?"])
     values.extend([now, closed_at, task_id])
     connection.execute(f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?", values)
+    updated_task = _require_task(connection, task_id)
+    if new_workset is not None:
+        _add_task_to_workset(connection, int(requested_workset_id), updated_task)
+    elif (
+        not workset_changed
+        and "status" in changes
+        and new_status != current["status"]
+        and current_workset_id is not None
+    ):
+        if current["status"] == "done" and new_status != "done":
+            event_type = "task_reopened"
+        elif current["status"] != "done" and new_status == "done":
+            event_type = "task_completed"
+        else:
+            event_type = "task_status_changed"
+        current_workset = _require_workset(connection, int(current_workset_id))
+        _record_workset_event(connection, current_workset, event_type, task=updated_task)
+        _sync_workset_state(connection, int(current_workset_id))
     connection.commit()
-    if blocked_close:
-        raise HTTPException(
-            status_code=409,
-            detail="Перед закрытием задачи заполните поле «Результат выполнения».",
-        )
     return _task_summary(_require_task(connection, task_id))
 
 
 @app.delete("/api/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int, connection: sqlite3.Connection = Depends(get_db)) -> Response:
-    _require_task(connection, task_id)
+    task = _require_task(connection, task_id)
+    workset_id = task.get("workset_id")
+    workset = _require_workset(connection, int(workset_id)) if workset_id is not None else None
+    if workset is not None:
+        _record_workset_event(connection, workset, "task_deleted", task=task)
     connection.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    if workset is not None:
+        remaining = connection.execute(
+            "SELECT COUNT(*) FROM workset_memberships WHERE workset_id = ?", (workset_id,)
+        ).fetchone()[0]
+        if remaining == 0:
+            _record_workset_event(connection, workset, "deleted_empty")
+            connection.execute("DELETE FROM worksets WHERE id = ?", (workset_id,))
+        else:
+            _sync_workset_state(connection, int(workset_id))
     connection.commit()
     shutil.rmtree(settings.attachments_dir / str(task_id), ignore_errors=True)
     return Response(status_code=204)
@@ -681,7 +1251,27 @@ def export_tasks(format: str = "md", connection: sqlite3.Connection = Depends(ge
         filename = export_filename("md")
         media_type = "text/markdown; charset=utf-8"
     else:
-        content = build_zip_export(tasks, attachments_by_task)
+        worksets = [
+            dict(row)
+            for row in connection.execute("SELECT * FROM worksets ORDER BY id").fetchall()
+        ]
+        memberships = [
+            dict(row)
+            for row in connection.execute(
+                "SELECT workset_id, task_id, added_at FROM workset_memberships ORDER BY workset_id, task_id"
+            ).fetchall()
+        ]
+        events = [
+            dict(row)
+            for row in connection.execute("SELECT * FROM workset_events ORDER BY id").fetchall()
+        ]
+        content = build_zip_export(
+            tasks,
+            attachments_by_task,
+            worksets=worksets,
+            workset_memberships=memberships,
+            workset_events=events,
+        )
         filename = export_filename("zip")
         media_type = "application/zip"
     return Response(

@@ -1,6 +1,6 @@
 /*
- * Board workspace layout. Wide screens use equal-height columns and scroll
- * task lists internally; smaller screens keep natural page scrolling.
+ * Board workspace layout. Columns grow with their content; smaller screens
+ * keep natural page scrolling as well.
  */
 
 /* Empty lists stay compact, but remain a small drop target. The hint itself
@@ -19,9 +19,9 @@
   padding: 8px 9px;
   border: 1px dashed var(--line);
   border-radius: 8px;
-  color: var(--muted);
-  background: var(--surface-soft);
-  font-size: 11px;
+  color: var(--ink-soft);
+  background: transparent;
+  font-size: 12px;
   line-height: 1.45;
   text-align: left;
   overflow-wrap: anywhere;
@@ -30,31 +30,28 @@
 
 @media (min-width: 1181px) {
   .board {
-    height: max(260px, calc(100vh - 345px));
-    height: max(260px, calc(100dvh - 345px));
-    min-height: 0;
+    height: auto;
+    min-height: max(260px, calc(100vh - 345px));
+    min-height: max(260px, calc(100dvh - 345px));
     align-items: stretch;
   }
 
   .board-column {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: max(260px, calc(100vh - 345px));
+    min-height: max(260px, calc(100dvh - 345px));
   }
 
-  .board-column > .column-header,
-  .board-column > .wip-warning {
+  .board-column > .column-header {
     flex: 0 0 auto;
   }
 
   .board-column > .task-list {
-    flex: 1 1 0%;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    scrollbar-gutter: stable;
+    flex: 0 0 auto;
+    min-height: 8px;
+    overflow: visible;
   }
 
   .board-column.is-empty > .task-list {
@@ -243,11 +240,6 @@
   border-color: var(--accent);
 }
 
-:root .board-column.wip-over-limit:not(.is-drop-target) {
-  background: color-mix(in srgb, var(--gh-red-bg) 32%, var(--gh-column, var(--surface-soft)));
-  border-color: color-mix(in srgb, var(--gh-red-fg) 48%, var(--line));
-}
-
 :root .wip-warning {
   color: var(--gh-yellow-fg);
   background: color-mix(in srgb, var(--gh-yellow-bg) 82%, var(--surface));
@@ -338,3 +330,61 @@
 .task-tags { margin-top: var(--space-3); gap: var(--space-2); }
 .task-card-footer { margin-top: var(--space-4); padding-top: var(--space-3); gap: var(--space-2); }
 .task-card { padding: var(--space-4) var(--space-3); }
+
+
+/* Workset toolbar groups and selected-view context. */
+.board-toolbar { flex-wrap: wrap; }
+.toolbar-group { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.toolbar-divider { width: 1px; height: 25px; flex: 0 0 1px; background: var(--line-strong); opacity: .7; }
+.workset-filter-box { gap: 7px; }
+.workset-filter-box .theme-select { min-width: 210px; }
+.workset-actions-menu { position: relative; flex: 0 0 auto; }
+.workset-actions-menu > summary { display: grid; place-items: center; width: 36px; height: 36px; list-style: none; cursor: pointer; font-size: 20px; }
+.workset-actions-menu > summary::-webkit-details-marker { display: none; }
+.workset-actions-popover { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; }
+.workset-context { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: -1px 0 10px; color: var(--ink-soft); font-size: 12px; }
+.workset-context[hidden] { display: none; }
+.workset-context-label { font-weight: 650; }
+.workset-context-clear { border: 0; padding: 2px 5px; border-radius: 5px; color: var(--accent); background: transparent; font: inherit; cursor: pointer; }
+.workset-context-clear:hover { background: var(--accent-pale); }
+.wip-warning { display: inline-flex; align-items: center; flex: 0 0 auto; margin: 0 0 0 auto; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--gh-yellow-fg) 35%, var(--line)); border-radius: 999px; color: var(--gh-yellow-fg); background: var(--gh-yellow-bg); font-size: 10px; line-height: 1.3; }
+.column-empty { min-height: 0; }
+.quick-add-hint { padding: 0; border: 0; background: transparent; font-size: 12px; }
+.quick-add-hint > span::before { content: "— "; }
+.task-workset-chip { display: inline-flex; align-items: center; max-width: 100%; padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: var(--surface-soft); font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
+.task-workset-field { width: 100%; max-width: none; margin: 0; }
+.task-workset-field .theme-select { width: 100%; }
+.task-panel .task-properties-sidebar .field-grid .theme-select,
+.task-panel .task-properties-sidebar .task-workset-field .theme-select { width: 100%; min-width: 0; }
+.task-panel .task-properties-sidebar .task-workset-field { flex: 0 0 auto; min-width: 0; }
+.task-panel .task-properties-sidebar .attachment-heading .attachment-icon-button { margin-left: auto; }
+.task-panel .task-description-section { min-height: 240px; }
+.task-panel .task-workspace-panel { min-height: 240px; }
+.task-panel .markdown-preview { min-height: 240px; }
+.task-panel .description-field { min-height: 240px; height: auto; max-height: none; resize: vertical; }
+.task-panel .task-panel-footer { position: sticky; bottom: 0; }
+.page-footer { font-size: 12px; color: var(--ink-soft); }
+
+@media (max-width: 760px) {
+  .toolbar-divider { display: none; }
+  .board-toolbar { align-items: stretch; }
+  .toolbar-group { flex: 1 1 auto; }
+  .project-toolbar-group, .workset-toolbar-group { min-width: 0; }
+  .workset-filter-box { flex: 1 1 auto; min-width: 0; }
+  .workset-filter-box .theme-select { min-width: 0; width: 100%; }
+  .quick-task-type { flex-wrap: wrap; }
+}
+
+@media (min-width: 1181px) {
+  .board-column { min-height: max(260px, calc(100dvh - 345px)); }
+}
+.board-column.is-empty > .column-empty {
+  margin: 4px 3px 10px;
+  padding: 8px 9px;
+  font-size: 12px;
+}
+.wip-warning:not([hidden]) + .column-add { margin-left: 0; }
+.quick-add-hint { min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; font-size: 12px; }
+@media (max-width: 520px) {
+  .quick-add-hint { padding: 0; border: 0; }
+}

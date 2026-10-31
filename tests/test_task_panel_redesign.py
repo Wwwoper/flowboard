@@ -5,8 +5,8 @@ def test_task_panel_redesign_uses_theme_tokens_and_searchable_tag_popover(client
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.41" in html
-    assert "/static/github-theme.css?v=0.2.3" in html
+    assert "/static/app.js?v=0.5.46" in html
+    assert "/static/github-theme.css?v=0.2.4" in html
     assert "/static/task-editor-redesign.css?v=0.2.5" in html
     for element_id in (
         "task-title-display",
@@ -120,7 +120,7 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
 def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
     html = client.get("/").text
     assert "/static/task-editor-redesign.css?v=0.2.5" in html
-    assert "/static/app.js?v=0.5.41" in html
+    assert "/static/app.js?v=0.5.46" in html
 
     script = client.get("/static/app.js").text
     for fragment in (

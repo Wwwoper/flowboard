@@ -55,11 +55,11 @@ def test_required_result_blocks_missing_empty_and_whitespace_without_changing_st
         assert "Результат выполнения" in response.json()["detail"]
         current = client.get(f"/api/tasks/{task['id']}").json()
         assert current["status"] == "todo"
-        assert current["result"] == result
+        assert current["result"] == ""
         assert current["closed_at"] is None
 
 
-def test_rejected_close_preserves_submitted_result_and_other_task_edits(client):
+def test_rejected_close_does_not_partially_save_other_task_edits(client):
     task = create_task(client, description="Old description")
     set_result_required(client, True)
 
@@ -71,8 +71,8 @@ def test_rejected_close_preserves_submitted_result_and_other_task_edits(client):
     assert response.status_code == 409
     current = client.get(f"/api/tasks/{task['id']}").json()
     assert current["status"] == "todo"
-    assert current["result"] == "  \t "
-    assert current["description"] == "Edited description"
+    assert current["result"] == ""
+    assert current["description"] == "Old description"
     assert current["closed_at"] is None
 
 

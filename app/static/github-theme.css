@@ -413,15 +413,6 @@ kbd {
   box-shadow: 0 0 0 2px var(--gh-focus);
 }
 
-.board-column.wip-over-limit {
-  background: var(--gh-red-bg);
-  border-color: var(--gh-red-fg);
-}
-
-.board-column.wip-over-limit .column-header {
-  color: var(--gh-red-fg);
-}
-
 .wip-warning {
   color: var(--gh-yellow-fg);
   background: var(--gh-yellow-bg);
@@ -733,15 +724,6 @@ kbd {
 [data-theme="dark"] .column-add:hover {
   color: var(--accent);
   background: var(--gh-control-hover);
-}
-
-[data-theme="dark"] .board-column.wip-over-limit {
-  background: var(--gh-red-bg);
-  border-color: var(--gh-red-fg);
-}
-
-[data-theme="dark"] .board-column.wip-over-limit .column-header {
-  color: var(--gh-red-fg);
 }
 
 [data-theme="dark"] .wip-warning {

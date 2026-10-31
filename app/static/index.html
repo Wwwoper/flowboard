@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.12">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.3">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.4">
 </head>
 <body>
   <div class="app-shell">
@@ -109,10 +109,10 @@
           </label>
           <details class="workset-actions-menu">
             <summary class="icon-button" aria-label="Действия с рабочим набором" title="Действия с рабочим набором">⋯</summary>
-            <div class="workset-actions-popover">
-              <button id="create-workset" class="workset-menu-item" type="button">＋ Создать набор</button>
-              <button id="rename-workset" class="workset-menu-item" type="button" disabled>Переименовать набор</button>
-              <button id="workset-history" class="workset-menu-item" type="button">История наборов</button>
+            <div class="workset-actions-popover theme-select-menu">
+              <button id="create-workset" class="theme-select-option" type="button">＋ Создать набор</button>
+              <button id="rename-workset" class="theme-select-option" type="button" disabled>Переименовать набор</button>
+              <button id="workset-history" class="theme-select-option" type="button">История наборов</button>
             </div>
           </details>
         </div>
@@ -670,7 +670,7 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
-  <script src="/static/themed-selects.js?v=0.1.3" defer></script>
+  <script src="/static/themed-selects.js?v=0.1.4" defer></script>
   <script src="/static/app.js?v=0.5.46" defer></script>
 </body>
 </html>

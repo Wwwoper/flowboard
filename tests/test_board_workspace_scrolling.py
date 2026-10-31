@@ -1,6 +1,6 @@
 def test_board_workspace_grows_with_content_and_keeps_drag_targets(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.3' in html
+    assert '/static/board-workspace.css?v=0.1.4' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css

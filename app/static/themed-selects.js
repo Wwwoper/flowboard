@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SELECTOR = "#project-filter, #tag-filter, [data-column-filter], [data-column-sort], #task-status, #task-type, #task-project, #task-workset";
+  const SELECTOR = "#project-filter, #tag-filter, #workset-filter, [data-column-filter], [data-column-sort], #task-status, #task-type, #task-project, #task-workset";
   const instances = new Map();
   let nextId = 1;
   let openInstance = null;
@@ -235,7 +235,7 @@
   document.querySelectorAll(SELECTOR).forEach(enhance);
 
   document.addEventListener("click", (event) => {
-    if (event.target.closest(".theme-select") || event.target.closest(".theme-select-menu")) return;
+    if (event.target.closest(".theme-select") || event.target.closest(".theme-select-menu[role=\"listbox\"]")) return;
     closeAll();
   });
   document.addEventListener("keydown", (event) => {

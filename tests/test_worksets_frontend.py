@@ -21,6 +21,9 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "previousDetails.workset_id || updated.workset_id" in script
     assert "doingCount > state.wipLimit" in script
     assert "workset-actions-menu" in html
+    assert 'class="workset-actions-popover theme-select-menu"' in html
+    assert html.count('class="theme-select-option"') >= 3
+    assert "#workset-filter" in client.get("/static/themed-selects.js").text
     assert 'class="toolbar-group project-toolbar-group"' in html
     assert 'class="toolbar-group workset-toolbar-group"' in html
     assert html.index('id="project-filter"') < html.index('id="add-project"')
@@ -32,6 +35,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
     assert "/static/app.js?v=0.5.46" in html
+    assert "/static/themed-selects.js?v=0.1.4" in html
     assert "/static/style.css?v=0.5.28" in html
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
@@ -40,4 +44,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.3" in html
+    assert "/static/board-workspace.css?v=0.1.4" in html

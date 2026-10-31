@@ -341,10 +341,7 @@
 .workset-actions-menu { position: relative; flex: 0 0 auto; }
 .workset-actions-menu > summary { display: grid; place-items: center; width: 36px; height: 36px; list-style: none; cursor: pointer; font-size: 20px; }
 .workset-actions-menu > summary::-webkit-details-marker { display: none; }
-.workset-actions-popover { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; display: grid; min-width: 190px; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
-.workset-menu-item { width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-soft); text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
-.workset-menu-item:hover:not(:disabled) { background: var(--surface-soft); color: var(--ink); }
-.workset-menu-item:disabled { opacity: .45; cursor: not-allowed; }
+.workset-actions-popover { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; }
 .workset-context { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: -1px 0 10px; color: var(--ink-soft); font-size: 12px; }
 .workset-context[hidden] { display: none; }
 .workset-context-label { font-weight: 650; }

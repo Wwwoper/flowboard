@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_board_workspace_uses_content_driven_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.3' in html
+    assert '/static/board-workspace.css?v=0.1.4' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css

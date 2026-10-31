@@ -79,8 +79,6 @@
     }));
   }
 
-  const doneColumnCollapseQuery = window.matchMedia("(max-width: 1180px)");
-
   let worksetHistoryOffset = 0;
   let worksetHistoryLoading = false;
   let worksetHistoryHasMore = false;
@@ -1383,12 +1381,10 @@
       list.replaceChildren();
 
       let tasksToRender = statusTasks;
-      if (status === "done" && doneColumnCollapseQuery.matches && !state.doneExpanded) {
-        tasksToRender = statusTasks.slice(0, 5);
-      }
-
       if (status === "done") {
-        const canCollapseDone = doneColumnCollapseQuery.matches && statusTasks.length > 5;
+        const canCollapseDone = statusTasks.length > 5;
+        if (!canCollapseDone) state.doneExpanded = false;
+        if (!state.doneExpanded) tasksToRender = statusTasks.slice(0, 5);
         const isExpanded = canCollapseDone && state.doneExpanded;
         const label = isExpanded
           ? "Свернуть список завершённых задач"
@@ -2919,7 +2915,19 @@
     els.attachmentPreviewError.hidden = false;
   });
   els.toggleDone.addEventListener("click", () => { state.doneExpanded = !state.doneExpanded; renderBoard(); });
-  doneColumnCollapseQuery.addEventListener("change", () => renderBoard());
+  const worksetActionsMenu = $(".workset-actions-menu");
+  document.addEventListener("pointerdown", (event) => {
+    if (worksetActionsMenu?.open && !worksetActionsMenu.contains(event.target)) {
+      worksetActionsMenu.removeAttribute("open");
+    }
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !worksetActionsMenu?.open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    worksetActionsMenu.removeAttribute("open");
+    $("summary", worksetActionsMenu)?.focus();
+  });
 
   els.columnOptionsToggles.forEach((button) => button.addEventListener("click", (event) => {
     event.stopPropagation();

@@ -1,6 +1,6 @@
 /*
- * Board workspace layout. Columns grow with their content; smaller screens
- * keep natural page scrolling as well.
+ * Board workspace layout. Wide screens keep columns within the viewport and
+ * scroll task lists internally; smaller screens use natural page scrolling.
  */
 
 /* Empty lists stay compact, but remain a small drop target. The hint itself
@@ -30,28 +30,31 @@
 
 @media (min-width: 1181px) {
   .board {
-    height: auto;
-    min-height: max(260px, calc(100vh - 345px));
-    min-height: max(260px, calc(100dvh - 345px));
+    height: max(260px, calc(100vh - 345px));
+    height: max(260px, calc(100dvh - 345px));
+    min-height: 0;
     align-items: stretch;
   }
 
   .board-column {
     display: flex;
     flex-direction: column;
-    height: auto;
-    min-height: max(260px, calc(100vh - 345px));
-    min-height: max(260px, calc(100dvh - 345px));
+    height: 100%;
+    min-height: 0;
   }
 
-  .board-column > .column-header {
+  .board-column > .column-header,
+  .board-column > .wip-warning {
     flex: 0 0 auto;
   }
 
   .board-column > .task-list {
-    flex: 0 0 auto;
-    min-height: 8px;
-    overflow: visible;
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
   }
 
   .board-column.is-empty > .task-list {

@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 
-def test_board_workspace_uses_content_driven_desktop_columns(client):
+def test_board_workspace_uses_fixed_height_desktop_columns_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.5' in html
+    assert '/static/board-workspace.css?v=0.1.6' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "min-height: max(260px, calc(100dvh - 345px));" in css
-    assert "height: auto;" in css
+    assert "height: max(260px, calc(100dvh - 345px));" in css
+    assert "min-height: 0;" in css
     assert "align-items: stretch;" in css
     assert "display: flex;" in css
     assert "flex-direction: column;" in css
     assert ".board-column > .task-list" in css
-    assert "overflow: visible;" in css
-    # The header remains separate while the list grows naturally with its cards.
+    assert "overflow-y: auto;" in css
+    assert "overscroll-behavior-y: contain;" in css
+    # The header stays visible while the task list scrolls inside the column.
     html_board = html.split('<section id="board" class="board"', 1)[1].split("</section>", 1)[0]
     assert html_board.index('class="column-header"') < html_board.index('class="task-list"')
 

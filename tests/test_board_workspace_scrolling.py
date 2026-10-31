@@ -1,13 +1,16 @@
-def test_board_workspace_grows_with_content_and_keeps_drag_targets(client):
+def test_board_workspace_uses_fixed_height_and_scrollable_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.5' in html
+    assert '/static/board-workspace.css?v=0.1.6' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
     assert "height: max(260px, calc(100dvh - 345px));" in css
     assert "align-items: stretch;" in css
-    assert "height: auto;" in css
-    assert "flex: 0 0 auto;" in css
+    assert "height: 100%;" in css
+    assert "min-height: 0;" in css
+    assert "flex: 1 1 0%;" in css
+    assert "overflow-y: auto;" in css
+    assert "overscroll-behavior-y: contain;" in css
     assert ".board-column.is-empty > .task-list" in css
 
     dragdrop = client.get("/static/dragdrop.js").text

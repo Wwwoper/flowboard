@@ -22,6 +22,12 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "doingCount > state.wipLimit" in script
     assert "workset-actions-menu" in html
     assert 'class="workset-actions-popover theme-select-menu"' in html
+    assert 'document.addEventListener("pointerdown", (event) =>' in script
+    assert 'worksetActionsMenu.contains(event.target)' in script
+    assert '  }, true);' in script
+    assert 'worksetActionsMenu.removeAttribute("open")' in script
+    assert 'event.key !== "Escape" || !worksetActionsMenu?.open' in script
+    assert '$("summary", worksetActionsMenu)?.focus();' in script
     assert html.count('class="theme-select-option"') >= 3
     assert "#workset-filter" in client.get("/static/themed-selects.js").text
     assert 'class="toolbar-group project-toolbar-group"' in html
@@ -34,7 +40,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.47" in html
+    assert "/static/app.js?v=0.5.48" in html
     assert "/static/themed-selects.js?v=0.1.5" in html
     assert "/static/style.css?v=0.5.29" in html
     assert 'aria-modal="true"' in html
@@ -44,4 +50,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.5" in html
+    assert "/static/board-workspace.css?v=0.1.6" in html

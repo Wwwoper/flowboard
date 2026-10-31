@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.44" in html
-    assert "/static/style.css?v=0.5.27" in html
+    assert "/static/app.js?v=0.5.45" in html
+    assert "/static/style.css?v=0.5.28" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -174,8 +174,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.44" in html
-    assert "/static/style.css?v=0.5.27" in html
+    assert "/static/app.js?v=0.5.45" in html
+    assert "/static/style.css?v=0.5.28" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -319,8 +319,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert html.count('data-column-sort=') == 4
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.44" in html
-    assert "/static/style.css?v=0.5.27" in html
+    assert "/static/app.js?v=0.5.45" in html
+    assert "/static/style.css?v=0.5.28" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -354,7 +354,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.27" in html
+    assert "/static/style.css?v=0.5.28" in html
     assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text

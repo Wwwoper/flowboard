@@ -712,6 +712,9 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .tag-add-row .text-field { min-width: 0; padding: 6px 8px; font-size: 11px; }
 .tag-add-row .button { flex: 0 0 auto; padding: 4px 9px; }
 .task-panel .task-tags-field { min-width: 0; }
+.task-field-error { margin: 5px 0 0; color: var(--red); font-size: 11px; line-height: 1.4; }
+.task-field-error[hidden] { display: none; }
+.task-result-required-hint { margin: 0 0 8px; }
 .task-panel .field-grid .text-field { min-height: 33px; }
 .task-panel .attachment-file-icon { width: 25px; height: 27px; }
 .task-panel .attachment-preview { width: 34px; height: 34px; flex-basis: 34px; }

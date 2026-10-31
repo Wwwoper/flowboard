@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.27">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.28">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.12">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
@@ -592,9 +592,10 @@
         </div>
         <div>
           <label class="field-label" for="task-project">Проект</label>
-          <select id="task-project" class="text-field" aria-label="Проект задачи">
+          <select id="task-project" class="text-field" aria-label="Проект задачи" aria-describedby="task-project-error">
             <option value="">Без проекта</option>
           </select>
+          <p id="task-project-error" class="task-field-error" role="alert" aria-live="polite" hidden></p>
         </div>
       </div>
       <div class="task-workset-field">
@@ -637,6 +638,7 @@
           <div id="description-preview" class="markdown-preview markdown-preview-editable" tabindex="0" aria-label="Описание задачи. Нажмите Enter, чтобы редактировать."></div>
         </div>
         <div id="task-result-panel" class="task-workspace-panel task-result-panel" role="tabpanel" aria-labelledby="task-result-tab" hidden>
+          <p id="task-result-required-hint" class="task-field-error task-result-required-hint" role="alert" aria-live="polite" hidden>Перед завершением задачи добавьте результат.</p>
           <textarea id="task-result" class="text-field result-field" maxlength="5000" rows="8" placeholder="Что получилось по итогам работы? Это поле не заменяет описание задачи." hidden></textarea>
           <div id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview" tabindex="0" aria-label="Результат задачи. Нажмите Enter, чтобы редактировать."></div>
         </div>
@@ -669,6 +671,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.3" defer></script>
-  <script src="/static/app.js?v=0.5.44" defer></script>
+  <script src="/static/app.js?v=0.5.45" defer></script>
 </body>
 </html>

@@ -94,6 +94,7 @@
     resultPreviewRequest: 0,
     draftSaveTimer: null,
     draftSavePromise: null,
+    pendingCloseTaskId: null,
     attachmentPreviewUrl: null,
     attachmentPreviewToken: 0,
     attachmentsExpanded: false,
@@ -152,6 +153,7 @@
     taskStatus: $("#task-status"),
     taskType: $("#task-type"),
     taskProject: $("#task-project"),
+    taskProjectError: $("#task-project-error"),
     taskWorkset: $("#task-workset"),
     taskTags: $("#task-tags"),
     taskTagList: $("#task-tag-list"),
@@ -167,6 +169,7 @@
     taskResultTab: $("#task-result-tab"),
     taskDescriptionPanel: $("#task-description-panel"),
     taskResultPanel: $("#task-result-panel"),
+    taskResultRequiredHint: $("#task-result-required-hint"),
     taskResultIndicator: $("#task-result-indicator"),
     copyDescription: $("#copy-description"),
     descriptionPreview: $("#description-preview"),
@@ -345,14 +348,19 @@
   }
 
   async function focusResultField(taskId) {
-    if (state.selectedTask?.id === taskId) {
-      if (els.taskStatus) els.taskStatus.value = state.selectedTask.status;
-      els.taskResult.focus({ preventScroll: true });
-      return;
+    if (state.selectedTask?.id !== taskId) {
+      if (state.selectedTask && !(await saveCurrentTaskDraft())) return;
+      await openTaskPanel(taskId);
     }
-    if (state.selectedTask && !(await saveCurrentTaskDraft())) return;
-    await openTaskPanel(taskId);
-    if (state.selectedTask?.id === taskId) els.taskResult.focus({ preventScroll: true });
+    if (state.selectedTask?.id !== taskId) return;
+    state.pendingCloseTaskId = taskId;
+    els.taskStatus.value = state.selectedTask.status;
+    setTaskWorkspaceTab("result");
+    state.resultPreviewVisible = false;
+    els.resultPreview.hidden = true;
+    els.taskResult.hidden = false;
+    els.taskResultRequiredHint.hidden = false;
+    els.taskResult.focus({ preventScroll: true });
   }
 
   const TOAST_POSITIONS = new Set([
@@ -1578,6 +1586,10 @@
     try {
       const task = await api(`/api/tasks/${taskId}`);
       state.selectedTask = task;
+      state.pendingCloseTaskId = null;
+      els.taskResultRequiredHint.hidden = true;
+      els.taskProjectError.hidden = true;
+      els.taskProjectError.textContent = "";
       populateTaskWorksetSelect(task);
       els.taskId.value = String(task.id);
       els.taskTitle.value = task.title;
@@ -1651,7 +1663,9 @@
   function currentTaskDraft(task = state.selectedTask) {
     return {
       title: String(els.taskTitle.value || "").trim() || task?.title || "",
-      status: els.taskStatus.value || task?.status || "todo",
+      status: state.pendingCloseTaskId === task?.id && String(els.taskResult.value || "").trim()
+        ? "done"
+        : (els.taskStatus.value || task?.status || "todo"),
       tags: editableTaskTags().join(", "),
       description: els.taskDescription.value,
       result: els.taskResult.value,
@@ -1716,6 +1730,11 @@
         const updated = await api(`/api/tasks/${taskId}`, { method: "PATCH", body: draft });
         if (state.selectedTask?.id === taskId) {
           state.selectedTask = { ...state.selectedTask, ...updated };
+          els.taskStatus.value = updated.status;
+          if (updated.status === "done" && state.pendingCloseTaskId === taskId) {
+            state.pendingCloseTaskId = null;
+            els.taskResultRequiredHint.hidden = true;
+          }
           els.taskTitleDisplayText.textContent = updated.title || "Без названия";
           els.taskMeta.textContent = `Создана: ${formatDateTime(updated.created_at)} · Изменена: ${formatDateTime(updated.updated_at)}${updated.closed_at ? ` · Закрыта: ${formatDateTime(updated.closed_at)}` : ""}`;
           els.closeTask.textContent = updated.status === "done" ? "↶ Вернуть в работу" : "✓ Закрыть задачу";
@@ -1734,6 +1753,10 @@
         renderBoard();
         return true;
       } catch (error) {
+        if (String(error.message).includes("Сначала удалите задачу из рабочего набора")) {
+          els.taskProjectError.textContent = "Задача входит в рабочий набор этого проекта. Сначала уберите её из набора, затем измените проект.";
+          els.taskProjectError.hidden = false;
+        }
         toast(`Не удалось автоматически сохранить изменения: ${error.message}`, "error");
         return false;
       }
@@ -3070,7 +3093,13 @@
   els.taskTitle.addEventListener("blur", () => {
     if (!titleEditorClosePending) scheduleTaskDraftSave(180);
   });
-  els.taskStatus.addEventListener("change", () => scheduleTaskDraftSave(180));
+  els.taskStatus.addEventListener("change", () => {
+    if (state.pendingCloseTaskId && els.taskStatus.value !== "done") {
+      state.pendingCloseTaskId = null;
+      els.taskResultRequiredHint.hidden = true;
+    }
+    scheduleTaskDraftSave(180);
+  });
   els.requireResultToClose.addEventListener("change", () => { void saveTaskSettings(); });
 
   for (const eventName of ["dragenter", "dragover"]) {
@@ -3837,7 +3866,11 @@
   }
 
   els.taskType.addEventListener("change", () => updateReservedTaskTag("type", els.taskType.value));
-  els.taskProject.addEventListener("change", () => updateReservedTaskTag("project", els.taskProject.value));
+  els.taskProject.addEventListener("change", () => {
+    els.taskProjectError.hidden = true;
+    els.taskProjectError.textContent = "";
+    updateReservedTaskTag("project", els.taskProject.value);
+  });
   els.taskWorkset.addEventListener("change", () => void updateTaskWorkset());
   els.taskTagInput.addEventListener("input", () => {
     setTaskTagError("");

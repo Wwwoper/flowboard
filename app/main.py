@@ -1001,19 +1001,14 @@ def patch_task(
                 status_code=409,
                 detail="Сначала удалите задачу из рабочего набора, чтобы изменить её проект",
             )
-    blocked_close = False
     if current["status"] != "done" and new_status == "done":
         if _task_settings(connection)["require_result_to_close"]:
             result = changes.get("result", current["result"] or "")
             if not str(result or "").strip():
-                blocked_close = True
-                changes.pop("status", None)
-                new_status = current["status"]
-                if not changes:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Перед закрытием задачи заполните поле «Результат выполнения».",
-                    )
+                raise HTTPException(
+                    status_code=409,
+                    detail="Перед закрытием задачи заполните поле «Результат выполнения».",
+                )
     assignments: dict[str, Any] = {}
     for field in ("title", "description", "result", "status", "position", "tags"):
         if field in changes:
@@ -1078,11 +1073,6 @@ def patch_task(
         _record_workset_event(connection, current_workset, event_type, task=updated_task)
         _sync_workset_state(connection, int(current_workset_id))
     connection.commit()
-    if blocked_close:
-        raise HTTPException(
-            status_code=409,
-            detail="Перед закрытием задачи заполните поле «Результат выполнения».",
-        )
     return _task_summary(_require_task(connection, task_id))
 
 

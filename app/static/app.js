@@ -3867,6 +3867,14 @@
 
   els.taskType.addEventListener("change", () => updateReservedTaskTag("type", els.taskType.value));
   els.taskProject.addEventListener("change", () => {
+    const task = state.selectedTask;
+    if (task?.workset_id) {
+      const project = projectForTask(task);
+      els.taskProject.value = project ? projectTag(project) : "";
+      els.taskProjectError.textContent = "Задача входит в рабочий набор этого проекта. Сначала уберите её из набора, затем измените проект.";
+      els.taskProjectError.hidden = false;
+      return;
+    }
     els.taskProjectError.hidden = true;
     els.taskProjectError.textContent = "";
     updateReservedTaskTag("project", els.taskProject.value);

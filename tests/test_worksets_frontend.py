@@ -31,7 +31,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.45" in html
+    assert "/static/app.js?v=0.5.46" in html
     assert "/static/style.css?v=0.5.28" in html
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html

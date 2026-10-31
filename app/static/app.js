@@ -8,6 +8,23 @@
     waiting: "Ожидает",
     done: "Готово",
   };
+
+  const TASK_TYPE_LABELS = {
+    bug: "Ошибка",
+    feature: "Функция",
+    docs: "Документация",
+    refactor: "Рефакторинг",
+  };
+  const TASK_TYPE_ALIASES = {
+    bug: "bug",
+    ошибка: "bug",
+    feature: "feature",
+    функция: "feature",
+    docs: "docs",
+    документация: "docs",
+    refactor: "refactor",
+    рефакторинг: "refactor",
+  };
   function readStorage(key, fallback = "") {
     try {
       return localStorage.getItem(key) ?? fallback;
@@ -36,10 +53,10 @@
   }
 
   const DEFAULT_COLUMN_PREFERENCES = {
-    todo: { tag: "", sort: "created_desc" },
-    doing: { tag: "", sort: "updated_desc" },
-    waiting: { tag: "", sort: "updated_asc" },
-    done: { tag: "", sort: "closed_desc" },
+    todo: { sort: "created_desc" },
+    doing: { sort: "updated_desc" },
+    waiting: { sort: "updated_asc" },
+    done: { sort: "closed_desc" },
   };
   const COLUMN_SORT_MODES = new Set([
     "manual", "created_desc", "created_asc", "updated_desc", "updated_asc",
@@ -57,7 +74,6 @@
     return Object.fromEntries(STATUSES.map((status) => {
       const value = stored[status] && typeof stored[status] === "object" ? stored[status] : {};
       return [status, {
-        tag: typeof value.tag === "string" ? value.tag : DEFAULT_COLUMN_PREFERENCES[status].tag,
         sort: COLUMN_SORT_MODES.has(value.sort) ? value.sort : DEFAULT_COLUMN_PREFERENCES[status].sort,
       }];
     }));
@@ -76,12 +92,13 @@
     selectedTask: null,
     doneExpanded: false,
     search: "",
-    tag: "",
+    taskFilters: readTaskFiltersFromUrl(),
     project: readStorage("flowboard-last-project"),
     worksetId: null,
     worksets: [],
     projects: readStoredProjects(),
     quickTaskType: "",
+    taskTypeDraft: "",
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
     density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
     dragOrigin: null,
@@ -131,7 +148,11 @@
     cancelWorksetEditor: $("#cancel-workset-editor"),
     saveWorksetEditor: $("#save-workset-editor"),
     addProject: $("#add-project"),
-    tagFilter: $("#tag-filter"),
+    taskFilterMenu: $("#task-filter-menu"),
+    taskFilterTrigger: $("#task-filter-trigger"),
+    taskFilterCount: $("#task-filter-count"),
+    taskFilterTypes: $("#task-filter-types"),
+    taskFilterTags: $("#task-filter-tags"),
     focusBar: $("#focus-bar"),
     focusTitle: $("#focus-title"),
     focusProject: $("#focus-project"),
@@ -975,8 +996,12 @@
         state.worksetId = null;
         els.projectFilter.value = project.slug;
         persistProjectState();
-        void loadWorksets().then(renderBoard).catch((error) => {
+        void loadWorksets().then(() => {
+          renderTaskFilters();
+          renderBoard();
+        }).catch((error) => {
           clearWorksetContextAfterError();
+          renderTaskFilters();
           renderBoard();
           toast(error.message, "error");
         });
@@ -1004,25 +1029,129 @@
     persistProjectState();
   }
 
-  function populateTagFilter() {
-    const existingValue = state.tag;
-    const tags = [...new Set(state.tasks.flatMap(taskTags).filter((tag) => !projectFromTag(tag)))].sort((a, b) => a.localeCompare(b, "ru"));
-    els.tagFilter.replaceChildren();
-    els.tagFilter.appendChild(new Option("Все теги", ""));
-    tags.forEach((tag) => els.tagFilter.appendChild(new Option(tag, tag)));
-    els.tagFilter.value = tags.includes(existingValue) ? existingValue : "";
-    state.tag = els.tagFilter.value;
+  function readTaskFiltersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      types: [...new Set(params.getAll("type").filter((value) => value === "__none__" || Object.hasOwn(TASK_TYPE_LABELS, value)))],
+      tags: [...new Set(params.getAll("tag").filter(Boolean))],
+    };
   }
 
-  function matchesFilters(task) {
+  function writeTaskFiltersToUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("type");
+    url.searchParams.delete("tag");
+    state.taskFilters.types.forEach((value) => url.searchParams.append("type", value));
+    state.taskFilters.tags.forEach((value) => url.searchParams.append("tag", value));
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function taskMatchesType(task, value) {
+    return value === "__none__" ? !task.task_type : task.task_type === value;
+  }
+
+  function matchesFilters(task, { skipTypes = false, skipTags = false } = {}) {
     const query = normalizeSearch(state.search);
     const terms = query ? query.split(/\s+/).filter(Boolean) : [];
-    const searchable = normalizeSearch([task.title, task.description, ...taskTags(task)].join(" "));
+    const searchable = normalizeSearch([
+      task.title, task.description, task.task_type, TASK_TYPE_LABELS[task.task_type] || "", ...taskTags(task),
+    ].join(" "));
     if (terms.some((term) => !searchable.includes(term))) return false;
-    if (state.tag && !taskTags(task).includes(state.tag)) return false;
+    if (!skipTypes && state.taskFilters.types.length
+      && !state.taskFilters.types.some((value) => taskMatchesType(task, value))) return false;
+    if (!skipTags && state.taskFilters.tags.length
+      && !state.taskFilters.tags.some((value) => taskTags(task).includes(value))) return false;
     if (state.project && !taskTags(task).some((tag) => projectFromTag(tag) === state.project)) return false;
     if (state.worksetId && task.workset_id !== state.worksetId) return false;
     return true;
+  }
+
+  function availableBoardTags() {
+    return [...new Set(state.tasks
+      .filter((task) => (!state.project || taskTags(task).some((tag) => projectFromTag(tag) === state.project))
+        && (!state.worksetId || task.workset_id === state.worksetId))
+      .flatMap(taskTags)
+      .filter((tag) => !projectFromTag(tag)))].sort((a, b) => a.localeCompare(b, "ru"));
+  }
+
+  function renderTaskFilters() {
+    const types = [{ value: "__none__", label: "Без типа" }, ...Object.entries(TASK_TYPE_LABELS).map(([value, label]) => ({ value, label }))];
+    const tags = availableBoardTags().map((value) => ({ value, label: value }));
+    const availableTypes = new Set(types.map((item) => item.value));
+    const availableTags = new Set(tags.map((item) => item.value));
+    state.taskFilters.types = state.taskFilters.types.filter((value) => availableTypes.has(value));
+    state.taskFilters.tags = state.taskFilters.tags.filter((value) => availableTags.has(value));
+    writeTaskFiltersToUrl();
+
+    const renderOptions = (container, items, selected, skipGroup) => {
+      container.replaceChildren();
+      if (!items.length) {
+        container.appendChild(make("span", "task-filter-empty", "Нет доступных значений"));
+        return;
+      }
+      items.forEach((item) => {
+        const count = state.tasks.filter((task) => matchesFilters(task, {
+          skipTypes: skipGroup === "types", skipTags: skipGroup === "tags",
+        }) && (skipGroup === "types" ? taskMatchesType(task, item.value) : taskTags(task).includes(item.value))).length;
+        const label = make("label", "task-filter-option");
+        const checkbox = make("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selected.includes(item.value);
+        checkbox.disabled = count === 0 && !checkbox.checked;
+        checkbox.addEventListener("change", () => {
+          const next = new Set(selected);
+          if (checkbox.checked) next.add(item.value);
+          else next.delete(item.value);
+          state.taskFilters[skipGroup] = [...next];
+          renderTaskFilters();
+          renderBoard();
+        });
+        label.append(checkbox, make("span", "task-filter-option-label", item.label), make("span", "task-filter-option-count", String(count)));
+        container.appendChild(label);
+      });
+    };
+    renderOptions(els.taskFilterTypes, types, state.taskFilters.types, "types");
+    renderOptions(els.taskFilterTags, tags, state.taskFilters.tags, "tags");
+    const total = state.taskFilters.types.length + state.taskFilters.tags.length;
+    els.taskFilterCount.textContent = String(total);
+    els.taskFilterCount.hidden = total === 0;
+    els.taskFilterTrigger.setAttribute("aria-label", total ? `Фильтр по типам и тегам: выбрано ${total}` : "Фильтр по типам и тегам");
+    renderTaskFilterChips();
+  }
+
+  function renderTaskFilterChips() {
+    let container = $("#task-filter-chips");
+    if (!container) {
+      container = make("div", "task-filter-chips");
+      container.id = "task-filter-chips";
+      els.taskFilterMenu.insertAdjacentElement("afterend", container);
+    }
+    container.replaceChildren();
+    const chips = [
+      ...state.taskFilters.types.map((value) => ({ group: "types", value, label: value === "__none__" ? "Без типа" : TASK_TYPE_LABELS[value] })),
+      ...state.taskFilters.tags.map((value) => ({ group: "tags", value, label: value })),
+    ];
+    chips.forEach((chip) => {
+      const button = make("button", "task-filter-chip", `${chip.label} ×`);
+      button.type = "button";
+      button.addEventListener("click", () => {
+        state.taskFilters[chip.group] = state.taskFilters[chip.group].filter((value) => value !== chip.value);
+        renderTaskFilters();
+        renderBoard();
+      });
+      container.appendChild(button);
+    });
+    if (chips.length) {
+      const reset = make("button", "task-filter-reset", "Сбросить всё");
+      reset.type = "button";
+      reset.addEventListener("click", () => {
+        state.taskFilters = { types: [], tags: [] };
+        renderTaskFilters();
+        renderBoard();
+      });
+      container.appendChild(reset);
+    }
+    container.hidden = chips.length === 0;
   }
 
   function make(tagName, className, text) {
@@ -1032,12 +1161,6 @@
     return node;
   }
 
-  const TASK_TYPE_LABELS = {
-    bug: "Ошибка",
-    feature: "Функция",
-    docs: "Документация",
-    refactor: "Рефакторинг",
-  };
   const PROJECT_ACCENT_KEYS = [
     "--project-accent-1",
     "--project-accent-2",
@@ -1104,8 +1227,8 @@
 
     const tags = taskTags(task);
     const project = projectForTask(task);
-    const typeTag = tags.find((tag) => Object.hasOwn(TASK_TYPE_LABELS, tag.toLowerCase()));
-    const hiddenTags = tags.filter((tag) => !projectFromTag(tag) && (!typeTag || tag !== typeTag));
+    const taskType = task.task_type || "";
+    const hiddenTags = tags.filter((tag) => !projectFromTag(tag));
 
     const top = make("div", "task-card-top");
     top.appendChild(make("div", "task-card-title", task.title));
@@ -1118,7 +1241,7 @@
 
     // Do not render an empty metadata row or a placeholder for a missing project.
     const workset = state.worksets.find((item) => item.id === task.workset_id);
-    if ((project && project !== state.project) || typeTag || (!state.worksetId && workset)) {
+    if ((project && project !== state.project) || taskType || (!state.worksetId && workset)) {
       const metadata = make("div", "task-card-meta");
       // The selected project is already clear from the board filter context.
       if (project && project !== state.project) {
@@ -1129,8 +1252,25 @@
         projectChip.appendChild(make("span", "task-project-name", projectLabel(project)));
         metadata.appendChild(projectChip);
       }
-      if (typeTag) {
-        metadata.appendChild(make("span", `task-type-chip task-type-${typeTag.toLowerCase()}`, TASK_TYPE_LABELS[typeTag.toLowerCase()]));
+      if (taskType) {
+        const typeChip = make("span", `task-type-chip task-type-${taskType}`, TASK_TYPE_LABELS[taskType]);
+        typeChip.setAttribute("role", "button");
+        typeChip.tabIndex = 0;
+        typeChip.title = `Фильтр по типу: ${TASK_TYPE_LABELS[taskType]}`;
+        const applyTypeFilter = (event) => {
+          event.stopPropagation();
+          state.taskFilters.types = [...new Set([...state.taskFilters.types, taskType])];
+          renderTaskFilters();
+          renderBoard();
+        };
+        typeChip.addEventListener("click", applyTypeFilter);
+        typeChip.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            applyTypeFilter(event);
+          }
+        });
+        metadata.appendChild(typeChip);
       }
       if (!state.worksetId && workset) {
         metadata.appendChild(make("span", "task-workset-chip", workset.name));
@@ -1166,7 +1306,7 @@
     }
     card.appendChild(footer);
     card.addEventListener("click", (event) => {
-      if (event.target.closest("button, a")) return;
+      if (event.target.closest("button, a, .task-type-chip")) return;
       openTaskPanel(task.id);
     });
     card.addEventListener("keydown", (event) => {
@@ -1178,32 +1318,8 @@
     return card;
   }
 
-  function columnTagLabel(tag) {
-    const normalized = String(tag || "").toLowerCase();
-    return Object.hasOwn(TASK_TYPE_LABELS, normalized) ? `Тип: ${TASK_TYPE_LABELS[normalized]}` : tag;
-  }
-
   function persistColumnPreferences() {
     writeStorage("flowboard-column-preferences", JSON.stringify(state.columnPreferences));
-  }
-
-  function populateColumnFilters() {
-    const tags = [...new Set(state.tasks.flatMap(taskTags).filter((tag) => !projectFromTag(tag)))]
-      .sort((a, b) => a.localeCompare(b, "ru"));
-    STATUSES.forEach((status) => {
-      const select = $(`[data-column-filter="${status}"]`);
-      if (!select) return;
-      const current = state.columnPreferences[status].tag;
-      select.replaceChildren(new Option("Все теги и типы", ""));
-      tags.forEach((tag) => select.appendChild(new Option(columnTagLabel(tag), tag)));
-      state.columnPreferences[status].tag = tags.includes(current) ? current : "";
-      select.value = state.columnPreferences[status].tag;
-      const sorter = $(`[data-column-sort="${status}"]`);
-      if (sorter) sorter.value = state.columnPreferences[status].sort;
-      const toggle = $(`[data-column-options-toggle="${status}"]`);
-      if (toggle) toggle.classList.toggle("has-column-filter", Boolean(state.columnPreferences[status].tag));
-    });
-    persistColumnPreferences();
   }
 
   function compareDateValues(left, right, key) {
@@ -1213,9 +1329,8 @@
   }
 
   function taskTypePriority(task) {
-    const tags = taskTags(task).map((tag) => tag.toLowerCase());
     const order = ["bug", "feature", "docs", "refactor"];
-    const index = order.findIndex((type) => tags.includes(type));
+    const index = order.indexOf(task.task_type || "");
     return index < 0 ? order.length : index;
   }
 
@@ -1259,7 +1374,8 @@
       const list = $(`.task-list[data-status="${status}"]`);
       let statusTasks = visibleTasks.filter((task) => task.status === status);
       const preference = state.columnPreferences[status];
-      if (preference.tag) statusTasks = statusTasks.filter((task) => taskTags(task).includes(preference.tag));
+      const sorter = $(`[data-column-sort="${status}"]`);
+      if (sorter && sorter.value !== preference.sort) sorter.value = preference.sort;
       if (status === "doing") doingCount = statusTasks.length;
       statusTasks = sortColumnTasks(statusTasks, preference.sort);
       $(`#count-${status}`).textContent = String(statusTasks.length);
@@ -1285,12 +1401,14 @@
 
       tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));
       column.classList.toggle("is-empty", tasksToRender.length === 0);
-      column.classList.toggle("has-column-filter", Boolean(preference.tag));
       const emptyDrop = $(".column-empty", column);
       if (emptyDrop) {
-        emptyDrop.textContent = status === "waiting" ? "Нет задач в ожидании"
-          : status === "done" ? "Пока нет завершённых задач."
-            : "Перетащите задачу сюда";
+        const hasActiveFilters = state.taskFilters.types.length || state.taskFilters.tags.length || state.search;
+        emptyDrop.textContent = statusTasks.length === 0 && hasActiveFilters
+          ? "Нет задач по выбранным фильтрам"
+          : status === "waiting" ? "Нет задач в ожидании"
+            : status === "done" ? "Пока нет завершённых задач."
+              : "Перетащите задачу сюда";
       }
     }
 
@@ -1351,8 +1469,7 @@
       clearWorksetContextAfterError();
       toast(`Не удалось загрузить рабочие наборы: ${error.message}`, "error");
     }
-    populateTagFilter();
-    populateColumnFilters();
+    renderTaskFilters();
     renderBoard();
   }
 
@@ -1366,7 +1483,7 @@
     els.archiveProjectFilter.replaceChildren(new Option("Все проекты", ""));
     projects.forEach((slug) => els.archiveProjectFilter.appendChild(new Option(projectLabel(slug), slug)));
     els.archiveTagFilter.replaceChildren(new Option("Все теги", ""));
-    tags.forEach((tag) => els.archiveTagFilter.appendChild(new Option(columnTagLabel(tag), tag)));
+    tags.forEach((tag) => els.archiveTagFilter.appendChild(new Option(tag, tag)));
     state.archiveFilters.project = projects.includes(selectedProject) ? selectedProject : "";
     state.archiveFilters.tag = tags.includes(selectedTag) ? selectedTag : "";
     els.archiveProjectFilter.value = state.archiveFilters.project;
@@ -1415,9 +1532,9 @@
         chip.style.setProperty("--project-accent", projectAccent(project));
         metadata.appendChild(chip);
       }
-      const taskType = taskTags(task).find((tag) => Object.hasOwn(TASK_TYPE_LABELS, tag.toLowerCase()));
-      if (taskType) metadata.appendChild(make("span", `archive-chip task-type-${taskType.toLowerCase()}`, TASK_TYPE_LABELS[taskType.toLowerCase()]));
-      const otherTags = taskTags(task).filter((tag) => !projectFromTag(tag) && tag !== taskType).slice(0, 3);
+      const taskType = task.task_type || "";
+      if (taskType) metadata.appendChild(make("span", `archive-chip task-type-${taskType}`, TASK_TYPE_LABELS[taskType]));
+      const otherTags = taskTags(task).filter((tag) => !projectFromTag(tag)).slice(0, 3);
       otherTags.forEach((tag) => metadata.appendChild(make("span", "archive-chip", tag)));
       if (metadata.childElementCount) copy.appendChild(metadata);
       const dates = make("p", "archive-item-dates", `Завершена: ${formatDateTime(task.closed_at)} · В архиве: ${formatDateTime(task.archived_at)}`);
@@ -1598,6 +1715,8 @@
       els.taskTitleDisplay.hidden = false;
       els.taskTitleReference.textContent = `#${task.id}`;
       els.taskStatus.value = task.status;
+      state.taskTypeDraft = task.task_type || "";
+      els.taskType.value = state.taskTypeDraft;
       els.taskTags.value = task.tags || "";
       els.taskTagInput.value = "";
       setTaskTagPopoverOpen(false);
@@ -1667,6 +1786,7 @@
         ? "done"
         : (els.taskStatus.value || task?.status || "todo"),
       tags: editableTaskTags().join(", "),
+      task_type: els.taskType.value,
       description: els.taskDescription.value,
       result: els.taskResult.value,
     };
@@ -1677,6 +1797,7 @@
       && draft.title === task.title
       && draft.status === task.status
       && normalizedTaskTags(draft.tags) === normalizedTaskTags(task.tags)
+      && draft.task_type === (task.task_type || "")
       && draft.description === (task.description || "")
       && draft.result === (task.result || "");
   }
@@ -1720,6 +1841,7 @@
       description: task.description || "",
       result: task.result || "",
       tags: task.tags || "",
+      task_type: task.task_type || "",
       status: task.status,
       position: task.position,
       workset_id: task.workset_id,
@@ -1731,6 +1853,8 @@
         if (state.selectedTask?.id === taskId) {
           state.selectedTask = { ...state.selectedTask, ...updated };
           els.taskStatus.value = updated.status;
+          state.taskTypeDraft = updated.task_type || "";
+          els.taskType.value = state.taskTypeDraft;
           if (updated.status === "done" && state.pendingCloseTaskId === taskId) {
             state.pendingCloseTaskId = null;
             els.taskResultRequiredHint.hidden = true;
@@ -1749,7 +1873,7 @@
           }
         }
         populateProjectFilter();
-        populateTagFilter();
+        renderTaskFilters();
         renderBoard();
         return true;
       } catch (error) {
@@ -1795,9 +1919,12 @@
 
   function tagChoiceDetails(value) {
     const tag = String(value || "").trim();
-    const normalized = tag.toLocaleLowerCase("ru");
-    if (Object.hasOwn(TASK_TYPE_LABELS, normalized)) {
-      return { value: normalized, label: TASK_TYPE_LABELS[normalized], kind: "type" };
+    const normalized = tag.toLocaleLowerCase("ru").replace(/ё/g, "е");
+    const taskType = Object.hasOwn(TASK_TYPE_ALIASES, normalized)
+      ? TASK_TYPE_ALIASES[normalized]
+      : "";
+    if (taskType) {
+      return { value: taskType, label: TASK_TYPE_LABELS[taskType], kind: "type" };
     }
     const project = projectFromTag(tag);
     if (project) {
@@ -1970,20 +2097,13 @@
   }
 
   async function createTask(title, status = "todo", taskType = state.quickTaskType) {
-    // Keep a selected type filter from silently assigning a type to every new task.
-    const inheritedTag = state.tag && !Object.hasOwn(TASK_TYPE_LABELS, state.tag.toLowerCase())
-      ? state.tag
-      : "";
-    const tags = [...new Set([
-      state.project ? projectTag(state.project) : "",
-      inheritedTag,
-      taskType,
-    ].filter(Boolean))].join(", ");
+    const tags = [state.project ? projectTag(state.project) : ""].filter(Boolean).join(", ");
     let task = await api("/api/tasks", {
       method: "POST",
       body: {
         title: title.trim(),
         tags,
+        task_type: taskType || "",
         ...(state.worksetId ? { workset_id: state.worksetId } : {}),
       },
     });
@@ -2017,6 +2137,7 @@
         description: snapshot.description || "",
         result: snapshot.result || "",
         tags: snapshot.tags || "",
+        task_type: snapshot.task_type || "",
         status: snapshot.status,
         position: snapshot.position,
       },
@@ -2054,6 +2175,7 @@
         title: els.taskTitle.value.trim(),
         status: els.taskStatus.value,
         tags: editableTaskTags().join(", "),
+        task_type: els.taskType.value,
         description: els.taskDescription.value,
         result: els.taskResult.value,
       };
@@ -2066,6 +2188,7 @@
         current.title !== task.title ||
         current.status !== task.status ||
         current.tags !== previousTags ||
+        current.task_type !== (task.task_type || "") ||
         current.description !== (task.description || "") ||
         current.result !== (task.result || "")
       ) {
@@ -2561,11 +2684,16 @@
     state.worksets = [];
     populateProjectFilter();
     populateWorksetFilter();
+    renderTaskFilters();
     renderBoard();
     els.quickTitle.focus();
     persistProjectState();
-    void loadWorksets().then(renderBoard).catch((error) => {
+    void loadWorksets().then(() => {
+      renderTaskFilters();
+      renderBoard();
+    }).catch((error) => {
       clearWorksetContextAfterError();
+      renderTaskFilters();
       renderBoard();
       toast(error.message, "error");
     });
@@ -2635,6 +2763,7 @@
 
   els.search.addEventListener("input", () => {
     state.search = els.search.value;
+    renderTaskFilters();
     renderBoard();
   });
   els.projectFilter.addEventListener("change", async () => {
@@ -2647,6 +2776,7 @@
       clearWorksetContextAfterError();
       toast(error.message, "error");
     }
+    renderTaskFilters();
     renderBoard();
     els.quickTitle.focus();
   });
@@ -2654,6 +2784,7 @@
     state.worksetId = Number(els.worksetFilter.value) || null;
     persistWorksetState();
     populateWorksetFilter();
+    renderTaskFilters();
     renderBoard();
   });
   els.createWorkset.addEventListener("click", () => {
@@ -2697,9 +2828,9 @@
       els.addProject.focus({ preventScroll: true });
     }
   });
-  els.tagFilter.addEventListener("change", () => {
-    state.tag = els.tagFilter.value;
-    renderBoard();
+  els.taskFilterMenu.addEventListener("click", (event) => event.stopPropagation());
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#task-filter-menu")) els.taskFilterMenu.open = false;
   });
 
   $$("[data-add-status]").forEach((button) => button.addEventListener("click", () => {
@@ -2805,14 +2936,6 @@
     button.setAttribute("aria-expanded", String(shouldOpen));
   }));
 
-  $$('[data-column-filter]').forEach((select) => select.addEventListener("change", () => {
-    state.columnPreferences[select.dataset.columnFilter].tag = select.value;
-    persistColumnPreferences();
-    renderBoard();
-    const toggle = $(`[data-column-options-toggle="${select.dataset.columnFilter}"]`);
-    if (toggle) toggle.classList.toggle("has-column-filter", Boolean(select.value));
-  }));
-
   $$('[data-column-sort]').forEach((select) => select.addEventListener("change", () => {
     const status = select.dataset.columnSort;
     state.columnPreferences[status].sort = COLUMN_SORT_MODES.has(select.value)
@@ -2826,7 +2949,6 @@
     const status = button.dataset.columnReset;
     state.columnPreferences[status] = { ...DEFAULT_COLUMN_PREFERENCES[status] };
     persistColumnPreferences();
-    populateColumnFilters();
     renderBoard();
   }));
 
@@ -3661,7 +3783,9 @@
       const detail = tagChoiceDetails(tag);
       if (detail.kind === kind) allChoices.set(detail.value.toLocaleLowerCase("ru"), detail);
     });
-    const selected = editableTaskTags().filter((tag) => tagChoiceDetails(tag).kind === kind);
+    const selected = kind === "type"
+      ? (state.taskTypeDraft ? [state.taskTypeDraft] : [])
+      : editableTaskTags().filter((tag) => tagChoiceDetails(tag).kind === kind);
     select.replaceChildren();
     const placeholder = document.createElement("option");
     placeholder.value = "";
@@ -3865,7 +3989,10 @@
     els.taskTagInput.setAttribute("aria-activedescendant", active?.id || "");
   }
 
-  els.taskType.addEventListener("change", () => updateReservedTaskTag("type", els.taskType.value));
+  els.taskType.addEventListener("change", () => {
+    state.taskTypeDraft = els.taskType.value;
+    scheduleTaskDraftSave();
+  });
   els.taskProject.addEventListener("change", () => {
     const task = state.selectedTask;
     if (task?.workset_id) {

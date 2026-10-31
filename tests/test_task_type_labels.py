@@ -33,8 +33,13 @@ def test_task_type_labels_are_shared_across_cards_editor_filters_and_archive(cli
 
     for technical_value, label in expected.items():
         assert f'{technical_value}: "{label}"' in script
-    assert "TASK_TYPE_LABELS[taskType.toLowerCase()]" in script
+    assert 'TASK_TYPE_LABELS[taskType]' in script
+    assert 'ошибка: "bug"' in script
+    assert 'рефакторинг: "refactor"' in script
+    assert 'Object.hasOwn(TASK_TYPE_ALIASES, normalized)' in script
+    assert 'const taskType = task.task_type || "";' in script
     create_task = script.split("async function createTask(", 1)[1].split("async function undoCreation(", 1)[0]
-    assert "taskType," in create_task
+    assert 'task_type: taskType || ""' in create_task
     assert "Object.keys(TASK_TYPE_LABELS).forEach(addChoice);" in script
     assert 'const order = ["bug", "feature", "docs", "refactor"];' in script
+    assert 'id="task-filter-menu"' in client.get("/").text

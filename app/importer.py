@@ -9,6 +9,7 @@ from typing import Any
 
 from app import frontmatter_compat as frontmatter
 from app.config import STATUSES
+from app.task_types import normalize_task_type, split_legacy_tags
 
 CHECKBOX_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
 TASK_DESCRIPTION_RE = re.compile(
@@ -62,6 +63,7 @@ class ParsedTask:
     result: str = ""
     status: str = "todo"
     tags: str = ""
+    task_type: str = ""
     created_at: str | None = None
     updated_at: str | None = None
     closed_at: str | None = None
@@ -110,13 +112,19 @@ def _task_from_metadata(
     if status != "done":
         closed_at = None
 
+    tags, legacy_types = split_legacy_tags(normalize_tags(metadata.get("tags")))
+    task_type = normalize_task_type(metadata.get("task_type")) or (
+        legacy_types[0] if legacy_types else ""
+    )
+
     return (
         ParsedTask(
             title=title,
             description=description,
             result=result,
             status=status,
-            tags=normalize_tags(metadata.get("tags")),
+            tags=", ".join(tags),
+            task_type=task_type,
             created_at=normalize_timestamp(metadata.get("created_at")),
             updated_at=normalize_timestamp(metadata.get("updated_at")),
             closed_at=closed_at,

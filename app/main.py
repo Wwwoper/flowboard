@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import math
 import re
 import shutil
@@ -588,9 +589,9 @@ def _create_task(connection: sqlite3.Connection, task: ParsedTask) -> int:
     position = float(position_row[0])
     cursor = connection.execute(
         """
-        INSERT INTO tasks (title, description, result, status, position, tags, created_at,
+        INSERT INTO tasks (title, description, result, status, position, tags, task_type, created_at,
                            updated_at, closed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             task.title,
@@ -599,6 +600,7 @@ def _create_task(connection: sqlite3.Connection, task: ParsedTask) -> int:
             task.status,
             position,
             task.tags,
+            task.task_type,
             created,
             updated,
             closed,
@@ -658,6 +660,33 @@ def list_tasks(connection: sqlite3.Connection = Depends(get_db)) -> list[TaskSum
 def list_archived_tasks(connection: sqlite3.Connection = Depends(get_db)) -> list[TaskSummary]:
     _archive_due_completed_tasks(connection)
     return [_task_summary(task) for task in _task_rows(connection, archived=True)]
+
+
+@app.get("/api/task-type-migration-report")
+def task_type_migration_report(
+    connection: sqlite3.Connection = Depends(get_db),
+) -> dict[str, Any]:
+    row = connection.execute(
+        "SELECT value FROM app_settings WHERE key = 'task_type_migration_report'"
+    ).fetchone()
+    if row is None:
+        return {
+            "migrated": 0, "removed": 0, "conflicts": [],
+            "backup_file": None, "backup_created": False,
+        }
+    try:
+        report = json.loads(row["value"])
+    except (TypeError, json.JSONDecodeError):
+        return {
+            "migrated": 0, "removed": 0, "conflicts": [],
+            "backup_file": None, "backup_created": False,
+        }
+    if isinstance(report, dict):
+        return report
+    return {
+        "migrated": 0, "removed": 0, "conflicts": [],
+        "backup_file": None, "backup_created": False,
+    }
 
 
 @app.get("/api/worksets", response_model=list[WorksetRead])
@@ -906,9 +935,9 @@ def create_task(
     ).fetchone()
     cursor = connection.execute(
         """
-        INSERT INTO tasks (title, description, result, status, position, tags, created_at,
+        INSERT INTO tasks (title, description, result, status, position, tags, task_type, created_at,
                            updated_at, closed_at)
-        VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, NULL)
+        VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, ?, NULL)
         """,
         (
             title,
@@ -916,6 +945,7 @@ def create_task(
             payload.result,
             float(position_row[0]),
             payload.tags,
+            payload.task_type,
             now,
             now,
         ),
@@ -1010,10 +1040,10 @@ def patch_task(
                     detail="Перед закрытием задачи заполните поле «Результат выполнения».",
                 )
     assignments: dict[str, Any] = {}
-    for field in ("title", "description", "result", "status", "position", "tags"):
+    for field in ("title", "description", "result", "status", "position", "tags", "task_type"):
         if field in changes:
             value = changes[field]
-            if field in ("description", "result", "tags") and value is None:
+            if field in ("description", "result", "tags", "task_type") and value is None:
                 value = ""
             assignments[field] = value
 

@@ -19,11 +19,11 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.28">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.29">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.12">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.13">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.4">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.5">
 </head>
 <body>
   <div class="app-shell">
@@ -117,11 +117,22 @@
           </details>
         </div>
         <span class="toolbar-divider" aria-hidden="true"></span>
-        <label class="filter-box tag-filter-box">
-          <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.5 10V4.5h5.8l7.2 7.2-4.3 4.3Z"></path><circle cx="6.5" cy="7.2" r=".8"></circle></svg>
-          <span class="visually-hidden">Фильтр по тегу</span>
-          <select id="tag-filter"><option value="">Все теги</option></select>
-        </label>
+        <details id="task-filter-menu" class="task-filter-menu">
+          <summary id="task-filter-trigger" class="button button-small button-quiet" aria-label="Фильтр по типам и тегам">
+            <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14M5.5 10h9M8 15h4"></path></svg>
+            <span>Типы и теги</span><span id="task-filter-count" class="task-filter-count" hidden>0</span>
+          </summary>
+          <div class="task-filter-popover">
+            <section class="task-filter-group" aria-labelledby="task-filter-types-heading">
+              <h3 id="task-filter-types-heading">Тип</h3>
+              <div id="task-filter-types" class="task-filter-options"></div>
+            </section>
+            <section class="task-filter-group" aria-labelledby="task-filter-tags-heading">
+              <h3 id="task-filter-tags-heading">Теги</h3>
+              <div id="task-filter-tags" class="task-filter-options"></div>
+            </section>
+          </div>
+        </details>
       </section>
       <div id="workset-context" class="workset-context" hidden aria-live="polite"></div>
 
@@ -135,11 +146,8 @@
           </header>
           <div class="column-options" data-column-options="todo">
             <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
-                    aria-label="Фильтр и сортировка задач: К выполнению" aria-expanded="false" title="Фильтр и сортировка задач: К выполнению">☷</button>
+                    aria-label="Сортировка задач: К выполнению" aria-expanded="false" title="Сортировка задач: К выполнению">☷</button>
             <div class="column-options-popover" data-column-options-panel="todo" hidden>
-              <label><span>Фильтр по тегу / типу</span>
-                <select data-column-filter="todo" aria-label="Фильтр по тегу и типу"></select>
-              </label>
               <label><span>Сортировка</span>
                 <select data-column-sort="todo" aria-label="Сортировка задач">
                   <option value="manual">Ручной порядок</option>
@@ -169,11 +177,8 @@
           </header>
           <div class="column-options" data-column-options="doing">
             <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
-                    aria-label="Фильтр и сортировка задач: В работе" aria-expanded="false" title="Фильтр и сортировка задач: В работе">☷</button>
+                    aria-label="Сортировка задач: В работе" aria-expanded="false" title="Сортировка задач: В работе">☷</button>
             <div class="column-options-popover" data-column-options-panel="doing" hidden>
-              <label><span>Фильтр по тегу / типу</span>
-                <select data-column-filter="doing" aria-label="Фильтр по тегу и типу"></select>
-              </label>
               <label><span>Сортировка</span>
                 <select data-column-sort="doing" aria-label="Сортировка задач">
                   <option value="manual">Ручной порядок</option>
@@ -202,11 +207,8 @@
           </header>
           <div class="column-options" data-column-options="waiting">
             <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
-                    aria-label="Фильтр и сортировка задач: Ожидает" aria-expanded="false" title="Фильтр и сортировка задач: Ожидает">☷</button>
+                    aria-label="Сортировка задач: Ожидает" aria-expanded="false" title="Сортировка задач: Ожидает">☷</button>
             <div class="column-options-popover" data-column-options-panel="waiting" hidden>
-              <label><span>Фильтр по тегу / типу</span>
-                <select data-column-filter="waiting" aria-label="Фильтр по тегу и типу"></select>
-              </label>
               <label><span>Сортировка</span>
                 <select data-column-sort="waiting" aria-label="Сортировка задач">
                   <option value="manual">Ручной порядок</option>
@@ -235,11 +237,8 @@
           </header>
           <div class="column-options" data-column-options="done">
             <button class="column-options-toggle" type="button" data-column-options-toggle="done"
-                    aria-label="Фильтр и сортировка задач: Готово" aria-expanded="false" title="Фильтр и сортировка задач: Готово">☷</button>
+                    aria-label="Сортировка задач: Готово" aria-expanded="false" title="Сортировка задач: Готово">☷</button>
             <div class="column-options-popover" data-column-options-panel="done" hidden>
-              <label><span>Фильтр по тегу / типу</span>
-                <select data-column-filter="done" aria-label="Фильтр по тегу и типу"></select>
-              </label>
               <label><span>Сортировка</span>
                 <select data-column-sort="done" aria-label="Сортировка задач">
                   <option value="manual">Ручной порядок</option>
@@ -670,7 +669,7 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
-  <script src="/static/themed-selects.js?v=0.1.4" defer></script>
-  <script src="/static/app.js?v=0.5.46" defer></script>
+  <script src="/static/themed-selects.js?v=0.1.5" defer></script>
+  <script src="/static/app.js?v=0.5.47" defer></script>
 </body>
 </html>

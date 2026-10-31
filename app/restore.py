@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from app.config import STATUSES
 from app.db import connect, initialize_database
+from app.task_types import normalize_task_type, split_legacy_tags
 
 
 def _safe_member_name(name: str) -> str:
@@ -89,13 +90,17 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
             connection = connect(db_path)
             try:
                 for task in task_items:
+                    restored_tags, legacy_types = split_legacy_tags(task.get("tags", ""))
+                    restored_type = normalize_task_type(task.get("task_type"))
+                    if not restored_type and legacy_types:
+                        restored_type = legacy_types[0]
                     connection.execute(
                         """
                         INSERT INTO tasks (
-                            id, title, description, result, status, position, tags,
+                            id, title, description, result, status, position, tags, task_type,
                             created_at, updated_at, closed_at, archived_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             task["id"],
@@ -104,7 +109,8 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                             task.get("result", ""),
                             task["status"],
                             float(task.get("position", 0)),
-                            task.get("tags", ""),
+                            ", ".join(restored_tags),
+                            restored_type,
                             task["created_at"],
                             task["updated_at"],
                             task.get("closed_at"),

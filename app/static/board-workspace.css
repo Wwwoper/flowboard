@@ -176,8 +176,7 @@
     width: auto;
     min-width: min(100%, 220px);
   }
-  .project-filter-box,
-  .tag-filter-box {
+  .project-filter-box {
     flex: 1 1 150px;
     min-width: 0;
   }
@@ -198,8 +197,7 @@
   .quick-task-type { gap: 5px; }
   .board-toolbar { gap: 7px; padding: 12px 0 8px; }
   .search-box { flex: 1 1 100%; min-width: 0; }
-  .project-filter-box,
-  .tag-filter-box { flex: 1 1 calc(50% - 5px); }
+  .project-filter-box { flex: 1 1 calc(50% - 5px); }
   .add-project-button {
     flex: 0 0 36px;
     width: 36px;

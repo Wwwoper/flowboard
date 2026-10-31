@@ -69,6 +69,8 @@ def test_restore_accepts_legacy_manifest_without_result(client, tmp_path):
         manifest = json.loads(original.read("tasks.json"))
         for item in manifest["tasks"]:
             item.pop("result", None)
+            item.pop("task_type", None)
+            item["tags"] = "bug, legacy-tag"
         manifest.pop("worksets", None)
         manifest.pop("workset_memberships", None)
         manifest.pop("workset_events", None)
@@ -82,11 +84,11 @@ def test_restore_accepts_legacy_manifest_without_result(client, tmp_path):
     connection = sqlite3.connect(target / "tracker.db")
     try:
         result = connection.execute(
-            "SELECT result FROM tasks WHERE id = ?", (exported["id"],)
+            "SELECT result, tags, task_type FROM tasks WHERE id = ?", (exported["id"],)
         ).fetchone()
     finally:
         connection.close()
-    assert result == ("",)
+    assert result == ("", "legacy-tag", "bug")
 
 
 def test_zip_backup_preserves_history_for_a_deleted_empty_workset(client, tmp_path):

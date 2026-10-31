@@ -298,8 +298,7 @@
 }
 @media (max-width: 640px) {
   .filter-box .theme-select,
-  .project-filter-box .theme-select,
-  .tag-filter-box .theme-select { width: 100%; max-width: none; }
+  .project-filter-box .theme-select { width: 100%; max-width: none; }
   .filter-box .theme-select-trigger { min-height: 32px; padding: 6px 7px; font-size: 10px; }
   .theme-select-option { font-size: 12px; }
 }
@@ -316,20 +315,17 @@
     width: 100%;
     min-width: 0;
   }
-  .board-toolbar .project-filter-box,
-  .board-toolbar > .tag-filter-box {
+  .board-toolbar .project-filter-box {
     flex: 1 1 0;
     min-width: 0;
   }
-  .board-toolbar .project-filter-box .theme-select,
-  .board-toolbar > .tag-filter-box .theme-select {
+  .board-toolbar .project-filter-box .theme-select {
     flex: 1 1 auto;
     width: 100%;
     min-width: 0;
     max-width: none;
   }
-  .board-toolbar .project-filter-box .theme-select-trigger,
-  .board-toolbar > .tag-filter-box .theme-select-trigger {
+  .board-toolbar .project-filter-box .theme-select-trigger {
     width: 100%;
     min-width: 0;
   }
@@ -592,10 +588,8 @@
     max-width: none;
     min-width: 0;
   }
-  .board-toolbar .project-filter-box,
-  .board-toolbar > .tag-filter-box { flex: 1 1 0; min-width: 0; }
-  .board-toolbar .project-filter-box .theme-select,
-  .board-toolbar > .tag-filter-box .theme-select {
+  .board-toolbar .project-filter-box { flex: 1 1 0; min-width: 0; }
+  .board-toolbar .project-filter-box .theme-select {
     width: 100%;
     max-width: none;
     min-width: 0;
@@ -609,8 +603,7 @@
     max-width: none;
     min-width: 0;
   }
-  .board-toolbar .project-filter-box,
-  .board-toolbar > .tag-filter-box { flex: 1 1 0; min-width: 0; }
+  .board-toolbar .project-filter-box { flex: 1 1 0; min-width: 0; }
   .board-toolbar .filter-box .theme-select {
     width: 100%;
     max-width: none;
@@ -637,8 +630,7 @@
 @media (max-width: 360px) {
   .board-toolbar { gap: 6px; }
   .board-toolbar > .search-box { padding-inline: 9px; gap: 7px; }
-  .board-toolbar .project-filter-box,
-  .board-toolbar > .tag-filter-box { padding-inline: 7px; gap: 6px; }
+  .board-toolbar .project-filter-box { padding-inline: 7px; gap: 6px; }
   .board-toolbar .search-shortcut-keycap { padding-inline: 5px; }
 }
 

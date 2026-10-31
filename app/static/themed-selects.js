@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SELECTOR = "#project-filter, #tag-filter, #workset-filter, [data-column-filter], [data-column-sort], #task-status, #task-type, #task-project, #task-workset";
+  const SELECTOR = "#project-filter, #workset-filter, [data-column-sort], #task-status, #task-type, #task-project, #task-workset";
   const instances = new Map();
   let nextId = 1;
   let openInstance = null;

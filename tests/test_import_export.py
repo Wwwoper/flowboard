@@ -44,7 +44,8 @@ not a task
     tasks = client.get("/api/tasks").json()
     by_title = {task["title"]: task for task in tasks}
     assert by_title["Починить авторизацию"]["status"] == "todo"
-    assert by_title["Починить авторизацию"]["tags"] == "backend, bug"
+    assert by_title["Починить авторизацию"]["tags"] == "backend"
+    assert by_title["Починить авторизацию"]["task_type"] == "bug"
     assert by_title["Добавить тесты"]["status"] == "todo"
     assert by_title["Настроить Ruff"]["status"] == "done"
     assert by_title["Настроить Ruff"]["closed_at"]
@@ -75,7 +76,8 @@ def test_import_export_markdown_round_trip(client):
     assert imported.status_code == 200
     before = client.get("/api/tasks").json()
     expected = {
-        (item["title"], item["status"], item["tags"], item["description"]) for item in before
+        (item["title"], item["status"], item["tags"], item["task_type"], item["description"])
+        for item in before
     }
 
     exported = client.get("/api/export?format=md")
@@ -93,7 +95,10 @@ def test_import_export_markdown_round_trip(client):
     assert response.json()["created"] == len(before)
     assert response.json()["skipped"] == []
     after = client.get("/api/tasks").json()
-    actual = {(item["title"], item["status"], item["tags"], item["description"]) for item in after}
+    actual = {
+        (item["title"], item["status"], item["tags"], item["task_type"], item["description"])
+        for item in after
+    }
     assert actual == expected
 
 
@@ -122,6 +127,7 @@ def test_zip_export_contains_manifest_and_all_attachments(client, tmp_path):
         assert manifest["format_version"] == 1
         archived_task = next(item for item in manifest["tasks"] if item["id"] == task["id"])
         assert archived_task["attachments"][0]["filename"] == "notes.txt"
+        assert archived_task["task_type"] == ""
         assert archived_task["attachments"][0]["archive_path"] == attachment_path
 
 
@@ -131,7 +137,8 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
         json={
             "title": "Export just this task",
             "description": "A **Markdown** description.",
-            "tags": "project:flowboard, bug, needs-review",
+            "tags": "project:flowboard, needs-review",
+            "task_type": "bug",
             "result": "Release published and smoke-tested.",
         },
     ).json()
@@ -170,7 +177,8 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
         post = loads(markdown)
         assert post.metadata["title"] == "Export just this task"
         assert post.metadata["status"] == "todo"
-        assert post.metadata["tags"] == ["project:flowboard", "bug", "needs-review"]
+        assert post.metadata["tags"] == ["project:flowboard", "needs-review"]
+        assert post.metadata["task_type"] == "bug"
         assert post.metadata["attachments"] == [
             "notes.txt",
             "notes (2).txt",

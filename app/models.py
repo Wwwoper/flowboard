@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.task_types import validate_custom_tags
+
 TaskStatus = Literal["todo", "doing", "waiting", "done"]
 
 
@@ -19,7 +21,13 @@ class TaskCreate(StrictModel):
     description: str = Field(default="", max_length=5000)
     result: str = Field(default="", max_length=5000)
     tags: str = Field(default="", max_length=1000)
+    task_type: str = Field(default="", pattern=r"^(|bug|feature|docs|refactor)$")
     workset_id: int | None = Field(default=None, gt=0)
+
+    @field_validator("tags")
+    @classmethod
+    def tags_must_not_use_reserved_type_names(cls, value: str) -> str:
+        return validate_custom_tags(value)
 
     @field_validator("title")
     @classmethod
@@ -37,7 +45,13 @@ class TaskPatch(StrictModel):
     status: TaskStatus | None = None
     position: float | None = None
     tags: str | None = Field(default=None, max_length=1000)
+    task_type: str | None = Field(default=None, pattern=r"^(|bug|feature|docs|refactor)$")
     workset_id: int | None = Field(default=None, gt=0)
+
+    @field_validator("tags")
+    @classmethod
+    def tags_must_not_use_reserved_type_names(cls, value: str | None) -> str | None:
+        return validate_custom_tags(value) if value is not None else value
 
     @field_validator("title")
     @classmethod
@@ -83,6 +97,7 @@ class TaskSummary(BaseModel):
     status: TaskStatus
     position: float
     tags: str
+    task_type: str = ""
     created_at: str
     updated_at: str
     closed_at: str | None

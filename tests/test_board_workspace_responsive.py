@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_board_workspace_uses_content_driven_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.4' in html
+    assert '/static/board-workspace.css?v=0.1.5' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
@@ -34,8 +34,8 @@ def test_narrow_layout_uses_page_scrolling_and_wraps_toolbar_controls(client):
     assert ".task-list, .task-list:empty { min-height: 20px; }" in base_css
     assert ".board-toolbar { flex-wrap: wrap; }" in css
     assert ".search-box { flex: 1 1 100%; min-width: 0; }" in css
-    assert ".project-filter-box," in css
-    assert ".tag-filter-box" in css
+    assert ".project-filter-box {" in css
+    assert 'id="task-filter-menu"' in html
     assert "min-width: 0;" in themed_css
     assert "overflow-wrap: anywhere;" in base_css
     assert 'id="quick-add-form"' in html

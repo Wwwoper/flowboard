@@ -28,15 +28,15 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'class="toolbar-group workset-toolbar-group"' in html
     assert html.index('id="project-filter"') < html.index('id="add-project"')
     assert html.index('id="add-project"') < html.index('id="workset-filter"')
-    assert html.index('id="workset-filter"') < html.index('id="tag-filter"')
+    assert html.index('id="workset-filter"') < html.index('id="task-filter-menu"')
     assert 'els.taskWorkset.closest(".task-workset-field")' in script
     assert "#task-workset" in client.get("/static/themed-selects.js").text
     assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.46" in html
-    assert "/static/themed-selects.js?v=0.1.4" in html
-    assert "/static/style.css?v=0.5.28" in html
+    assert "/static/app.js?v=0.5.47" in html
+    assert "/static/themed-selects.js?v=0.1.5" in html
+    assert "/static/style.css?v=0.5.29" in html
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
     assert "Показать ещё" in script
@@ -44,4 +44,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.4" in html
+    assert "/static/board-workspace.css?v=0.1.5" in html

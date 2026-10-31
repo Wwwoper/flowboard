@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.46" in html
-    assert "/static/style.css?v=0.5.28" in html
+    assert "/static/app.js?v=0.5.47" in html
+    assert "/static/style.css?v=0.5.29" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -135,10 +135,9 @@ def test_quick_add_can_assign_optional_task_type(client):
     assert "function setQuickTaskType(type)" in script
     assert "createTask(title, status, taskType)" in script
     assert 'setQuickTaskType("")' in script
-    assert (
-        'const inheritedTag = state.tag && !Object.hasOwn(TASK_TYPE_LABELS, state.tag.toLowerCase())'
-        in script
-    )
+    create_task = script.split("async function createTask(", 1)[1].split("async function undoCreation(", 1)[0]
+    assert 'task_type: taskType || ""' in create_task
+    assert 'taskFilters: readTaskFiltersFromUrl()' in script
 
     css = client.get("/static/style.css").text
     assert ".quick-task-type" in css
@@ -174,8 +173,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.46" in html
-    assert "/static/style.css?v=0.5.28" in html
+    assert "/static/app.js?v=0.5.47" in html
+    assert "/static/style.css?v=0.5.29" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -305,7 +304,7 @@ def test_main_board_promotes_task_import_and_moves_backup_to_settings(client):
     assert 'els.exportZip' not in script
 
 
-def test_archive_and_per_column_filters_are_available_without_adding_a_board_column(client):
+def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(client):
     html = client.get("/").text
     assert 'id="archive-dialog"' in html
     assert 'id="open-archive"' in html
@@ -315,12 +314,15 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     assert 'id="archive-project-filter"' in html
     assert 'id="archive-tag-filter"' in html
     assert html.count('data-column-options-toggle=') == 4
-    assert html.count('data-column-filter=') == 4
+    assert html.count('data-column-filter=') == 0
     assert html.count('data-column-sort=') == 4
+    assert 'id="task-filter-menu"' in html
+    assert 'id="task-filter-types"' in html
+    assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.46" in html
-    assert "/static/style.css?v=0.5.28" in html
+    assert "/static/app.js?v=0.5.47" in html
+    assert "/static/style.css?v=0.5.29" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -328,7 +330,8 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
     script = client.get("/static/app.js").text
     for fragment in (
         "function readColumnPreferences()",
-        "function populateColumnFilters()",
+        "function renderTaskFilters()",
+        "function matchesFilters(task, { skipTypes = false, skipTags = false } = {})",
         "function sortColumnTasks(tasks, mode)",
         'writeStorage("flowboard-column-preferences"',
         'api("/api/archive/tasks")',
@@ -354,7 +357,7 @@ def test_archive_and_per_column_filters_are_available_without_adding_a_board_col
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.28" in html
+    assert "/static/style.css?v=0.5.29" in html
     assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text
@@ -379,7 +382,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.12" in html
+    assert "/static/themed-controls.css?v=0.1.13" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
@@ -418,8 +421,8 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
 def test_column_header_actions_have_contextual_names_and_comfortable_hit_areas(client):
     html = client.get("/").text
     for label in ("К выполнению", "В работе", "Ожидает", "Готово"):
-        assert f'aria-label="Фильтр и сортировка задач: {label}"' in html
-        assert f'title="Фильтр и сортировка задач: {label}"' in html
+        assert f'aria-label="Сортировка задач: {label}"' in html
+        assert f'title="Сортировка задач: {label}"' in html
     for label in ("К выполнению", "В работе", "Ожидает"):
         assert f'aria-label="Добавить задачу в колонку «{label}»"' in html
 
@@ -431,3 +434,53 @@ def test_column_header_actions_have_contextual_names_and_comfortable_hit_areas(c
     assert "flex: 0 0 32px;" in css
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
+
+
+def test_unified_type_tag_filter_uses_or_within_groups_and_and_between_them(client):
+    import json
+    import shutil
+    import subprocess
+
+    if not shutil.which("node"):
+        return
+    script = client.get("/static/app.js").text
+    function = script.split("function matchesFilters", 1)[1].split(
+        "function availableBoardTags", 1
+    )[0]
+    tasks = [
+        {"id": 1, "task_type": "bug", "tags": "frontend"},
+        {"id": 2, "task_type": "feature", "tags": "ui"},
+        {"id": 3, "task_type": "docs", "tags": "frontend"},
+        {"id": 4, "task_type": "bug", "tags": "backend"},
+        {"id": 5, "task_type": "", "tags": "frontend"},
+    ]
+    node_script = f"""
+const state = {{search: "", project: "", worksetId: null,
+  taskFilters: {{types: ["bug", "feature"], tags: ["frontend", "ui"]}}}};
+const TASK_TYPE_LABELS = {{
+  bug: "Ошибка", feature: "Функция", docs: "Документация", refactor: "Рефакторинг"
+}};
+const normalizeSearch = value => String(value || "").toLocaleLowerCase("ru").replace(/ё/g, "е").trim();
+const taskTags = task => String(task.tags || "")
+  .split(",").map(tag => tag.trim()).filter(Boolean);
+const projectFromTag = () => "";
+const taskMatchesType = (task, value) => value === "__none__"
+  ? !task.task_type
+  : task.task_type === value;
+function matchesFilters{function}
+const tasks = {json.dumps(tasks, ensure_ascii=False)};
+const matched = tasks.filter(task => matchesFilters(task)).map(task => task.id);
+const typeCount = tasks.filter(task => matchesFilters(task, {{skipTypes: true}})
+  && (task.task_type === "bug" || task.task_type === "feature")).length;
+state.taskFilters.types = ["__none__"];
+const noneMatches = matchesFilters({{task_type: "", tags: "frontend"}}, {{skipTags: true}});
+console.log(JSON.stringify({{matched, typeCount, noneMatches}}));
+"""
+    result = subprocess.run(
+        ["node", "-e", node_script], check=True, capture_output=True, text=True
+    )
+    assert json.loads(result.stdout) == {
+        "matched": [1, 2],
+        "typeCount": 2,
+        "noneMatches": True,
+    }

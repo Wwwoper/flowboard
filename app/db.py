@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'doing', 'waiting', 'done')),
     position REAL NOT NULL DEFAULT 0,
     tags TEXT NOT NULL DEFAULT '',
+    task_type TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     closed_at TEXT NULL,
@@ -96,6 +98,31 @@ def initialize_database(db_path: str | Path | None = None) -> None:
     connection = connect(db_path)
     try:
         connection.executescript(SCHEMA)
+        task_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(tasks)").fetchall()
+        }
+        needs_task_type_migration = "task_type" not in task_columns
+        from app.task_types import split_legacy_tags
+
+        legacy_rows = [
+            row
+            for row in connection.execute("SELECT id, tags FROM tasks").fetchall()
+            if split_legacy_tags(row["tags"])[1]
+        ]
+        backup_file = None
+        backup_created = False
+        if needs_task_type_migration or legacy_rows:
+            backup_path = Path(db_path if db_path is not None else settings.db_path)
+            backup_file = backup_path.with_name(
+                backup_path.name + ".pre-task-type-migration.bak"
+            )
+            if not backup_file.exists():
+                backup_connection = sqlite3.connect(backup_file)
+                try:
+                    connection.backup(backup_connection)
+                    backup_created = True
+                finally:
+                    backup_connection.close()
         connection.execute("BEGIN IMMEDIATE")
         # Existing databases predate task archiving. Add the nullable column in-place
         # instead of rebuilding the table, preserving task IDs and attachment links.
@@ -106,6 +133,44 @@ def initialize_database(db_path: str | Path | None = None) -> None:
             connection.execute("ALTER TABLE tasks ADD COLUMN archived_at TEXT NULL")
         if "result" not in task_columns:
             connection.execute("ALTER TABLE tasks ADD COLUMN result TEXT NOT NULL DEFAULT ''")
+        if "task_type" not in task_columns:
+            connection.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT NOT NULL DEFAULT ''")
+
+        migration_report = {
+            "migrated": 0,
+            "removed": 0,
+            "conflicts": [],
+            "backup_file": backup_file.name if backup_file else None,
+            "backup_created": backup_created,
+        }
+        for row in connection.execute("SELECT id, tags, task_type FROM tasks").fetchall():
+            clean_tags, legacy_types = split_legacy_tags(row["tags"])
+            if not legacy_types:
+                continue
+            current_type = str(row["task_type"] or "").strip()
+            selected_type = current_type or legacy_types[0]
+            if len(legacy_types) > 1 or (
+                current_type and any(item != current_type for item in legacy_types)
+            ):
+                migration_report["conflicts"].append(
+                    {
+                        "task_id": row["id"],
+                        "existing_type": current_type,
+                        "legacy_types": legacy_types,
+                    }
+                )
+            connection.execute(
+                "UPDATE tasks SET tags = ?, task_type = ? WHERE id = ?",
+                (", ".join(clean_tags), selected_type, row["id"]),
+            )
+            migration_report["migrated"] += int(not current_type)
+            migration_report["removed"] += len(legacy_types)
+        if needs_task_type_migration or legacy_rows:
+            connection.execute(
+                "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                ("task_type_migration_report", json.dumps(migration_report, ensure_ascii=False)),
+            )
 
         # Event identifiers are historical snapshots, not live relationships. Keep
         # them when a task or workset is physically deleted.

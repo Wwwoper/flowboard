@@ -128,7 +128,7 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.46" in response.text
+    assert "/static/app.js?v=0.5.47" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):
@@ -189,3 +189,37 @@ def test_task_result_validation_and_old_records_default_to_empty(client):
     assert client.patch(
         f"/api/tasks/{created['id']}", json={"result": "x" * 5001}
     ).status_code == 422
+
+
+def test_task_type_is_a_separate_field_and_reserved_tag_names_are_rejected(client):
+    created = client.post(
+        "/api/tasks",
+        json={"title": "Typed task", "task_type": "feature", "tags": "backend, review"},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["task_type"] == "feature"
+    assert created.json()["tags"] == "backend, review"
+
+    updated = client.patch(
+        f"/api/tasks/{created.json()['id']}", json={"task_type": "docs"}
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["task_type"] == "docs"
+
+    for reserved in ("bug", "BUG", "Ошибка", "ФУНКЦИЯ", "docs", "Документация", "Рефакторинг"):
+        response = client.post("/api/tasks", json={"title": "Invalid tag", "tags": reserved})
+        assert response.status_code == 422, reserved
+
+    response = client.patch(
+        f"/api/tasks/{created.json()['id']}", json={"tags": "backend, Рефакторинг"}
+    )
+    assert response.status_code == 422
+
+
+def test_task_type_migration_report_endpoint_returns_a_stable_shape(client):
+    response = client.get("/api/task-type-migration-report")
+    assert response.status_code == 200
+    assert response.json() == {
+        "migrated": 0, "removed": 0, "conflicts": [],
+        "backup_file": None, "backup_created": False,
+    }

@@ -47,10 +47,10 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' not in html
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.52" in html
-    assert "/static/themed-selects.js?v=0.1.6" in html
+    assert "/static/app.js?v=0.5.53" in html
+    assert "/static/themed-selects.js?v=0.1.7" in html
     assert "/static/style.css?v=0.5.33" in html
-    assert "/static/board-workspace.css?v=0.1.8" in html
+    assert "/static/board-workspace.css?v=0.1.9" in html
     toolbar_css = client.get("/static/board-workspace.css").text
     assert ".board-toolbar .filter-box {" in toolbar_css
     assert "background: var(--gh-control, var(--surface));" in toolbar_css
@@ -58,7 +58,26 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert ".workset-filter-box .theme-select-value" in toolbar_css
     select_script = client.get("/static/themed-selects.js").text
     assert 'instance.select.id === "workset-filter"' in select_script
-    assert "instance.trigger.title = valueLabel" in select_script
+    assert 'instance.trigger.title = instance.select.title || valueLabel' in select_script
+    assert 'if (instance.select.disabled && openInstance === instance) close(instance);' in select_script
+    assert 'menu.classList.add("workset-filter-menu")' in select_script
+    assert 'document.addEventListener("focusin", (event) =>' in select_script
+    assert 'openInstance.wrapper.contains(event.target) || openInstance.menu.contains(event.target)' in select_script
+    assert 'attributeFilter: ["disabled", "hidden", "label", "title", "value"]' in select_script
+    assert 'const activeWorksets = state.worksets.filter((workset) => workset.status === "active");' in script
+    assert 'const hasSelectableWorksets = activeWorksets.length > 0 || selectedWorkset?.status === "completed";' in script
+    assert 'els.worksetFilter.disabled = !hasSelectableWorksets;' in script
+    assert 'Создайте первый набор задач' in script
+    assert 'hasSelectableWorksets ? "Все задачи проекта" : "Все задачи"' in script
+    assert 'filterBox?.classList.toggle("is-empty", !hasSelectableWorksets)' in script
+    assert 'class="workset-context" aria-live="polite"' in html
+    assert 'els.worksetContext.hidden = false;' in script
+    assert 'height: 28px; min-height: 28px;' in toolbar_css
+    assert '.workset-filter-box.is-empty .theme-select-chevron { display: none; }' in toolbar_css
+    assert '.workset-filter-menu .theme-select-option[aria-selected="true"]::before' in toolbar_css
+    assert '.workset-filter-menu .theme-select-option[aria-selected="true"]:hover' in toolbar_css
+    assert '.board-toolbar .filter-box:has(.theme-select-trigger:focus-visible)' in toolbar_css
+    assert '.board-toolbar .filter-box:focus-within' not in toolbar_css
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
     assert "Показать ещё" in script
@@ -66,4 +85,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.8" in html
+    assert "/static/board-workspace.css?v=0.1.9" in html

@@ -532,14 +532,29 @@
 
   function populateWorksetFilter() {
     const selected = state.worksetId ? String(state.worksetId) : "";
-    els.worksetFilter.replaceChildren(new Option(state.project ? "Все задачи проекта" : "Все задачи", ""));
-    state.worksets.filter((workset) => workset.status === "active").forEach((workset) => {
+    const selectedWorkset = state.worksets.find((workset) => String(workset.id) === selected);
+    const activeWorksets = state.worksets.filter((workset) => workset.status === "active");
+    const hasSelectableWorksets = activeWorksets.length > 0 || selectedWorkset?.status === "completed";
+    const emptyHint = !state.project
+      ? "Сначала выберите проект"
+      : state.worksets.length
+        ? "Нет активных наборов. Создайте новый через «Действия»"
+        : "Создайте первый набор задач";
+    const filterBox = els.worksetFilter.closest(".workset-filter-box");
+    filterBox?.classList.toggle("is-empty", !hasSelectableWorksets);
+    if (filterBox) filterBox.title = hasSelectableWorksets ? "" : emptyHint;
+    els.worksetFilter.disabled = !hasSelectableWorksets;
+    els.worksetFilter.title = hasSelectableWorksets ? "" : emptyHint;
+    els.worksetFilter.replaceChildren(new Option(
+      hasSelectableWorksets ? "Все задачи проекта" : "Все задачи",
+      "",
+    ));
+    activeWorksets.forEach((workset) => {
       els.worksetFilter.appendChild(new Option(
         `${workset.name} · ${workset.done_count}/${workset.task_count}`,
         String(workset.id),
       ));
     });
-    const selectedWorkset = state.worksets.find((workset) => String(workset.id) === selected);
     if (selectedWorkset?.status === "completed") {
       els.worksetFilter.appendChild(new Option(`История: ${selectedWorkset.name}`, selected));
     }
@@ -557,7 +572,7 @@
 
   function renderWorksetContext(workset = state.worksets.find((item) => item.id === state.worksetId)) {
     els.worksetContext.replaceChildren();
-    els.worksetContext.hidden = !workset;
+    els.worksetContext.hidden = false;
     if (!workset) return;
     els.worksetContext.appendChild(make("span", "workset-context-label", `Набор: ${workset.name} · ${workset.done_count} из ${workset.task_count}`));
     const clear = make("button", "workset-context-clear", "Все задачи проекта ×");

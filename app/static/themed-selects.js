@@ -42,9 +42,17 @@
     const selected = selectedOption(instance.select);
     const valueLabel = selected?.textContent.trim() || "Выбрать значение";
     if (instance.valueLabel.textContent !== valueLabel) instance.valueLabel.textContent = valueLabel;
-    instance.trigger.setAttribute("aria-label", `${instance.label}: ${valueLabel}`);
+    const isEmptyWorksetFilter = instance.select.id === "workset-filter" && instance.select.disabled;
+    const disabledHint = isEmptyWorksetFilter ? instance.select.title : "";
+    instance.trigger.setAttribute(
+      "aria-label",
+      `${instance.label}: ${valueLabel}${disabledHint ? `. ${disabledHint}.` : ""}`,
+    );
     instance.trigger.setAttribute("aria-valuetext", valueLabel);
-    if (instance.select.id === "workset-filter") instance.trigger.title = valueLabel;
+    if (instance.select.id === "workset-filter") {
+      instance.trigger.title = instance.select.title || valueLabel;
+    }
+    if (instance.select.disabled && openInstance === instance) close(instance);
     instance.trigger.disabled = instance.select.disabled;
     instance.menu.querySelectorAll("[role=option]").forEach((item) => {
       const isSelected = item.dataset.value === instance.select.value;
@@ -190,6 +198,7 @@
 
     const menu = document.createElement("div");
     menu.className = "theme-select-menu";
+    if (select.id === "workset-filter") menu.classList.add("workset-filter-menu");
     menu.id = `theme-select-menu-${nextId++}`;
     menu.setAttribute("role", "listbox");
     menu.setAttribute("aria-label", labelFor(select));
@@ -228,7 +237,7 @@
     });
     select.addEventListener("change", () => syncValue(instance));
     const observer = new MutationObserver(() => renderOptions(instance));
-    observer.observe(select, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "hidden", "label", "value"] });
+    observer.observe(select, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "hidden", "label", "title", "value"] });
     instance.observer = observer;
     renderOptions(instance);
   }
@@ -241,6 +250,11 @@
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && openInstance) close(openInstance, true);
+  });
+  document.addEventListener("focusin", (event) => {
+    if (!openInstance) return;
+    if (openInstance.wrapper.contains(event.target) || openInstance.menu.contains(event.target)) return;
+    close(openInstance);
   });
   document.addEventListener("scroll", (event) => {
     if (openInstance && !event.target.closest?.(".theme-select-menu")) close(openInstance);

@@ -41,7 +41,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/app.js?v=0.5.53" in html
     assert "/static/style.css?v=0.5.33" in html
 
 
@@ -188,7 +188,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/app.js?v=0.5.53" in html
     assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
@@ -385,7 +385,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/app.js?v=0.5.53" in html
     assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' in html

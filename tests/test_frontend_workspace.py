@@ -166,6 +166,10 @@ def test_quick_add_can_assign_optional_task_type(client):
         assert f'--quick-type-bg: var(--{background}' in picker_css
     assert '.quick-add[data-task-type] .quick-task-type > summary.quick-task-type-trigger' in picker_css
     assert '.quick-add[data-task-type] .quick-add-entry' in picker_css
+    assert (
+        '.quick-add[data-task-type] .quick-add-form {\n  padding-inline: 10px 0;\n}'
+        in picker_css
+    )
     create_task = script.split("async function createTask(", 1)[1].split("async function undoCreation(", 1)[0]
     assert 'task_type: taskType || ""' in create_task
     assert 'taskFilters: readTaskFiltersFromUrl()' in script

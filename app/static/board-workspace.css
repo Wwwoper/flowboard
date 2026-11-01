@@ -629,7 +629,7 @@
   transition: background .15s ease, border-color .15s ease;
 }
 .quick-add[data-task-type] .quick-add-form {
-  padding-inline: 10px;
+  padding-inline: 10px 0;
 }
 .quick-add[data-task-type] .quick-task-type > summary.quick-task-type-trigger {
   color: var(--quick-type-fg);

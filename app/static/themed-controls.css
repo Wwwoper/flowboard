@@ -577,21 +577,21 @@
   font-weight: 600;
   line-height: 1.35;
 }
-.toolbar-menu-panel .theme-manager-select,
-.settings-dialog .theme-manager-select {
+.toolbar-menu-panel .theme-manager-select-wrapper,
+.settings-dialog .theme-manager-select-wrapper {
   box-sizing: border-box;
-  display: block;
+  display: flex;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  margin: 0;
-  padding: 8px 30px 8px 10px;
+  margin: 0 0 12px;
+}
+.toolbar-menu-panel .theme-manager-select-wrapper .theme-select-trigger,
+.settings-dialog .theme-manager-select-wrapper .theme-select-trigger {
+  padding: 8px 10px;
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
 }
 .theme-manager-help,
 .theme-manager-status {

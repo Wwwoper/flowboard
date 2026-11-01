@@ -3,8 +3,8 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.15' in html
-    assert '/static/themed-selects.js?v=0.1.8' in html
+    assert '/static/themed-controls.css?v=0.1.16' in html
+    assert '/static/themed-selects.js?v=0.1.9' in html
 
     css_response = client.get("/static/themed-controls.css")
     assert css_response.status_code == 200
@@ -19,6 +19,8 @@ def test_theme_aware_controls_assets_are_loaded(client):
         'color: var(--gh-yellow-fg, var(--orange))',
         'color: var(--gh-purple-fg, var(--accent-dark))',
         ".theme-select-trigger",
+        ".settings-dialog .theme-manager-select-wrapper .theme-select-trigger",
+        ".theme-manager-select-wrapper {",
         ".theme-select-menu[hidden]",
         '.theme-select-option[aria-selected="true"]',
         ".toolbar-main-group > .search-box",
@@ -47,6 +49,7 @@ def test_theme_aware_controls_assets_are_loaded(client):
         '#task-status',
         '#task-type',
         '#task-project',
+        '#saved-themes-select',
         'setAttribute("role", "listbox")',
         'setAttribute("role", "option")',
         'event.key === "ArrowDown"',
@@ -58,3 +61,4 @@ def test_theme_aware_controls_assets_are_loaded(client):
         assert fragment in script
     assert "#tag-filter" not in script
     assert "[data-column-filter]" not in script
+    assert 'wrapper.classList.add("theme-manager-select-wrapper")' in script

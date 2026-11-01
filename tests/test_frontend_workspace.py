@@ -448,7 +448,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
     assert "/static/style.css?v=0.5.33" in html
     assert '/static/github-theme.css?v=0.2.5' in html
-    assert '/static/themed-controls.css?v=0.1.15' in html
+    assert '/static/themed-controls.css?v=0.1.16' in html
     assert '/static/board-workspace.css?v=0.1.18' in html
     assert '/static/app.js?v=0.5.58' in html
 
@@ -486,7 +486,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
     controls = client.get("/static/themed-controls.css").text
-    assert "/static/themed-controls.css?v=0.1.15" in html
+    assert "/static/themed-controls.css?v=0.1.16" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
@@ -509,10 +509,9 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     ):
         assert fragment in html
 
-    assert ".theme-manager-select" in controls
-    assert "text-overflow: ellipsis" in controls
+    assert ".theme-manager-select-wrapper" in controls
+    assert ".settings-dialog .theme-manager-select-wrapper .theme-select-trigger" in controls
     assert ".toolbar-menu-section" in controls
-    assert ".settings-dialog .theme-manager-select" in controls
 
     script = client.get("/static/app.js").text
     assert 'Активна встроенная тема. Сохранено тем: ${themes.length}' in script

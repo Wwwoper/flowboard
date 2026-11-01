@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SELECTOR = "#project-filter, #workset-filter, [data-column-sort], #task-status, #task-type, #task-project, #task-workset";
+  const SELECTOR = "#project-filter, #workset-filter, [data-column-sort], #task-status, #task-type, #task-project, #task-workset, #saved-themes-select";
   const instances = new Map();
   let nextId = 1;
   let openInstance = null;
@@ -206,6 +206,9 @@
 
     const wrapper = document.createElement("span");
     wrapper.className = "theme-select";
+    if (select.classList.contains("theme-manager-select")) {
+      wrapper.classList.add("theme-manager-select-wrapper");
+    }
     select.before(wrapper);
     wrapper.appendChild(select);
     select.classList.add("theme-select-native");

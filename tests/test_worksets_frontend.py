@@ -51,7 +51,7 @@ def test_workset_controls_are_available_without_a_separate_context_row(client):
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
     assert "/static/app.js?v=0.5.58" in html
-    assert "/static/themed-selects.js?v=0.1.8" in html
+    assert "/static/themed-selects.js?v=0.1.9" in html
     assert "/static/style.css?v=0.5.33" in html
     assert "/static/board-workspace.css?v=0.1.18" in html
     toolbar_css = client.get("/static/board-workspace.css").text

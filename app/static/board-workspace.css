@@ -839,3 +839,52 @@
   .workset-filter-box .theme-select { width: 100%; max-width: none; }
   .toolbar-actions-group { margin-left: auto; }
 }
+
+/* Keyboard focus uses one theme-aware ring; pointer focus stays visually quiet. */
+:root {
+  --focus-ring: var(--gh-focus, color-mix(in srgb, var(--accent) 35%, transparent));
+}
+
+*:focus {
+  outline: none !important;
+}
+
+:root[data-focus-modality="keyboard"] *:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+:root[data-focus-modality="pointer"] *:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:root[data-focus-modality="keyboard"] .quick-add:has(.quick-add-form input:focus-visible),
+:root[data-focus-modality="keyboard"] .search-box:has(input:focus-visible),
+:root[data-focus-modality="keyboard"] .filter-box:has(:is(select, .theme-select-trigger):focus-visible),
+:root[data-focus-modality="keyboard"] .toast-position-option:has(input:focus-visible) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+:root[data-focus-modality="keyboard"] .quick-add:has(.quick-add-form input:focus-visible) .quick-add-form input:focus-visible,
+:root[data-focus-modality="keyboard"] .search-box:has(input:focus-visible) input:focus-visible,
+:root[data-focus-modality="keyboard"] .filter-box:has(:is(select, .theme-select-trigger):focus-visible) :is(select, .theme-select-trigger):focus-visible,
+:root[data-focus-modality="keyboard"] .toast-position-option:has(input:focus-visible) input:focus-visible {
+  box-shadow: none !important;
+}
+
+/* Legacy :focus-within wrappers must not react to pointer focus. */
+:root[data-focus-modality="pointer"] .toolbar-main-group > .search-box:focus-within,
+:root[data-focus-modality="pointer"] .toast-position-option:focus-within {
+  outline: none !important;
+  border-color: var(--line);
+  box-shadow: none !important;
+}
+
+:root[data-focus-modality="keyboard"] .toolbar-main-group > .search-box:has(input:focus-visible),
+:root[data-focus-modality="keyboard"] .toast-position-option:has(input:focus-visible) {
+  border-color: var(--accent);
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}

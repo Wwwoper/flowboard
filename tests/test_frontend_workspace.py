@@ -42,7 +42,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.56" in html
+    assert "/static/app.js?v=0.5.57" in html
     assert "/static/style.css?v=0.5.33" in html
 
 
@@ -209,7 +209,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.56" in html
+    assert "/static/app.js?v=0.5.57" in html
     assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
@@ -406,7 +406,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.56" in html
+    assert "/static/app.js?v=0.5.57" in html
     assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' in html
@@ -442,33 +442,48 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert "flex: 0 0 32px;" in css
 
 
-def test_input_focus_does_not_highlight_form_frames(client):
+def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
     assert "/static/style.css?v=0.5.33" in html
     assert '/static/github-theme.css?v=0.2.5' in html
+    assert '/static/themed-controls.css?v=0.1.15' in html
+    assert '/static/board-workspace.css?v=0.1.17' in html
+    assert '/static/app.js?v=0.5.57' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
+    workspace = client.get("/static/board-workspace.css").text
+    script = client.get("/static/app.js").text
 
     for stylesheet in (style, theme):
         assert "button:focus-visible" in stylesheet
-        assert "input:focus-visible" not in stylesheet
-        assert "select:focus-visible" not in stylesheet
-        assert "textarea:focus-visible" not in stylesheet
+        assert "\ninput:focus-visible {" not in stylesheet
+        assert "\nselect:focus-visible {" not in stylesheet
+        assert "\ntextarea:focus-visible {" not in stylesheet
 
-    for selector in (".quick-add:focus-within", ".text-field:focus {"):
-        assert selector not in style
-    for selector in (
-        ".quick-add:focus-within",
-        ".search-box:focus-within",
-        ".filter-box:focus-within",
-        ".text-field:focus {",
-    ):
-        assert selector not in theme
+    assert "--focus-ring: var(--gh-focus, color-mix(in srgb, var(--accent) 35%, transparent));" in workspace
+    assert "*:focus {\n  outline: none !important;\n}" in workspace
+    assert ':root[data-focus-modality="keyboard"] *:focus-visible' in workspace
+    assert ':root[data-focus-modality="pointer"] *:focus-visible' in workspace
+    assert ".quick-add:has(.quick-add-form input:focus-visible)" in workspace
+    assert ".search-box:has(input:focus-visible)" in workspace
+    assert ".filter-box:has(:is(select, .theme-select-trigger):focus-visible)" in workspace
+    assert ".toast-position-option:has(input:focus-visible)" in workspace
+    assert ".toolbar-main-group > .search-box:has(input:focus-visible)" in workspace
+    assert (
+        ':root[data-focus-modality="pointer"] .toolbar-main-group > .search-box:focus-within,\n'
+        ':root[data-focus-modality="pointer"] .toast-position-option:focus-within {\n  outline: none !important;'
+    ) in workspace
+    assert "box-shadow: none !important;" in workspace
+    assert 'focusRoot.dataset.focusModality = "pointer"' in script
+    assert 'focusRoot.dataset.focusModality = "keyboard"' in script
+    assert 'document.addEventListener("pointerdown"' in script
+    assert 'document.addEventListener("keydown"' in script
 
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
+    controls = client.get("/static/themed-controls.css").text
     assert "/static/themed-controls.css?v=0.1.15" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
@@ -492,7 +507,6 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     ):
         assert fragment in html
 
-    controls = client.get("/static/themed-controls.css").text
     assert ".theme-manager-select" in controls
     assert "text-overflow: ellipsis" in controls
     assert ".toolbar-menu-section" in controls

@@ -1,6 +1,16 @@
 (() => {
   "use strict";
 
+  // Text inputs can match :focus-visible after pointer clicks in some browsers.
+  const focusRoot = document.documentElement;
+  document.addEventListener("pointerdown", () => {
+    focusRoot.dataset.focusModality = "pointer";
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+    focusRoot.dataset.focusModality = "keyboard";
+  }, true);
+
   const STATUSES = ["todo", "doing", "waiting", "done"];
   const CREATE_PROJECT_OPTION = "__create_project__";
   const MAX_TASK_TEXT_LENGTH = 30000;

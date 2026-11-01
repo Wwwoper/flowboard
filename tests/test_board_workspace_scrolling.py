@@ -1,6 +1,6 @@
 def test_board_workspace_uses_available_height_and_scrollable_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.16' in html
+    assert '/static/board-workspace.css?v=0.1.17' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css

@@ -48,9 +48,17 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
     assert "/static/app.js?v=0.5.52" in html
-    assert "/static/themed-selects.js?v=0.1.5" in html
+    assert "/static/themed-selects.js?v=0.1.6" in html
     assert "/static/style.css?v=0.5.33" in html
-    assert "/static/board-workspace.css?v=0.1.7" in html
+    assert "/static/board-workspace.css?v=0.1.8" in html
+    toolbar_css = client.get("/static/board-workspace.css").text
+    assert ".board-toolbar .filter-box {" in toolbar_css
+    assert "background: var(--gh-control, var(--surface));" in toolbar_css
+    assert ".board-toolbar .filter-box:has(.theme-select.is-open)" in toolbar_css
+    assert ".workset-filter-box .theme-select-value" in toolbar_css
+    select_script = client.get("/static/themed-selects.js").text
+    assert 'instance.select.id === "workset-filter"' in select_script
+    assert "instance.trigger.title = valueLabel" in select_script
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
     assert "Показать ещё" in script
@@ -58,4 +66,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.7" in html
+    assert "/static/board-workspace.css?v=0.1.8" in html

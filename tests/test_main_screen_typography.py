@@ -49,7 +49,7 @@ def test_main_screen_uses_shared_typography_and_spacing_tokens(client):
     assert "clamp(1.625rem, 2.4vw, 1.875rem)" in css
     assert "overflow-wrap: anywhere;" in css
     assert 'href="/static/style.css?v=0.5.33"' in html
-    assert 'href="/static/board-workspace.css?v=0.1.7"' in html
+    assert 'href="/static/board-workspace.css?v=0.1.8"' in html
     assert ".toolbar-menu-trigger" in css
     assert ".settings-open-button::after,\n.topbar-import-button::after { display: none; }" in css
 

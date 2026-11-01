@@ -365,7 +365,7 @@
   .project-toolbar-group { flex: 0 1 190px; min-width: 150px; }
   .project-filter-box { width: 100%; min-width: 0; }
   .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
-  .workset-toolbar-group { flex: 0 1 300px; min-width: 230px; }
+  .workset-toolbar-group { flex: 0 1 320px; min-width: 270px; }
   .workset-filter-box { flex: 1 1 auto; min-width: 0; }
   .workset-filter-box .theme-select { width: 100%; min-width: 0; }
 }
@@ -408,6 +408,38 @@
   background: var(--surface-soft);
 }
 .task-filter-menu > summary { min-height: 40px; }
+
+/* Project and workset selectors share the quiet-button surface and interaction states. */
+.board-toolbar .filter-box {
+  color: var(--ink-soft);
+  border-color: var(--line);
+  background: var(--gh-control, var(--surface));
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+.board-toolbar .filter-box:hover,
+.board-toolbar .filter-box:focus-within,
+.board-toolbar .filter-box:has(.theme-select.is-open) {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+.board-toolbar .filter-box .theme-select-trigger {
+  color: inherit;
+  font-weight: 600;
+}
+.board-toolbar .filter-box .theme-select-trigger:hover:not(:disabled),
+.board-toolbar .filter-box .theme-select.is-open .theme-select-trigger {
+  color: var(--ink);
+  border-color: transparent;
+  background: transparent;
+}
+.workset-filter-box .theme-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 /* A single, compact type picker replaces the row of filter-like type chips. */
 .quick-add { flex-wrap: nowrap; }

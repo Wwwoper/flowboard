@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_board_workspace_uses_fixed_height_desktop_columns_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.7' in html
+    assert '/static/board-workspace.css?v=0.1.8' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css

@@ -44,6 +44,7 @@
     if (instance.valueLabel.textContent !== valueLabel) instance.valueLabel.textContent = valueLabel;
     instance.trigger.setAttribute("aria-label", `${instance.label}: ${valueLabel}`);
     instance.trigger.setAttribute("aria-valuetext", valueLabel);
+    if (instance.select.id === "workset-filter") instance.trigger.title = valueLabel;
     instance.trigger.disabled = instance.select.disabled;
     instance.menu.querySelectorAll("[role=option]").forEach((item) => {
       const isSelected = item.dataset.value === instance.select.value;

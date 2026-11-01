@@ -53,7 +53,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "/static/app.js?v=0.5.54" in html
     assert "/static/themed-selects.js?v=0.1.7" in html
     assert "/static/style.css?v=0.5.33" in html
-    assert "/static/board-workspace.css?v=0.1.10" in html
+    assert "/static/board-workspace.css?v=0.1.11" in html
     toolbar_css = client.get("/static/board-workspace.css").text
     assert ".board-toolbar .filter-box {" in toolbar_css
     assert "background: var(--gh-control, var(--surface));" in toolbar_css
@@ -95,4 +95,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.10" in html
+    assert "/static/board-workspace.css?v=0.1.11" in html

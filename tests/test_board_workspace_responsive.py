@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import re
 
-def test_board_workspace_uses_fixed_height_desktop_columns_with_internal_scrolling(client):
+
+def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.10' in html
+    assert '/static/board-workspace.css?v=0.1.11' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "height: max(260px, calc(100dvh - 300px));" in css
+    assert "min-height: 100dvh;" in css
+    assert ".app-shell > main" in css
+    assert "flex: 1 1 auto;" in css
+    assert "height: auto;" in css
+    assert "min-height: 260px;" in css
+    assert ".page-footer" in css
+    assert "margin-top: auto;" in css
+    assert "height: max(260px, calc(100dvh - 300px));" not in css
     assert "min-height: 0;" in css
     assert "align-items: stretch;" in css
     assert "display: flex;" in css
@@ -34,7 +43,8 @@ def test_narrow_layout_uses_page_scrolling_and_wraps_toolbar_controls(client):
     assert ".board { grid-template-columns: minmax(0, 1fr);" in base_css
     assert ".task-list, .task-list:empty { min-height: 20px; }" in base_css
     assert ".board-toolbar { flex-wrap: wrap; }" in css
-    assert ".search-box { flex: 1 1 100%; min-width: 0; }" in css
+    assert ".board-toolbar > .search-box" in css
+    assert "flex: 1 1 100%;" in css
     assert ".project-filter-box {" in css
     assert 'id="task-filter-menu"' in html
     assert "min-width: 0;" in themed_css
@@ -82,3 +92,18 @@ def test_board_and_task_panel_keep_long_content_wrappable_at_small_viewports(cli
     assert "grid-template-columns: minmax(0, 1fr);" in css
     assert ".task-panel { padding: 14px; overflow-y: auto; display: block; }" in css
     assert ".attachment-list { flex: 0 0 auto; max-height: 180px; min-height: 0; }" in css
+
+
+def test_board_toolbar_keeps_actions_adjacent_to_filters(client):
+    html = client.get("/").text
+    css = client.get("/static/board-workspace.css").text
+
+    assert 'class="toolbar-filters-group" aria-label="Фильтры доски"' in html
+    assert 'class="toolbar-actions-group"' in html
+    assert "gap: 12px;" in css
+    assert "margin-left: 0;" in css
+    assert all(
+        "margin-left: auto;" not in rule
+        for rule in re.findall(r"\.toolbar-actions-group\s*\{([^}]*)\}", css)
+    )
+    assert ".workset-toolbar-group:has(> .workset-filter-box[hidden])" in css

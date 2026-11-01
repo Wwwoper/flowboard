@@ -1,10 +1,15 @@
-def test_board_workspace_uses_fixed_height_and_scrollable_desktop_columns(client):
+def test_board_workspace_uses_available_height_and_scrollable_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.10' in html
+    assert '/static/board-workspace.css?v=0.1.11' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "height: max(260px, calc(100dvh - 300px));" in css
+    assert "min-height: 100dvh;" in css
+    assert ".app-shell > main" in css
+    assert "height: auto;" in css
+    assert "min-height: 260px;" in css
+    assert "margin-top: auto;" in css
+    assert "height: max(260px, calc(100dvh - 300px));" not in css
     assert "align-items: stretch;" in css
     assert "height: 100%;" in css
     assert "min-height: 0;" in css

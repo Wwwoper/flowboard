@@ -29,10 +29,31 @@
 }
 
 @media (min-width: 1181px) {
-  .board {
-    height: max(260px, calc(100vh - 300px));
-    height: max(260px, calc(100dvh - 300px));
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .app-shell > main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     min-height: 0;
+  }
+
+  .page-heading,
+  .quick-add,
+  .focus-bar,
+  .board-toolbar,
+  .workset-context {
+    flex-shrink: 0;
+  }
+
+  .board {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 260px;
     align-items: stretch;
   }
 
@@ -45,6 +66,11 @@
 
   .board-column > .column-header {
     flex: 0 0 auto;
+  }
+
+  .page-footer {
+    flex: 0 0 auto;
+    margin-top: auto;
   }
 
   .board-column > .task-list {
@@ -344,9 +370,6 @@
   .quick-task-type { flex-wrap: wrap; }
 }
 
-@media (min-width: 1181px) {
-  .board-column { min-height: max(260px, calc(100dvh - 300px)); }
-}
 .board-column.is-empty > .column-empty {
   margin: 4px 3px 10px;
   padding: 8px 9px;
@@ -354,19 +377,52 @@
 }
 /* Homepage toolbar and quick-add controls use one compact, consistent rhythm. */
 @media (min-width: 1181px) {
-  .board-toolbar { flex-wrap: nowrap; align-items: center; }
-  .board-toolbar > .search-box {
-    flex: 1 1 280px;
-    width: auto;
-    max-width: none;
-    min-width: 200px;
+  .board-toolbar {
+    flex-wrap: nowrap;
+    align-items: center;
   }
-  .project-toolbar-group { flex: 0 1 190px; min-width: 150px; }
-  .project-filter-box { width: 100%; min-width: 0; }
-  .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
-  .workset-toolbar-group { flex: 0 1 320px; min-width: 270px; }
-  .workset-filter-box { flex: 1 1 auto; min-width: 0; }
-  .workset-filter-box .theme-select { width: 100%; min-width: 0; }
+
+  .project-toolbar-group {
+    flex: 0 1 190px;
+    min-width: 150px;
+  }
+
+  .project-filter-box {
+    flex: 0 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-filter-box .theme-select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .workset-toolbar-group {
+    flex: 0 1 260px;
+    min-width: 0;
+  }
+
+  .workset-filter-box {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 260px;
+    min-width: 0;
+  }
+
+  .workset-filter-box .theme-select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .toolbar-filters-group {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
 }
 
 .board-toolbar .search-box,
@@ -550,7 +606,6 @@
 
 /* Board height follows the available viewport; visible scrollbars signal long columns. */
 @media (min-width: 1181px) {
-  .board { height: max(260px, calc(100dvh - 300px)); }
   .board-column > .task-list {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--ink-soft) 48%, transparent) transparent;
@@ -625,15 +680,6 @@
   background: var(--gh-yellow-bg);
 }
 
-@media (max-width: 1180px) {
-  .board-toolbar { flex-wrap: wrap; }
-  .board-toolbar > .search-box { flex: 1 1 100%; width: 100%; min-width: 0; }
-  .project-toolbar-group { flex: 1 1 170px; min-width: 0; }
-  .project-filter-box, .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
-  .workset-toolbar-group { flex: 1 1 250px; min-width: 0; }
-  .workset-filter-box { flex: 1 1 auto; min-width: 0; }
-  .workset-filter-box .theme-select { width: 100%; min-width: 0; }
-}
 @media (max-width: 760px) {
   .quick-add { flex-wrap: wrap; }
   .quick-add-entry { flex: 1 1 100%; }
@@ -646,14 +692,13 @@
   .done-toggle { min-width: 68px; }
 }
 
-/* The board toolbar keeps search roomy and groups filters separately from actions. */
+/* Keep all board controls together; wrap only when the viewport needs another row. */
 .board-toolbar {
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
   gap: 12px;
-  min-height: 40px;
 }
+
 .board-toolbar > .search-box {
   flex: 1 1 320px;
   width: auto;
@@ -661,32 +706,45 @@
   max-width: 480px;
   container-type: inline-size;
 }
+
 .board-toolbar > .search-box input { min-width: 0; }
 .board-toolbar .search-shortcut-keycap { flex: 0 0 auto; }
+
 .toolbar-filters-group,
 .toolbar-actions-group {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
 }
-.toolbar-filters-group { flex: 0 1 auto; }
-.toolbar-actions-group { flex: 0 0 auto; margin-left: auto; }
+
+.toolbar-filters-group {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.toolbar-actions-group {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+
 .toolbar-divider { display: none; }
-.project-toolbar-group,
-.workset-toolbar-group { flex: 0 1 auto; min-width: 0; }
-.project-filter-box { width: auto; min-width: 0; }
+.toolbar-group { min-width: 0; }
+.project-filter-box { flex: 0 1 auto; min-width: 0; }
 .project-filter-box .theme-select { width: auto; max-width: 200px; min-width: 0; }
 .workset-filter-box { width: auto; max-width: 260px; min-width: 0; }
 .workset-filter-box .theme-select { width: auto; max-width: 100%; min-width: 0; }
-.workset-filter-box .theme-select-trigger { max-width: 100%; }
+.workset-filter-box .theme-select-trigger,
 .workset-filter-box .theme-select-value { max-width: 100%; }
+.workset-toolbar-group:has(> .workset-filter-box[hidden]) { display: none; }
 .task-filter-menu { flex: 0 0 auto; }
 .task-filter-count[hidden] { display: none !important; }
+
 .board-toolbar .search-box,
 .board-toolbar .filter-box,
 .workset-actions-menu > summary,
 .task-filter-menu > summary { min-height: 40px; height: 40px; }
+
 .workset-actions-menu > summary.workset-actions-trigger::after,
 .task-filter-menu > summary::after {
   content: "";
@@ -698,25 +756,44 @@
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg);
 }
+
 .workset-actions-menu[open] > summary.workset-actions-trigger::after,
-.task-filter-menu[open] > summary::after { margin-top: 3px; transform: rotate(225deg); }
+.task-filter-menu[open] > summary::after {
+  margin-top: 3px;
+  transform: rotate(225deg);
+}
+
 @container (max-width: 300px) {
   .search-shortcut-keycap { display: none !important; }
 }
+
 @media (max-width: 1180px) {
-  .board-toolbar { flex-wrap: wrap; align-items: center; }
+  .board-toolbar { flex-wrap: wrap; }
+
   .board-toolbar > .search-box {
     flex: 1 1 100%;
     width: 100%;
     max-width: none;
     min-width: 0;
   }
-  .toolbar-filters-group { flex: 1 1 auto; flex-wrap: wrap; }
-  .toolbar-actions-group { margin-left: auto; }
+
+  .toolbar-filters-group {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+  }
+
+  .project-toolbar-group { flex: 0 1 190px; min-width: 140px; }
+  .project-filter-box,
+  .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
+  .workset-toolbar-group { flex: 0 1 260px; min-width: 0; }
+  .workset-filter-box,
+  .workset-filter-box .theme-select { width: 100%; max-width: 260px; min-width: 0; }
+  .toolbar-actions-group { margin-left: 0; }
 }
+
 @media (max-width: 760px) {
   .board-toolbar { gap: 8px; }
-  .toolbar-filters-group { flex: 1 1 100%; gap: 7px; }
+  .toolbar-filters-group { flex: 0 1 auto; flex-wrap: wrap; gap: 7px; }
   .project-toolbar-group,
   .workset-toolbar-group { flex: 1 1 160px; }
   .project-filter-box,

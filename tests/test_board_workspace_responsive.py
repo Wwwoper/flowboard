@@ -4,7 +4,7 @@ from __future__ import annotations
 
 def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.17' in html
+    assert '/static/board-workspace.css?v=0.1.18' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
@@ -67,10 +67,12 @@ def test_theme_surfaces_focus_states_and_header_hit_areas_use_shared_tokens(clie
     assert ".column-add:focus-visible" in base_css
     assert ".column-options-toggle:focus-visible" in base_css
     assert ".done-toggle:focus-visible" in base_css
-    assert "width: 40px;" in board_css
-    assert "height: 40px;" in board_css
+    assert "width: 36px;" in board_css
+    assert "height: 36px;" in board_css
     assert ".done-toggle {" in board_css
-    assert "min-height: 40px;" in board_css
+    assert ".column-header-actions {" in board_css
+    assert "align-items: center;" in board_css
+    assert "min-height: 36px;" in board_css
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert "function validateTheme(value)" in manager_js
@@ -114,7 +116,7 @@ def test_toolbar_search_expands_and_filters_wrap_as_a_single_group(client):
     board_css = client.get("/static/board-workspace.css").text
     themed_css = client.get("/static/themed-controls.css").text
 
-    assert "/static/board-workspace.css?v=0.1.17" in html
+    assert "/static/board-workspace.css?v=0.1.18" in html
     assert ".toolbar-main-group {" in board_css
     assert "flex: 1 1 640px;" in board_css
     assert "flex-wrap: nowrap;" in board_css

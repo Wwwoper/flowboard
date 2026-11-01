@@ -42,7 +42,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.57" in html
+    assert "/static/app.js?v=0.5.58" in html
     assert "/static/style.css?v=0.5.33" in html
 
 
@@ -209,7 +209,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.57" in html
+    assert "/static/app.js?v=0.5.58" in html
     assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
@@ -406,10 +406,11 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.57" in html
+    assert "/static/app.js?v=0.5.58" in html
     assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
-    assert '<span>Ещё</span>' in html
+    assert '<span>Ещё</span>' not in html
+    assert 'data-tooltip="Показать остальные завершённые задачи"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
 
@@ -429,6 +430,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
         '"Показать остальные завершённые задачи"',
         'els.toggleDone.setAttribute("aria-label", label)',
         'els.toggleDone.setAttribute("aria-expanded", String(isExpanded))',
+        'els.toggleDone.dataset.tooltip = label;',
     ):
         assert fragment in script
 
@@ -447,8 +449,8 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     assert "/static/style.css?v=0.5.33" in html
     assert '/static/github-theme.css?v=0.2.5' in html
     assert '/static/themed-controls.css?v=0.1.15' in html
-    assert '/static/board-workspace.css?v=0.1.17' in html
-    assert '/static/app.js?v=0.5.57' in html
+    assert '/static/board-workspace.css?v=0.1.18' in html
+    assert '/static/app.js?v=0.5.58' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -523,15 +525,23 @@ def test_column_header_actions_have_contextual_names_and_comfortable_hit_areas(c
     html = client.get("/").text
     for label in ("К выполнению", "В работе", "Ожидает", "Готово"):
         assert f'aria-label="Сортировка задач: {label}"' in html
-        assert f'title="Сортировка задач: {label}"' in html
+    assert html.count('class="column-header-actions"') == 4
+    assert html.count('data-tooltip="Сортировка"') == 4
+    assert html.count('data-tooltip="Добавить"') == 3
+    assert 'title="Сортировка задач:' not in html
+    assert 'title="Добавить задачу в колонку' not in html
     for label in ("К выполнению", "В работе", "Ожидает"):
         assert f'aria-label="Добавить задачу в колонку «{label}»"' in html
 
     css = client.get("/static/style.css").text
     board_css = client.get("/static/board-workspace.css").text
     assert ".column-add { display: grid; place-items: center; flex: 0 0 32px;" in css
-    assert "flex-basis: 40px;" in board_css
-    assert "width: 40px;" in board_css
+    assert "flex: 0 0 36px;" in board_css
+    assert "width: 36px;" in board_css
+    assert "height: 36px;" in board_css
+    assert ".column-options {\n  position: relative;" in board_css
+    assert "top: calc(100% + 6px);" in board_css
+    assert "column-header-actions button[data-tooltip]::after" in board_css
     assert ".column-options-toggle:focus-visible" in css
     assert ".column-add:focus-visible" in css
     assert ".column-options-toggle {" in css

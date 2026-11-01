@@ -14,10 +14,9 @@ def test_done_column_can_collapse_at_every_viewport_width_and_keeps_titles_reada
     assert 'color: var(--ink);' in css
     assert '.board-column-done .done-card .task-card-footer' in css
     assert 'id="toggle-done" class="done-toggle"' in html
-    assert '<span>Ещё</span>' in html
-    assert (
-        '$("span", els.toggleDone).textContent = isExpanded ? "Свернуть" : "Ещё";'
-        in script
-    )
+    assert '<span>Ещё</span>' not in html
+    assert 'data-tooltip="Показать остальные завершённые задачи"' in html
+    assert '$("span", els.toggleDone)' not in script
+    assert 'els.toggleDone.dataset.tooltip = label;' in script
     assert 'column.classList.toggle("has-done-overflow", canCollapseDone);' in script
     assert 'aria-label="Показать остальные завершённые задачи"' in html

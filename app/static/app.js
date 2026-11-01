@@ -1418,9 +1418,8 @@
           : "Показать остальные завершённые задачи";
         els.toggleDone.hidden = !canCollapseDone;
         els.toggleDone.setAttribute("aria-label", label);
-        els.toggleDone.title = label;
+        els.toggleDone.dataset.tooltip = label;
         els.toggleDone.setAttribute("aria-expanded", String(isExpanded));
-        $("span", els.toggleDone).textContent = isExpanded ? "Свернуть" : "Ещё";
       }
 
       tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));

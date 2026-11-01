@@ -658,38 +658,70 @@
   }
 }
 
-/* Larger header hit targets and an explicit completed-list action. */
-.column-add {
-  flex-basis: 40px;
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
-}
-.column-options { top: 8px; right: 47px; }
-.column-options-toggle {
-  flex-basis: 40px;
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
-}
-.done-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+/* Column actions share one stable row and identical hit areas. */
+.column-header-actions {
+  display: flex;
   flex: 0 0 auto;
-  width: auto;
-  min-width: 72px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0 8px;
-  color: var(--ink-soft);
-  font-size: 11px;
-  font-weight: 650;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.column-options {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 12;
+  flex: 0 0 auto;
+}
+.column-options-popover {
+  top: calc(100% + 6px);
+  right: 0;
+}
+.column-add,
+.column-options-toggle,
+.done-toggle {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
 }
 .done-toggle svg { width: 14px; height: 14px; }
-.done-toggle span { white-space: nowrap; }
-.board-column-done.has-done-overflow .column-options { right: 95px; }
+
+/* Custom tooltips open below the controls and grow left from the right edge. */
+.column-header-actions button[data-tooltip] { position: relative; }
+.column-header-actions button[data-tooltip]::after {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 24px));
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: var(--surface);
+  background: var(--ink);
+  box-shadow: var(--shadow);
+  content: attr(data-tooltip);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.column-header-actions button[data-tooltip]:hover::after,
+.column-header-actions button[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
 
 /* Readable card metadata and consistent compact/comfortable previews. */
 .task-card-excerpt,
@@ -722,7 +754,6 @@
   .board-toolbar .filter-box,
   .workset-actions-menu > summary,
   .task-filter-menu > summary { min-height: 40px; height: 40px; }
-  .done-toggle { min-width: 68px; }
 }
 
 /* The toolbar has two explicit groups: search/filters and workset actions. */

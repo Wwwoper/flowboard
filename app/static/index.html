@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.5">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.15">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.17">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.18">
 </head>
 <body>
   <div class="app-shell">
@@ -149,27 +149,30 @@
             <span class="column-marker marker-todo"></span>
             <h2>К выполнению</h2>
             <span class="column-count" id="count-todo">0</span>
-            <button class="column-add" data-add-status="todo" type="button" aria-label="Добавить задачу в колонку «К выполнению»" title="Добавить задачу в колонку «К выполнению»">＋</button>
-          </header>
-          <div class="column-options" data-column-options="todo">
-            <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
-                    aria-label="Сортировка задач: К выполнению" aria-expanded="false" title="Сортировка задач: К выполнению">☷</button>
-            <div class="column-options-popover" data-column-options-panel="todo" hidden>
-              <label><span>Сортировка</span>
-                <select data-column-sort="todo" aria-label="Сортировка задач">
-                  <option value="manual">Ручной порядок</option>
-                  <option value="created_desc">Сначала новые</option>
-                  <option value="created_asc">Сначала старые</option>
-                  <option value="updated_desc">Недавно изменены</option>
-                  <option value="updated_asc">Давно не менялись</option>
-                  <option value="closed_desc">Последние завершённые</option>
-                  <option value="type">По типу задачи</option>
-                  <option value="title_asc">По названию</option>
-                </select>
-              </label>
-              <button class="column-options-reset" type="button" data-column-reset="todo">Сбросить настройки</button>
+
+            <div class="column-header-actions">
+              <div class="column-options" data-column-options="todo">
+                <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
+                  aria-label="Сортировка задач: К выполнению" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div class="column-options-popover" data-column-options-panel="todo" hidden>
+                  <label><span>Сортировка</span>
+                    <select data-column-sort="todo" aria-label="Сортировка задач">
+                      <option value="manual">Ручной порядок</option>
+                      <option value="created_desc">Сначала новые</option>
+                      <option value="created_asc">Сначала старые</option>
+                      <option value="updated_desc">Недавно изменены</option>
+                      <option value="updated_asc">Давно не менялись</option>
+                      <option value="closed_desc">Последние завершённые</option>
+                      <option value="type">По типу задачи</option>
+                      <option value="title_asc">По названию</option>
+                    </select>
+                  </label>
+                  <button class="column-options-reset" type="button" data-column-reset="todo">Сбросить настройки</button>
+                </div>
+              </div>
+              <button class="column-add" data-add-status="todo" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «К выполнению»">＋</button>
             </div>
-          </div>
+          </header>
           <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
           <p class="column-empty">Перетащите задачу сюда</p>
         </section>
@@ -179,27 +182,30 @@
             <span class="column-marker marker-doing"></span>
             <h2>В работе</h2>
             <span class="column-count" id="count-doing" aria-label="Задач в работе относительно мягкого лимита">0/3</span>
-            <button class="column-add" data-add-status="doing" type="button" aria-label="Добавить задачу в колонку «В работе»" title="Добавить задачу в колонку «В работе»">＋</button>
-          </header>
-          <div class="column-options" data-column-options="doing">
-            <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
-                    aria-label="Сортировка задач: В работе" aria-expanded="false" title="Сортировка задач: В работе">☷</button>
-            <div class="column-options-popover" data-column-options-panel="doing" hidden>
-              <label><span>Сортировка</span>
-                <select data-column-sort="doing" aria-label="Сортировка задач">
-                  <option value="manual">Ручной порядок</option>
-                  <option value="created_desc">Сначала новые</option>
-                  <option value="created_asc">Сначала старые</option>
-                  <option value="updated_desc">Недавно изменены</option>
-                  <option value="updated_asc">Давно не менялись</option>
-                  <option value="closed_desc">Последние завершённые</option>
-                  <option value="type">По типу задачи</option>
-                  <option value="title_asc">По названию</option>
-                </select>
-              </label>
-              <button class="column-options-reset" type="button" data-column-reset="doing">Сбросить настройки</button>
+
+            <div class="column-header-actions">
+              <div class="column-options" data-column-options="doing">
+                <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
+                  aria-label="Сортировка задач: В работе" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div class="column-options-popover" data-column-options-panel="doing" hidden>
+                  <label><span>Сортировка</span>
+                    <select data-column-sort="doing" aria-label="Сортировка задач">
+                      <option value="manual">Ручной порядок</option>
+                      <option value="created_desc">Сначала новые</option>
+                      <option value="created_asc">Сначала старые</option>
+                      <option value="updated_desc">Недавно изменены</option>
+                      <option value="updated_asc">Давно не менялись</option>
+                      <option value="closed_desc">Последние завершённые</option>
+                      <option value="type">По типу задачи</option>
+                      <option value="title_asc">По названию</option>
+                    </select>
+                  </label>
+                  <button class="column-options-reset" type="button" data-column-reset="doing">Сбросить настройки</button>
+                </div>
+              </div>
+              <button class="column-add" data-add-status="doing" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «В работе»">＋</button>
             </div>
-          </div>
+          </header>
           <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
           <p class="column-empty">Перетащите задачу сюда</p>
         </section>
@@ -209,27 +215,30 @@
             <span class="column-marker marker-waiting"></span>
             <h2>Ожидает</h2>
             <span class="column-count" id="count-waiting">0</span>
-            <button class="column-add" data-add-status="waiting" type="button" aria-label="Добавить задачу в колонку «Ожидает»" title="Добавить задачу в колонку «Ожидает»">＋</button>
-          </header>
-          <div class="column-options" data-column-options="waiting">
-            <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
-                    aria-label="Сортировка задач: Ожидает" aria-expanded="false" title="Сортировка задач: Ожидает">☷</button>
-            <div class="column-options-popover" data-column-options-panel="waiting" hidden>
-              <label><span>Сортировка</span>
-                <select data-column-sort="waiting" aria-label="Сортировка задач">
-                  <option value="manual">Ручной порядок</option>
-                  <option value="created_desc">Сначала новые</option>
-                  <option value="created_asc">Сначала старые</option>
-                  <option value="updated_desc">Недавно изменены</option>
-                  <option value="updated_asc">Давно не менялись</option>
-                  <option value="closed_desc">Последние завершённые</option>
-                  <option value="type">По типу задачи</option>
-                  <option value="title_asc">По названию</option>
-                </select>
-              </label>
-              <button class="column-options-reset" type="button" data-column-reset="waiting">Сбросить настройки</button>
+
+            <div class="column-header-actions">
+              <div class="column-options" data-column-options="waiting">
+                <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
+                  aria-label="Сортировка задач: Ожидает" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div class="column-options-popover" data-column-options-panel="waiting" hidden>
+                  <label><span>Сортировка</span>
+                    <select data-column-sort="waiting" aria-label="Сортировка задач">
+                      <option value="manual">Ручной порядок</option>
+                      <option value="created_desc">Сначала новые</option>
+                      <option value="created_asc">Сначала старые</option>
+                      <option value="updated_desc">Недавно изменены</option>
+                      <option value="updated_asc">Давно не менялись</option>
+                      <option value="closed_desc">Последние завершённые</option>
+                      <option value="type">По типу задачи</option>
+                      <option value="title_asc">По названию</option>
+                    </select>
+                  </label>
+                  <button class="column-options-reset" type="button" data-column-reset="waiting">Сбросить настройки</button>
+                </div>
+              </div>
+              <button class="column-add" data-add-status="waiting" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «Ожидает»">＋</button>
             </div>
-          </div>
+          </header>
           <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
           <p class="column-empty">Нет задач в ожидании</p>
         </section>
@@ -239,28 +248,31 @@
             <span class="column-marker marker-done"></span>
             <h2>Готово</h2>
             <span class="column-count" id="count-done">0</span>
-            <button id="toggle-done" class="done-toggle" type="button" aria-label="Показать остальные завершённые задачи" title="Показать остальные завершённые задачи" aria-expanded="false"><span>Ещё</span><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></button>
-          </header>
-          <div class="column-options" data-column-options="done">
-            <button class="column-options-toggle" type="button" data-column-options-toggle="done"
-                    aria-label="Сортировка задач: Готово" aria-expanded="false" title="Сортировка задач: Готово">☷</button>
-            <div class="column-options-popover" data-column-options-panel="done" hidden>
-              <label><span>Сортировка</span>
-                <select data-column-sort="done" aria-label="Сортировка задач">
-                  <option value="manual">Ручной порядок</option>
-                  <option value="created_desc">Сначала новые</option>
-                  <option value="created_asc">Сначала старые</option>
-                  <option value="updated_desc">Недавно изменены</option>
-                  <option value="updated_asc">Давно не менялись</option>
-                  <option value="closed_desc">Последние завершённые</option>
-                  <option value="type">По типу задачи</option>
-                  <option value="title_asc">По названию</option>
-                </select>
-              </label>
-              <button class="column-archive-completed" type="button" data-archive-completed>Архивировать завершённые</button>
-              <button class="column-options-reset" type="button" data-column-reset="done">Сбросить настройки</button>
+
+            <div class="column-header-actions">
+              <button id="toggle-done" class="done-toggle" type="button" aria-label="Показать остальные завершённые задачи" data-tooltip="Показать остальные завершённые задачи" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></button>
+              <div class="column-options" data-column-options="done">
+                <button class="column-options-toggle" type="button" data-column-options-toggle="done"
+                  aria-label="Сортировка задач: Готово" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div class="column-options-popover" data-column-options-panel="done" hidden>
+                  <label><span>Сортировка</span>
+                    <select data-column-sort="done" aria-label="Сортировка задач">
+                      <option value="manual">Ручной порядок</option>
+                      <option value="created_desc">Сначала новые</option>
+                      <option value="created_asc">Сначала старые</option>
+                      <option value="updated_desc">Недавно изменены</option>
+                      <option value="updated_asc">Давно не менялись</option>
+                      <option value="closed_desc">Последние завершённые</option>
+                      <option value="type">По типу задачи</option>
+                      <option value="title_asc">По названию</option>
+                    </select>
+                  </label>
+                  <button class="column-archive-completed" type="button" data-archive-completed>Архивировать завершённые</button>
+                  <button class="column-options-reset" type="button" data-column-reset="done">Сбросить настройки</button>
+                </div>
+              </div>
             </div>
-          </div>
+          </header>
           <div class="task-list" data-status="done" aria-label="Завершённые задачи"></div>
           <p class="column-empty">Пока нет завершённых задач.</p>
         </section>
@@ -685,6 +697,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.8" defer></script>
-  <script src="/static/app.js?v=0.5.57" defer></script>
+  <script src="/static/app.js?v=0.5.58" defer></script>
 </body>
 </html>

@@ -235,3 +235,49 @@ def test_result_survives_markdown_export_and_import(client):
     task = next(item for item in client.get("/api/tasks").json() if item["title"] == "Outcome")
     assert task["description"] == "Original requirements"
     assert task["result"] == "Shipped v1"
+
+
+def test_import_accepts_description_and_result_up_to_30000_characters(client):
+    description = "d" * 30_000
+    result = "r" * 30_000
+    markdown = (
+        "---\ntitle: Long imported task\nresult: |\n  "
+        + result
+        + "\n---\n"
+        + description
+    )
+
+    response = upload_md(client, [("long-task.md", markdown.encode("utf-8"))])
+
+    assert response.status_code == 200, response.text
+    assert response.json()["created"] == 1
+    task = next(
+        task for task in client.get("/api/tasks").json()
+        if task["title"] == "Long imported task"
+    )
+    assert task["description"] == description
+    assert task["result"] == result
+
+
+def test_markdown_export_import_round_trip_preserves_long_task_text(client):
+    description = "description " * 899 + "description"
+    result = "result " * 899 + "result"
+    created = client.post(
+        "/api/tasks",
+        json={"title": "Long Markdown round trip", "description": description, "result": result},
+    )
+    assert created.status_code == 201, created.text
+
+    exported = client.get("/api/export?format=md")
+    assert exported.status_code == 200
+    assert client.delete(f"/api/tasks/{created.json()['id']}").status_code == 204
+
+    imported = upload_md(client, [("long-export.md", exported.content)])
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["created"] == 1
+    restored = next(
+        task for task in client.get("/api/tasks").json()
+        if task["title"] == "Long Markdown round trip"
+    )
+    assert restored["description"] == description
+    assert restored["result"] == result

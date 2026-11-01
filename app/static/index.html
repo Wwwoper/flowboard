@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="/static/style.css?v=0.5.30">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.13">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.5">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
   <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.6">
 </head>
 <body>
@@ -631,15 +631,21 @@
             <svg class="copy-description-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
             <svg class="copy-description-check" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
           </button>
+          <button id="expand-task-workspace" class="icon-button workspace-expand-button" type="button" aria-label="Развернуть редактор" title="Развернуть редактор" aria-expanded="false">
+            <svg class="workspace-expand-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
+            <svg class="workspace-collapse-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v5H3M16 3v5h5M3 16h5v5M21 16h-5v5"/></svg>
+          </button>
         </div>
         <div id="task-description-panel" class="task-workspace-panel task-description-panel" role="tabpanel" aria-labelledby="task-description-tab">
-          <textarea id="task-description" class="text-field description-field" maxlength="5000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown." hidden></textarea>
+          <textarea id="task-description" class="text-field description-field" maxlength="30000" rows="8" placeholder="Контекст, решение или следующие шаги… Поддерживается Markdown." hidden></textarea>
           <div id="description-preview" class="markdown-preview markdown-preview-editable" tabindex="0" aria-label="Описание задачи. Нажмите Enter, чтобы редактировать."></div>
+          <div id="description-char-count" class="task-document-char-count" aria-live="off">0 / 30 000 символов</div>
         </div>
         <div id="task-result-panel" class="task-workspace-panel task-result-panel" role="tabpanel" aria-labelledby="task-result-tab" hidden>
           <p id="task-result-required-hint" class="task-field-error task-result-required-hint" role="alert" aria-live="polite" hidden>Перед завершением задачи добавьте результат.</p>
-          <textarea id="task-result" class="text-field result-field" maxlength="5000" rows="8" placeholder="Что получилось по итогам работы? Это поле не заменяет описание задачи." hidden></textarea>
+          <textarea id="task-result" class="text-field result-field" maxlength="30000" rows="8" placeholder="Что получилось по итогам работы? Это поле не заменяет описание задачи." hidden></textarea>
           <div id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview" tabindex="0" aria-label="Результат задачи. Нажмите Enter, чтобы редактировать."></div>
+          <div id="result-char-count" class="task-document-char-count" aria-live="off">0 / 30 000 символов</div>
         </div>
       </section>
 
@@ -670,6 +676,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.5" defer></script>
-  <script src="/static/app.js?v=0.5.49" defer></script>
+  <script src="/static/app.js?v=0.5.50" defer></script>
 </body>
 </html>

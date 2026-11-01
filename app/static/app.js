@@ -2,6 +2,7 @@
   "use strict";
 
   const STATUSES = ["todo", "doing", "waiting", "done"];
+  const MAX_TASK_TEXT_LENGTH = 30000;
   const STATUS_LABELS = {
     todo: "К выполнению",
     doing: "В работе",
@@ -191,6 +192,9 @@
     taskResultRequiredHint: $("#task-result-required-hint"),
     taskResultIndicator: $("#task-result-indicator"),
     copyDescription: $("#copy-description"),
+    expandTaskWorkspace: $("#expand-task-workspace"),
+    descriptionCharCount: $("#description-char-count"),
+    resultCharCount: $("#result-char-count"),
     descriptionPreview: $("#description-preview"),
     resultPreview: $("#result-preview"),
     toggleAttachmentUpload: $("#toggle-attachment-upload"),
@@ -1668,7 +1672,10 @@
   function closePanel() {
     clearTaskDraftSaveTimer();
     closeAttachmentPreview();
-    els.panel.classList.remove("is-open");
+    els.panel.classList.remove("is-open", "is-workspace-expanded");
+    els.expandTaskWorkspace.setAttribute("aria-expanded", "false");
+    els.expandTaskWorkspace.setAttribute("aria-label", "Развернуть редактор");
+    els.expandTaskWorkspace.title = "Развернуть редактор";
     els.panel.setAttribute("aria-hidden", "true");
     els.attachmentList.querySelectorAll(".attachment-preview").forEach((image) => {
       if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
@@ -1719,6 +1726,7 @@
       renderTaskTagEditor();
       els.taskDescription.value = task.description || "";
       els.taskResult.value = task.result || "";
+      updateTaskDocumentCounters();
       state.resultPreviewVisible = true;
       setTaskWorkspaceTab("description");
       updateTaskResultIndicator();
@@ -3045,6 +3053,24 @@
     els.taskResultIndicator.hidden = !els.taskResult.value.trim();
   }
 
+  const taskDocumentNumberFormat = new Intl.NumberFormat("ru-RU");
+
+  function updateTaskDocumentCounters() {
+    const descriptionLength = els.taskDescription.value.length;
+    const resultLength = els.taskResult.value.length;
+    els.descriptionCharCount.textContent = `${taskDocumentNumberFormat.format(descriptionLength)} / ${taskDocumentNumberFormat.format(MAX_TASK_TEXT_LENGTH)} символов`;
+    els.resultCharCount.textContent = `${taskDocumentNumberFormat.format(resultLength)} / ${taskDocumentNumberFormat.format(MAX_TASK_TEXT_LENGTH)} символов`;
+    els.descriptionCharCount.classList.toggle("is-limit-reached", descriptionLength >= MAX_TASK_TEXT_LENGTH);
+    els.resultCharCount.classList.toggle("is-limit-reached", resultLength >= MAX_TASK_TEXT_LENGTH);
+  }
+
+  function setTaskWorkspaceExpanded(expanded) {
+    els.panel.classList.toggle("is-workspace-expanded", expanded);
+    els.expandTaskWorkspace.setAttribute("aria-expanded", String(expanded));
+    els.expandTaskWorkspace.setAttribute("aria-label", expanded ? "Свернуть редактор" : "Развернуть редактор");
+    els.expandTaskWorkspace.title = expanded ? "Свернуть редактор" : "Развернуть редактор";
+  }
+
   function updateTaskWorkspaceHeading() {
     const subject = state.activeTaskTab === "result" ? "результат" : "описание";
     els.copyDescription.setAttribute("aria-label", `Копировать ${subject}`);
@@ -3172,6 +3198,7 @@
     }
     lines[lineNumber] = `${match[1]}[${input.checked ? "x" : " "}]${line.slice(match[0].length)}`;
     textarea.value = lines.join("\n");
+    updateTaskDocumentCounters();
     input.setAttribute("aria-label", input.checked ? "Снять отметку" : "Отметить пункт списка");
     void refreshPreview();
     scheduleTaskDraftSave(0);
@@ -3183,6 +3210,9 @@
   els.taskDescriptionTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.taskResultTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
   els.copyDescription.addEventListener("click", () => { void copyTaskDescription(); });
+  els.expandTaskWorkspace.addEventListener("click", () => {
+    setTaskWorkspaceExpanded(!els.panel.classList.contains("is-workspace-expanded"));
+  });
   els.descriptionPreview.addEventListener("click", (event) => {
     if (!state.previewVisible || event.target.closest("input[data-task-checkbox], a, button")) return;
     void setDescriptionEditing(true);
@@ -3212,11 +3242,13 @@
     void setResultEditing(true);
   });
   els.taskDescription.addEventListener("input", () => {
+    updateTaskDocumentCounters();
     if (state.previewVisible) requestMarkdownPreview();
   });
   els.taskDescription.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskResult.addEventListener("input", () => {
     updateTaskResultIndicator();
+    updateTaskDocumentCounters();
     scheduleTaskDraftSave(180);
   });
   els.taskResult.addEventListener("blur", () => scheduleTaskDraftSave(180));
@@ -3259,6 +3291,11 @@
       if (els.attachmentPreviewDialog.open) {
         event.preventDefault();
         closeAttachmentPreview();
+        return;
+      }
+      if (els.panel.classList.contains("is-workspace-expanded")) {
+        event.preventDefault();
+        setTaskWorkspaceExpanded(false);
         return;
       }
       if (els.shortcutsDialog.open) els.shortcutsDialog.close();

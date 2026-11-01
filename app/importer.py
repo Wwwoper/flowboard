@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app import frontmatter_compat as frontmatter
-from app.config import STATUSES
+from app.config import MAX_TASK_TEXT_LENGTH, STATUSES
 from app.task_types import normalize_task_type, split_legacy_tags
 
 CHECKBOX_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
@@ -93,8 +93,8 @@ def _task_from_metadata(
         description = description_match.group(1).strip("\r\n")
     else:
         description = body.strip()
-    if len(description) > 5000:
-        return None, SkippedRecord(filename, "описание длиннее 5000 символов")
+    if len(description) > MAX_TASK_TEXT_LENGTH:
+        return None, SkippedRecord(filename, "описание длиннее 30000 символов")
     is_single_task_export = metadata.get("flowboard_export_format") == "single-task-v1"
     result_match = TASK_RESULT_RE.search(body) if is_single_task_export else None
     if result_match is not None:
@@ -102,8 +102,8 @@ def _task_from_metadata(
     else:
         result_value = metadata.get("result", "")
         result = result_value if isinstance(result_value, str) else ""
-    if len(result) > 5000:
-        return None, SkippedRecord(filename, "результат длиннее 5000 символов")
+    if len(result) > MAX_TASK_TEXT_LENGTH:
+        return None, SkippedRecord(filename, "результат длиннее 30000 символов")
 
     status = normalize_status(metadata.get("status"))
     closed_at = normalize_timestamp(metadata.get("closed_at"))

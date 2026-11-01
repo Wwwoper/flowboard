@@ -5,9 +5,9 @@ def test_task_panel_redesign_uses_theme_tokens_and_searchable_tag_popover(client
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "/static/app.js?v=0.5.49" in html
+    assert "/static/app.js?v=0.5.50" in html
     assert "/static/github-theme.css?v=0.2.4" in html
-    assert "/static/task-editor-redesign.css?v=0.2.5" in html
+    assert "/static/task-editor-redesign.css?v=0.2.6" in html
     for element_id in (
         "task-title-display",
         "panel-task-reference",
@@ -72,7 +72,18 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
     assert 'aria-selected="false" aria-controls="task-result-panel" tabindex="-1"' in html
     assert 'id="task-result-panel" class="task-workspace-panel task-result-panel" role="tabpanel" aria-labelledby="task-result-tab" hidden' in html
     assert 'id="task-result-indicator" class="task-result-indicator" aria-hidden="true" hidden' in html
-    assert 'id="task-result" class="text-field result-field" maxlength="5000" rows="8" placeholder=' in html
+    assert 'id="expand-task-workspace" class="icon-button workspace-expand-button"' in html
+    assert 'id="description-char-count" class="task-document-char-count"' in html
+    assert 'id="result-char-count" class="task-document-char-count"' in html
+    assert 'id="task-description" class="text-field description-field" maxlength="30000"' in html
+    assert 'id="task-result" class="text-field result-field" maxlength="30000" rows="8" placeholder=' in html
+    script = client.get("/static/app.js").text
+    assert "function updateTaskDocumentCounters()" in script
+    assert "function setTaskWorkspaceExpanded(expanded)" in script
+    assert 'els.expandTaskWorkspace.addEventListener("click"' in script
+    assert 'els.taskDescription.addEventListener("input"' in script
+    assert 'els.taskResult.addEventListener("input"' in script
+    assert 'if (els.panel.classList.contains("is-workspace-expanded"))' in script
     assert 'id="result-preview" class="markdown-preview markdown-preview-editable task-result-preview"' in html
     assert html.count('class="task-workspace-heading"') == 0
     tabs = html.split('class="task-workspace-tabs"', 1)[1].split('</div>', 1)[0]
@@ -119,8 +130,8 @@ def test_task_editor_uses_one_tabbed_workspace_and_a_properties_sidebar(client):
 
 def test_task_properties_use_compact_selects_collapsible_tags_and_attachments(client):
     html = client.get("/").text
-    assert "/static/task-editor-redesign.css?v=0.2.5" in html
-    assert "/static/app.js?v=0.5.49" in html
+    assert "/static/task-editor-redesign.css?v=0.2.6" in html
+    assert "/static/app.js?v=0.5.50" in html
 
     script = client.get("/static/app.js").text
     for fragment in (

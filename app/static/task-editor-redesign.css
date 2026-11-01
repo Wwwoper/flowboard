@@ -1353,3 +1353,66 @@
 @media (prefers-reduced-motion: reduce) {
   .task-panel .task-properties-sidebar .attachment-list-toggle svg { transition: none; }
 }
+
+
+/* Long task documents: live length feedback and an optional full-panel workspace. */
+.task-panel .workspace-expand-button {
+  display: inline-grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  margin: 2px 0;
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+}
+.task-panel .workspace-expand-button:hover,
+.task-panel .workspace-expand-button:focus-visible {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+.task-panel .workspace-collapse-icon,
+.task-panel .workspace-expand-button[aria-expanded="true"] .workspace-expand-icon { display: none; }
+.task-panel .workspace-expand-button[aria-expanded="true"] .workspace-collapse-icon { display: block; }
+.task-panel .task-document-char-count {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  padding-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.task-panel .task-document-char-count.is-limit-reached { color: var(--red); }
+.task-panel.is-workspace-expanded {
+  z-index: 60;
+  display: flex;
+  width: 100vw;
+  max-width: none;
+  padding: 22px clamp(18px, 4vw, 64px) 16px;
+  overflow: hidden;
+}
+.task-panel.is-workspace-expanded .task-form-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+.task-panel.is-workspace-expanded .task-editor-workspace {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+.task-panel.is-workspace-expanded .task-properties-sidebar { display: none; }
+@media (max-width: 700px) {
+  .task-panel.is-workspace-expanded { padding: 12px 12px 9px; }
+  .task-panel.is-workspace-expanded .task-form-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+}

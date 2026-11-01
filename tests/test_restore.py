@@ -233,3 +233,45 @@ def test_restore_accepts_legacy_workset_events_without_new_snapshot_fields(clien
     finally:
         connection.close()
     assert snapshots == [(None, None, None, None), (None, None, None, None)]
+
+
+def test_zip_backup_restores_long_description_and_result(client, tmp_path):
+    description = "description " * 1_500
+    result = "result " * 1_500
+    created = client.post(
+        "/api/tasks",
+        json={"title": "Long backup task", "description": description, "result": result},
+    )
+    assert created.status_code == 201, created.text
+
+    archive_path = tmp_path / "long-backup.zip"
+    archive_path.write_bytes(client.get("/api/export?format=zip").content)
+    target = tmp_path / "long-restored"
+    assert restore_backup(archive_path, target) == 1
+
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        restored = connection.execute("SELECT description, result FROM tasks").fetchone()
+    finally:
+        connection.close()
+
+    assert restored == (description, result)
+
+
+@pytest.mark.parametrize("field", ["description", "result"])
+def test_restore_rejects_task_text_over_30000_characters(client, tmp_path, field):
+    created = client.post("/api/tasks", json={"title": "Restore validation"})
+    assert created.status_code == 201, created.text
+    source = tmp_path / "valid.zip"
+    source.write_bytes(client.get("/api/export?format=zip").content)
+    invalid = tmp_path / f"invalid-{field}.zip"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(invalid, "w") as backup:
+        manifest = json.loads(original.read("tasks.json"))
+        manifest["tasks"][0][field] = "x" * 30_001
+        backup.writestr("tasks.json", json.dumps(manifest))
+        for name in original.namelist():
+            if name != "tasks.json":
+                backup.writestr(name, original.read(name))
+
+    with pytest.raises(ValueError, match="Некорректное описание|Некорректный результат"):
+        restore_backup(invalid, tmp_path / f"restored-{field}")

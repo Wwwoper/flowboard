@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import uuid4
 
-from app.config import STATUSES
+from app.config import MAX_TASK_TEXT_LENGTH, STATUSES
 from app.db import connect, initialize_database
 from app.task_types import normalize_task_type, split_legacy_tags
 
@@ -70,11 +70,12 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
             seen_ids.add(task_id)
             if task.get("status") not in STATUSES:
                 raise ValueError(f"Неизвестный статус задачи {task_id}")
+            description = task.get("description", "")
+            if not isinstance(description, str) or len(description) > MAX_TASK_TEXT_LENGTH:
+                raise ValueError(f"Некорректное описание задачи {task_id}")
             result = task.get("result", "")
-            if not isinstance(result, str) or len(result) > 5000:
-                raise ValueError(
-                    f"Некорректный результат выполнения задачи {task_id}"
-                )
+            if not isinstance(result, str) or len(result) > MAX_TASK_TEXT_LENGTH:
+                raise ValueError(f"Некорректный результат выполнения задачи {task_id}")
             if (
                 not isinstance(task.get("title"), str)
                 or not task["title"].strip()

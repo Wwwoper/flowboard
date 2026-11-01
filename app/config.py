@@ -29,6 +29,8 @@ class Settings:
 
 
 settings = Settings()
+MAX_TASK_TEXT_LENGTH = 30_000
+
 STATUSES = ("todo", "doing", "waiting", "done")
 STATUS_LABELS = {
     "todo": "К выполнению",

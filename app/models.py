@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.config import MAX_TASK_TEXT_LENGTH
 from app.task_types import validate_custom_tags
 
 TaskStatus = Literal["todo", "doing", "waiting", "done"]
@@ -18,8 +19,8 @@ class StrictModel(BaseModel):
 
 class TaskCreate(StrictModel):
     title: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=5000)
-    result: str = Field(default="", max_length=5000)
+    description: str = Field(default="", max_length=MAX_TASK_TEXT_LENGTH)
+    result: str = Field(default="", max_length=MAX_TASK_TEXT_LENGTH)
     tags: str = Field(default="", max_length=1000)
     task_type: str = Field(default="", pattern=r"^(|bug|feature|docs|refactor)$")
     workset_id: int | None = Field(default=None, gt=0)
@@ -40,8 +41,8 @@ class TaskCreate(StrictModel):
 
 class TaskPatch(StrictModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=5000)
-    result: str | None = Field(default=None, max_length=5000)
+    description: str | None = Field(default=None, max_length=MAX_TASK_TEXT_LENGTH)
+    result: str | None = Field(default=None, max_length=MAX_TASK_TEXT_LENGTH)
     status: TaskStatus | None = None
     position: float | None = None
     tags: str | None = Field(default=None, max_length=1000)
@@ -123,7 +124,7 @@ class ImportResult(BaseModel):
 
 
 class MarkdownPreviewRequest(StrictModel):
-    text: str = Field(default="", max_length=5000)
+    text: str = Field(default="", max_length=MAX_TASK_TEXT_LENGTH)
 
 
 class WorksetCreate(StrictModel):

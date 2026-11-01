@@ -618,7 +618,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .attachment-preview-message { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
 .attachment-preview-image[hidden], .attachment-preview-message[hidden] { display: none; }
 .shortcuts-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.shortcuts-dialog-header h2 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
+.shortcuts-dialog-header h2, .shortcuts-dialog-header h3 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
 .shortcut-list { display: flex; flex-direction: column; gap: 0; margin: 22px 0 0; }
 .shortcut-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
 .shortcut-list > div:last-child { border-bottom: 0; }
@@ -971,6 +971,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   min-height: 0;
   height: calc(100% - 86px);
 }
+.settings-dialog.is-subpage .settings-layout { grid-template-columns: minmax(0, 1fr); }
 .settings-tabs {
   display: flex;
   flex-direction: column;
@@ -1196,6 +1197,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .settings-dialog-header { padding: 17px 16px 14px; }
   .settings-dialog-header h2 { font-size: 19px; }
   .settings-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: calc(100% - 73px); }
+  .settings-dialog.is-subpage .settings-layout { grid-template-rows: minmax(0, 1fr); }
   .settings-tabs { flex-direction: row; gap: 5px; padding: 8px 10px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .settings-tab { flex: 0 0 auto; min-height: 35px; padding: 8px 10px; white-space: nowrap; font-size: 11px; }
   .settings-panels { padding: 19px 16px; }
@@ -1258,17 +1260,29 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 }
 .column-archive-completed { color: var(--red); }
 
-/* Archived work is available on demand, never as a fifth board column. */
-.archive-dialog {
-  width: min(940px, calc(100vw - 28px)); max-width: none; max-height: calc(100dvh - 28px);
-  margin: auto; padding: 20px; overflow: hidden; border: 1px solid var(--line);
-  border-radius: 16px; color: var(--ink); background: var(--surface); box-shadow: var(--shadow);
-}
-.archive-dialog:not([open]) { display: none; }
-.archive-dialog::backdrop { background: color-mix(in srgb, var(--overlay) 52%, transparent); backdrop-filter: blur(4px); }
-.archive-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.archive-dialog-header h2 { margin: 0; font-size: 23px; letter-spacing: -.55px; }
-.archive-dialog-header .eyebrow { margin-bottom: 5px; }
+/* Nested settings pages keep complex tools inside the settings workspace. */
+.settings-subpage { min-width: 0; min-height: 100%; }
+.settings-subpage[hidden] { display: none; }
+.settings-subpage-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.settings-subpage-header h3 { margin: 0; font-size: 19px; letter-spacing: -.4px; }
+.settings-subpage-header .eyebrow { margin-bottom: 5px; }
+.settings-back-button { flex: 0 0 auto; }
+.archive-settings-page .archive-list { max-height: min(42vh, 420px); }
+.manage-projects-help { margin: 12px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.project-manager-section { margin-top: 16px; }
+.project-manager-section + .project-manager-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.project-manager-section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.project-manager-section-heading h3 { margin: 0; color: var(--ink); font-size: 14px; font-weight: 650; }
+.project-manager-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.project-manager-list { display: grid; gap: 7px; }
+.project-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft, var(--surface)); }
+.project-manager-copy { display: grid; gap: 3px; min-width: 0; }
+.project-manager-name { overflow-wrap: anywhere; color: var(--ink); font-size: 13px; font-weight: 600; }
+.project-manager-key { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.project-manager-action { flex: 0 0 auto; min-height: 32px; padding: 0 10px; font-size: 12px; }
+.project-manager-action.is-archive { color: var(--red, var(--muted)); }
+.project-manager-empty { margin: 0; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.project-manager-empty[hidden] { display: none; }
 .archive-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
 .archive-auto-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
 .archive-auto-toggle input { accent-color: var(--accent); }
@@ -1302,15 +1316,18 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 @media (max-width: 640px) {
   .column-options { right: 35px; top: 8px; }
   .column-options-popover { right: -33px; }
-  .archive-dialog { width: calc(100vw - 14px); max-height: calc(100dvh - 14px); padding: 12px; border-radius: 12px; }
-  .archive-dialog-header h2 { font-size: 20px; }
+  .settings-subpage-header { align-items: flex-start; }
+  .settings-subpage-header h3 { font-size: 18px; }
+  .settings-back-button { padding: 7px 8px; font-size: 11px; }
   .archive-toolbar { align-items: stretch; }
   .archive-search-box { flex-basis: 100%; }
   .archive-toolbar .filter-box { flex: 1 1 40%; max-width: none; }
   .archive-toolbar .filter-box select { max-width: 100%; width: 100%; min-width: 0; }
   .archive-period-filter { flex: 1 1 100% !important; }
   .archive-toolbar #archive-completed-now { flex: 1 1 100%; }
-  .archive-list { max-height: 42vh; }
+  .archive-settings-page .archive-list { max-height: 38vh; }
+  .project-manager-item { align-items: flex-start; gap: 8px; padding: 9px; }
+  .project-manager-action { padding-inline: 7px; }
   .archive-item { align-items: flex-start; padding: 9px; }
   .archive-item .archive-restore { padding: 6px 7px; font-size: 10px; }
 }

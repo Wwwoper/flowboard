@@ -7,9 +7,8 @@ def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_ren
     assert html.count('class="toolbar-icon"') == 5
     assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
     assert 'aria-label="Создать проект" title="Создать проект"' in html
-    toolbar_html, _, shortcuts_html = html.partition('<dialog id="shortcuts-dialog"')
-    assert "⌘/Ctrl K" not in toolbar_html
-    assert "⌘/Ctrl K" in shortcuts_html
+    assert 'id="shortcuts-settings-page" class="settings-subpage"' in html
+    assert "⌘/Ctrl K" in html.split('id="shortcuts-settings-page"', 1)[1]
 
     css = client.get("/static/themed-controls.css").text
     for selector in (
@@ -41,11 +40,11 @@ def test_project_workspace_controls_are_served(client):
         "focus-bar",
         "focus-task",
         "density-toggle",
-        "shortcuts-dialog",
+        "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.50" in html
-    assert "/static/style.css?v=0.5.30" in html
+    assert "/static/app.js?v=0.5.51" in html
+    assert "/static/style.css?v=0.5.31" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -187,8 +186,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.50" in html
-    assert "/static/style.css?v=0.5.30" in html
+    assert "/static/app.js?v=0.5.51" in html
+    assert "/static/style.css?v=0.5.31" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -311,16 +310,55 @@ def test_main_board_promotes_task_import_and_moves_backup_to_settings(client):
     assert 'if (status === "doing") doingCount = statusTasks.length;' in script
     assert 'const overLimit = doingCount > state.wipLimit;' in script
     assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script
-    assert 'els.settingsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));' in script
-    assert 'if (els.settingsDialog.open) els.settingsDialog.close();' in script
+    assert 'els.settingsDialog.addEventListener("close", () => {' in script
+    assert 'els.settingsDialog.addEventListener("cancel", (event) => {' in script
+    assert 'if (activeSettingsSubpage) closeSettingsSubpage();' in script
+    assert 'function openSettingsSubpage(name)' in script
+    assert 'function closeSettingsSubpage({ focus = true } = {})' in script
     assert 'els.backupExport.addEventListener("click", () => { window.location.href = "/api/export?format=zip"; });' in script
     assert 'els.exportMd' not in script
     assert 'els.exportZip' not in script
 
 
+
+def test_settings_tools_open_as_nested_pages_and_keep_the_settings_dialog_open(client):
+    html = client.get("/").text
+    settings_dialog = html.split('<dialog id="settings-dialog"', 1)[1].split('</dialog>', 1)[0]
+    for page_id in (
+        "shortcuts-settings-page",
+        "archive-settings-page",
+    ):
+        assert f'id="{page_id}"' in settings_dialog
+    assert 'id="shortcuts-dialog"' not in html
+    assert 'id="archive-dialog"' not in html
+
+    script = client.get("/static/app.js").text
+    for fragment in (
+        'shortcuts: els.shortcutsPage',
+        'archive: els.archivePage',
+        'projects: manageProjectsPage',
+        'function openSettingsSubpage(name)',
+        'returnToSettingsSubpageAfterPanel = "archive"',
+        'if (returnToSettingsSubpageAfterPanel) {',
+        'void openArchive();',
+        'function closeSettingsSubpage({ focus = true } = {})',
+        'settingsParentScrollTop = $(".settings-panels").scrollTop',
+        'page.querySelector(".settings-back-button")',
+        'els.settingsDialog.classList.add("is-subpage")',
+        'els.settingsDialog.classList.remove("is-subpage")',
+        'els.settingsDialog.addEventListener("cancel", (event) => {',
+        'els.shortcutsButton.addEventListener("click", () => openSettingsSubpage("shortcuts"))',
+        'function openManageProjectsPage() {',
+        'openSettingsSubpage("projects")',
+    ):
+        assert fragment in script
+    assert 'els.archiveDialog.showModal()' not in script
+    assert 'manageProjectsDialog.showModal()' not in script
+
 def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(client):
     html = client.get("/").text
-    assert 'id="archive-dialog"' in html
+    assert 'id="archive-settings-page" class="settings-subpage archive-settings-page"' in html
+    assert 'id="archive-dialog"' not in html
     assert 'id="open-archive"' in html
     assert 'id="archive-auto-enabled"' in html
     assert 'id="archive-after-days"' in html
@@ -335,8 +373,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.50" in html
-    assert "/static/style.css?v=0.5.30" in html
+    assert "/static/app.js?v=0.5.51" in html
+    assert "/static/style.css?v=0.5.31" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -362,7 +400,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
     css = client.get("/static/style.css").text
     assert ".column-options-popover" in css
-    assert ".archive-dialog" in css
+    assert ".archive-settings-page" in css
+    assert ".settings-subpage" in css
     assert ".archive-item" in css
     assert '.done-toggle[aria-expanded="true"] svg' in css
     assert "transform: rotate(180deg)" in css
@@ -371,7 +410,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.30" in html
+    assert "/static/style.css?v=0.5.31" in html
     assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text

@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.30">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.31">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.4">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.13">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
@@ -376,23 +376,66 @@
             <p class="theme-manager-help">Восстановление выполняется из ZIP-архива отдельно; инструкция есть в руководстве Flowboard.</p>
           </div>
         </section>
+
+        <section id="shortcuts-settings-page" class="settings-subpage" aria-labelledby="shortcuts-heading" hidden>
+          <div class="settings-subpage-header shortcuts-dialog-header">
+            <div><p class="eyebrow">FLOWBOARD</p><h3 id="shortcuts-heading">Сочетания клавиш</h3></div>
+            <button id="close-shortcuts" class="button button-small button-quiet settings-back-button" type="button">← Назад к настройкам</button>
+          </div>
+          <dl class="shortcut-list">
+            <div><dt>Новая задача</dt><dd><kbd>N</kbd></dd></div>
+            <div><dt>Поиск задач</dt><dd><kbd>/</kbd> <span>или</span> <kbd>⌘/Ctrl K</kbd></dd></div>
+            <div><dt>Переключить проект</dt><dd><kbd>⌘ ⇧ P</kbd><span>/</span><kbd>Ctrl ⇧ P</kbd></dd></div>
+            <div><dt>Закрыть панель или окно</dt><dd><kbd>Esc</kbd></dd></div>
+            <div><dt>Эта памятка</dt><dd><kbd>?</kbd></dd></div>
+          </dl>
+          <p class="shortcuts-note">Буквенные сочетания работают при любой раскладке. Клавиши N, / и ? не срабатывают во время ввода текста.</p>
+        </section>
+        <section id="archive-settings-page" class="settings-subpage archive-settings-page" aria-labelledby="archive-heading" hidden>
+          <div class="settings-subpage-header archive-dialog-header">
+            <div><p class="eyebrow">ХРАНЕНИЕ</p><h3 id="archive-heading">Архив задач</h3></div>
+            <button id="close-archive" class="button button-small button-quiet settings-back-button" type="button">← Назад к настройкам</button>
+          </div>
+          <section class="archive-settings" aria-label="Настройки автоархивирования">
+            <label class="archive-auto-toggle"><input id="archive-auto-enabled" type="checkbox"> Автоматически архивировать завершённые задачи</label>
+            <label class="archive-days-setting"><span>После</span>
+              <select id="archive-after-days">
+                <option value="7">7 дней</option><option value="30">30 дней</option>
+                <option value="60">60 дней</option><option value="90">90 дней</option>
+              </select>
+              <span>без изменений</span>
+            </label>
+            <p>Учитываются только задачи в колонке «Готово». Архив не удаляет задачи и их вложения.</p>
+          </section>
+          <div class="archive-toolbar">
+            <label class="search-box archive-search-box"><span aria-hidden="true">⌕</span>
+              <span class="visually-hidden">Поиск в архиве</span>
+              <input id="archive-search" type="search" placeholder="Найти в архиве…" autocomplete="off">
+            </label>
+            <label class="filter-box"><span class="visually-hidden">Фильтр архива по проекту</span>
+              <select id="archive-project-filter" aria-label="Проект в архиве"><option value="">Все проекты</option></select>
+            </label>
+            <label class="filter-box"><span class="visually-hidden">Фильтр архива по тегу</span>
+              <select id="archive-tag-filter" aria-label="Тег в архиве"><option value="">Все теги</option></select>
+            </label>
+            <label class="filter-box archive-period-filter"><span class="visually-hidden">Период архивирования</span>
+              <select id="archive-period-filter" aria-label="Период архивирования">
+                <option value="">За всё время</option>
+                <option value="7">За 7 дней</option>
+                <option value="30">За 30 дней</option>
+                <option value="90">За 90 дней</option>
+              </select>
+            </label>
+            <button id="archive-completed-now" class="button button-small button-quiet" type="button">Архивировать все «Готово»</button>
+          </div>
+          <p id="archive-count" class="archive-count" aria-live="polite">Загрузка архива…</p>
+          <div id="archive-list" class="archive-list"></div>
+          <p id="archive-empty" class="archive-empty" hidden>В архиве пока нет задач.</p>
+        </section>
       </div>
     </div>
   </dialog>
-  <dialog id="shortcuts-dialog" class="shortcuts-dialog" aria-labelledby="shortcuts-heading">
-    <div class="shortcuts-dialog-header">
-      <div><p class="eyebrow">FLOWBOARD</p><h2 id="shortcuts-heading">Сочетания клавиш</h2></div>
-      <button id="close-shortcuts" class="icon-button" type="button" aria-label="Закрыть">×</button>
-    </div>
-    <dl class="shortcut-list">
-      <div><dt>Новая задача</dt><dd><kbd>N</kbd></dd></div>
-      <div><dt>Поиск задач</dt><dd><kbd>/</kbd> <span>или</span> <kbd>⌘/Ctrl K</kbd></dd></div>
-      <div><dt>Переключить проект</dt><dd><kbd>⌘ ⇧ P</kbd><span>/</span><kbd>Ctrl ⇧ P</kbd></dd></div>
-      <div><dt>Закрыть панель или окно</dt><dd><kbd>Esc</kbd></dd></div>
-      <div><dt>Эта памятка</dt><dd><kbd>?</kbd></dd></div>
-    </dl>
-    <p class="shortcuts-note">Буквенные сочетания работают при любой раскладке. Клавиши N, / и ? не срабатывают во время ввода текста.</p>
-  </dialog>
+
   <dialog id="project-dialog" class="shortcuts-dialog project-dialog" aria-labelledby="project-dialog-heading">
     <div class="shortcuts-dialog-header">
       <div><p class="eyebrow">НАВИГАЦИЯ</p><h2 id="project-dialog-heading">Перейти к проекту</h2></div>
@@ -475,47 +518,7 @@
       <img id="attachment-preview-image" class="attachment-preview-image" alt="" hidden>
     </div>
   </dialog>
-  <dialog id="archive-dialog" class="archive-dialog" aria-labelledby="archive-heading">
-    <div class="archive-dialog-header">
-      <div><p class="eyebrow">ХРАНЕНИЕ</p><h2 id="archive-heading">Архив задач</h2></div>
-      <button id="close-archive" class="icon-button" type="button" aria-label="Закрыть архив">×</button>
-    </div>
-    <section class="archive-settings" aria-label="Настройки автоархивирования">
-      <label class="archive-auto-toggle"><input id="archive-auto-enabled" type="checkbox"> Автоматически архивировать завершённые задачи</label>
-      <label class="archive-days-setting"><span>После</span>
-        <select id="archive-after-days">
-          <option value="7">7 дней</option><option value="30">30 дней</option>
-          <option value="60">60 дней</option><option value="90">90 дней</option>
-        </select>
-        <span>без изменений</span>
-      </label>
-      <p>Учитываются только задачи в колонке «Готово». Архив не удаляет задачи и их вложения.</p>
-    </section>
-    <div class="archive-toolbar">
-      <label class="search-box archive-search-box"><span aria-hidden="true">⌕</span>
-        <span class="visually-hidden">Поиск в архиве</span>
-        <input id="archive-search" type="search" placeholder="Найти в архиве…" autocomplete="off">
-      </label>
-      <label class="filter-box"><span class="visually-hidden">Фильтр архива по проекту</span>
-        <select id="archive-project-filter" aria-label="Проект в архиве"><option value="">Все проекты</option></select>
-      </label>
-      <label class="filter-box"><span class="visually-hidden">Фильтр архива по тегу</span>
-        <select id="archive-tag-filter" aria-label="Тег в архиве"><option value="">Все теги</option></select>
-      </label>
-      <label class="filter-box archive-period-filter"><span class="visually-hidden">Период архивирования</span>
-        <select id="archive-period-filter" aria-label="Период архивирования">
-          <option value="">За всё время</option>
-          <option value="7">За 7 дней</option>
-          <option value="30">За 30 дней</option>
-          <option value="90">За 90 дней</option>
-        </select>
-      </label>
-      <button id="archive-completed-now" class="button button-small button-quiet" type="button">Архивировать все «Готово»</button>
-    </div>
-    <p id="archive-count" class="archive-count" aria-live="polite">Загрузка архива…</p>
-    <div id="archive-list" class="archive-list"></div>
-    <p id="archive-empty" class="archive-empty" hidden>В архиве пока нет задач.</p>
-  </dialog>
+
 
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <dialog id="workset-history-dialog" class="shortcuts-dialog workset-history-dialog" aria-labelledby="workset-history-heading" aria-modal="true">
@@ -676,6 +679,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.5" defer></script>
-  <script src="/static/app.js?v=0.5.50" defer></script>
+  <script src="/static/app.js?v=0.5.51" defer></script>
 </body>
 </html>

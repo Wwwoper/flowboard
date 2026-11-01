@@ -240,8 +240,8 @@
     densityToggle: $("#density-toggle"),
     densityToggleLabel: $("#density-toggle-label"),
     shortcutsButton: $("#shortcuts-button"),
-    shortcutsDialog: $("#shortcuts-dialog"),
-    closeShortcuts: $("#close-shortcuts"),
+    shortcutsPage: $("#shortcuts-settings-page"),
+    shortcutsBack: $("#close-shortcuts"),
     projectDialog: $("#project-dialog"),
     closeProjectDialog: $("#close-project-dialog"),
     projectCommandSearch: $("#project-command-search"),
@@ -249,8 +249,8 @@
   };
   Object.assign(els, {
     archiveOpen: $("#open-archive"),
-    archiveDialog: $("#archive-dialog"),
-    archiveClose: $("#close-archive"),
+    archivePage: $("#archive-settings-page"),
+    archiveBack: $("#close-archive"),
     archiveAutoEnabled: $("#archive-auto-enabled"),
     requireResultToClose: $("#require-result-to-close"),
     archiveAfterDays: $("#archive-after-days"),
@@ -1521,8 +1521,14 @@
       const title = make("button", "archive-task-title", task.title);
       title.type = "button";
       title.addEventListener("click", () => {
-        els.archiveDialog.close();
-        void openTaskPanel(task.id);
+        returnToSettingsSubpageAfterPanel = "archive";
+        els.settingsDialog.close();
+        void openTaskPanel(task.id).then(() => {
+          if (!state.selectedTask && returnToSettingsSubpageAfterPanel) {
+            returnToSettingsSubpageAfterPanel = null;
+            void openArchive();
+          }
+        });
       });
       copy.appendChild(title);
       const metadata = make("div", "archive-item-tags");
@@ -1582,7 +1588,7 @@
   }
 
   async function openArchive() {
-    if (!els.archiveDialog.open) els.archiveDialog.showModal();
+    openSettingsSubpage("archive");
     els.archiveCount.textContent = "Загрузка архива…";
     try {
       await Promise.all([loadArchiveSettings(), loadArchivedTasks()]);
@@ -1625,7 +1631,7 @@
     try {
       const result = await api("/api/archive/completed", { method: "POST" });
       await loadTasks();
-      if (els.archiveDialog.open) await loadArchivedTasks();
+      if (isSettingsSubpageActive("archive")) await loadArchivedTasks();
       toast(result.archived
         ? `В архив перемещено: ${pluralTasks(result.archived)}`
         : "В колонке «Готово» нет задач для архивирования");
@@ -1640,11 +1646,11 @@
       await api(`/api/archive/tasks/${taskId}`, { method: "POST" });
       if (state.selectedTask?.id === taskId) closePanel();
       await loadTasks();
-      if (els.archiveDialog.open) await loadArchivedTasks();
+      if (isSettingsSubpageActive("archive")) await loadArchivedTasks();
       toast("Задача перемещена в архив", "success", "Восстановить", async () => {
         await api(`/api/archive/tasks/${taskId}/restore`, { method: "POST" });
         await loadTasks();
-        if (els.archiveDialog.open) await loadArchivedTasks();
+        if (isSettingsSubpageActive("archive")) await loadArchivedTasks();
       });
     } catch (error) {
       toast(`Не удалось архивировать задачу: ${error.message}`, "error");
@@ -1668,6 +1674,8 @@
     els.panel.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
   }
+
+  let returnToSettingsSubpageAfterPanel = null;
 
   function closePanel() {
     clearTaskDraftSaveTimer();
@@ -1700,6 +1708,10 @@
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
     els.archiveTask.hidden = true;
+    if (returnToSettingsSubpageAfterPanel) {
+      returnToSettingsSubpageAfterPanel = null;
+      void openArchive();
+    }
   }
 
   async function openTaskPanel(taskId) {
@@ -2980,14 +2992,8 @@
   $$('[data-archive-completed]').forEach((button) => button.addEventListener("click", () => {
     void archiveCompletedTasks();
   }));
-  els.archiveOpen.addEventListener("click", () => {
-    if (els.settingsDialog.open) els.settingsDialog.close();
-    void openArchive();
-  });
-  els.archiveClose.addEventListener("click", () => els.archiveDialog.close());
-  els.archiveDialog.addEventListener("click", (event) => {
-    if (event.target === els.archiveDialog) els.archiveDialog.close();
-  });
+  els.archiveOpen.addEventListener("click", () => { void openArchive(); });
+  els.archiveBack.addEventListener("click", closeSettingsSubpage);
   els.archiveAutoEnabled.addEventListener("change", () => { void saveArchiveSettings(); });
   els.archiveAfterDays.addEventListener("change", () => { void saveArchiveSettings(); });
   els.archiveSearch.addEventListener("input", () => {
@@ -3298,8 +3304,7 @@
         setTaskWorkspaceExpanded(false);
         return;
       }
-      if (els.shortcutsDialog.open) els.shortcutsDialog.close();
-      else if (els.projectDialog.open) els.projectDialog.close();
+      if (els.projectDialog.open) els.projectDialog.close();
       else if (!els.overlay.hidden) void dismissTaskPanel();
       else {
         const latestToast = els.toastRegion.lastElementChild;
@@ -3309,7 +3314,13 @@
         }
       }
     }
-    if (els.settingsDialog.open) return;
+    if (els.settingsDialog.open) {
+      if (!isTyping && !event.metaKey && !event.ctrlKey && !event.altKey && event.key === "?") {
+        event.preventDefault();
+        openSettingsSubpage("shortcuts");
+      }
+      return;
+    }
     if ((event.metaKey || event.ctrlKey) && event.code === "KeyK") {
       event.preventDefault();
       els.search.focus();
@@ -3331,9 +3342,13 @@
       els.search.select();
     } else if (event.key === "?") {
       event.preventDefault();
-      if (!els.shortcutsDialog.open) els.shortcutsDialog.showModal();
+      openSettingsSubpage("shortcuts");
     }
   });
+
+  let activeSettingsSubpage = null;
+  let settingsParentScrollTop = 0;
+  let manageProjectsPage = null;
 
   function selectSettingsTab(tabName, { focus = false } = {}) {
     const tabs = $$('[data-settings-tab]');
@@ -3349,8 +3364,52 @@
     if (focus) selectedTab.focus({ preventScroll: true });
   }
 
+  function settingsSubpageFor(name) {
+    return ({ archive: els.archivePage, shortcuts: els.shortcutsPage, projects: manageProjectsPage })[name] || null;
+  }
+
+  function isSettingsSubpageActive(name) {
+    return activeSettingsSubpage === name;
+  }
+
+  function openSettingsSubpage(name) {
+    const page = settingsSubpageFor(name);
+    if (!page) return;
+    if (!els.settingsDialog.open) els.settingsDialog.showModal();
+    if (activeSettingsSubpage) closeSettingsSubpage({ focus: false });
+    settingsParentScrollTop = $(".settings-panels").scrollTop;
+    $$('[data-settings-tab]').forEach((tab) => { tab.hidden = true; });
+    $$('[data-settings-panel]').forEach((panel) => { panel.hidden = true; });
+    page.hidden = false;
+    els.settingsDialog.classList.add("is-subpage");
+    activeSettingsSubpage = name;
+    $(".settings-panels").scrollTop = 0;
+    const backButton = page.querySelector(".settings-back-button");
+    if (backButton) backButton.focus({ preventScroll: true });
+  }
+
+  function closeSettingsSubpage({ focus = true } = {}) {
+    if (!activeSettingsSubpage) return;
+    const page = settingsSubpageFor(activeSettingsSubpage);
+    if (page) page.hidden = true;
+    activeSettingsSubpage = null;
+    els.settingsDialog.classList.remove("is-subpage");
+    $$('[data-settings-tab]').forEach((tab) => { tab.hidden = false; });
+    const selectedTab = $('[data-settings-tab][aria-selected="true"]');
+    $$('[data-settings-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.settingsPanel !== selectedTab?.dataset.settingsTab;
+    });
+    $(".settings-panels").scrollTop = settingsParentScrollTop;
+    if (focus && selectedTab) selectedTab.focus({ preventScroll: true });
+  }
+
   els.settingsOpen.addEventListener("click", () => {
     if (!els.settingsDialog.open) els.settingsDialog.showModal();
+    if (activeSettingsSubpage) {
+      const page = settingsSubpageFor(activeSettingsSubpage);
+      page?.querySelector(".settings-back-button")?.focus({ preventScroll: true });
+      return;
+    }
     const activeTab = $('[data-settings-tab][aria-selected="true"]');
     (activeTab || els.settingsClose).focus({ preventScroll: true });
   });
@@ -3358,7 +3417,16 @@
   els.settingsDialog.addEventListener("click", (event) => {
     if (event.target === els.settingsDialog) els.settingsDialog.close();
   });
-  els.settingsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
+  els.settingsDialog.addEventListener("close", () => {
+    closeSettingsSubpage({ focus: false });
+    els.settingsOpen.focus({ preventScroll: true });
+  });
+  els.settingsDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    if (activeSettingsSubpage) closeSettingsSubpage();
+    else els.settingsDialog.close();
+  });
+  els.shortcutsBack.addEventListener("click", closeSettingsSubpage);
   $$('[data-settings-tab]').forEach((tab) => {
     tab.addEventListener("click", () => selectSettingsTab(tab.dataset.settingsTab));
     tab.addEventListener("keydown", (event) => {
@@ -3443,15 +3511,7 @@
       toast(error.message || "Не удалось сбросить тему", "error");
     }
   });
-  els.shortcutsButton.addEventListener("click", () => {
-    if (els.settingsDialog.open) els.settingsDialog.close();
-    if (!els.shortcutsDialog.open) els.shortcutsDialog.showModal();
-  });
-  els.shortcutsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
-  els.closeShortcuts.addEventListener("click", () => els.shortcutsDialog.close());
-  els.shortcutsDialog.addEventListener("click", (event) => {
-    if (event.target === els.shortcutsDialog) els.shortcutsDialog.close();
-  });
+  els.shortcutsButton.addEventListener("click", () => openSettingsSubpage("shortcuts"));
   els.closeProjectDialog.addEventListener("click", () => els.projectDialog.close());
   els.projectDialog.addEventListener("click", (event) => {
     if (event.target === els.projectDialog) els.projectDialog.close();
@@ -3527,32 +3587,6 @@
     });
   };
 
-  const projectManagerStyles = document.createElement("style");
-  projectManagerStyles.textContent = `
-    .manage-projects-dialog { width: min(620px, calc(100vw - 28px)); max-height: min(82vh, 760px); overflow: auto; }
-    .manage-projects-help { margin: 12px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-    .project-manager-section { margin-top: 16px; }
-    .project-manager-section + .project-manager-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
-    .project-manager-section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .project-manager-section-heading h3 { margin: 0; color: var(--ink); font-size: 14px; font-weight: 650; }
-    .project-manager-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .project-manager-list { display: grid; gap: 7px; }
-    .project-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft, var(--surface)); }
-    .project-manager-copy { display: grid; gap: 3px; min-width: 0; }
-    .project-manager-name { overflow-wrap: anywhere; color: var(--ink); font-size: 13px; font-weight: 600; }
-    .project-manager-key { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
-    .project-manager-action { flex: 0 0 auto; min-height: 32px; padding: 0 10px; font-size: 12px; }
-    .project-manager-action.is-archive { color: var(--red, var(--muted)); }
-    .project-manager-empty { margin: 0; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-    .project-manager-empty[hidden] { display: none; }
-    @media (max-width: 480px) {
-      .manage-projects-dialog { width: calc(100vw - 20px); padding: 16px; }
-      .project-manager-item { align-items: flex-start; gap: 8px; padding: 9px; }
-      .project-manager-action { padding-inline: 7px; }
-    }
-  `;
-  document.head.appendChild(projectManagerStyles);
-
   const manageProjectsButton = make("button", "button button-quiet toolbar-menu-item manage-projects-button");
   manageProjectsButton.type = "button";
   manageProjectsButton.setAttribute("aria-label", "Управление проектами");
@@ -3568,26 +3602,24 @@
   manageProjectsButton.append(manageProjectsIcon, make("span", "manage-projects-label", "Управление проектами"));
   $("#organization-settings-actions").append(manageProjectsButton);
 
-  const manageProjectsDialog = document.createElement("dialog");
-  manageProjectsDialog.id = "manage-projects-dialog";
-  manageProjectsDialog.className = "shortcuts-dialog manage-projects-dialog";
-  manageProjectsDialog.setAttribute("aria-labelledby", "manage-projects-heading");
-  manageProjectsDialog.setAttribute("aria-describedby", "manage-projects-help");
+  manageProjectsPage = make("section", "settings-subpage manage-projects-page");
+  manageProjectsPage.id = "manage-projects-settings-page";
+  manageProjectsPage.hidden = true;
+  manageProjectsPage.setAttribute("aria-labelledby", "manage-projects-heading");
+  manageProjectsPage.setAttribute("aria-describedby", "manage-projects-help");
 
-  const manageProjectsHeader = make("div", "shortcuts-dialog-header");
+  const manageProjectsHeader = make("div", "settings-subpage-header shortcuts-dialog-header");
   const manageProjectsTitleBlock = make("div");
   manageProjectsTitleBlock.append(
     make("p", "eyebrow", "ПРОЕКТЫ"),
-    make("h2", "", "Управление проектами"),
+    make("h3", "", "Управление проектами"),
   );
   manageProjectsTitleBlock.lastElementChild.id = "manage-projects-heading";
-  const closeManageProjectsButton = make("button", "icon-button", "×");
-  closeManageProjectsButton.type = "button";
-  closeManageProjectsButton.setAttribute("aria-label", "Закрыть управление проектами");
-  closeManageProjectsButton.title = "Закрыть";
-  manageProjectsHeader.append(manageProjectsTitleBlock, closeManageProjectsButton);
-  manageProjectsDialog.append(manageProjectsHeader);
-  manageProjectsDialog.append(make("p", "manage-projects-help", "Архив скрывает проект из обычного списка, не удаляя задачи и теги. Архивный проект можно восстановить в любое время."));
+  const manageProjectsBackButton = make("button", "button button-small button-quiet settings-back-button", "← Назад к настройкам");
+  manageProjectsBackButton.type = "button";
+  manageProjectsHeader.append(manageProjectsTitleBlock, manageProjectsBackButton);
+  manageProjectsPage.append(manageProjectsHeader);
+  manageProjectsPage.append(make("p", "manage-projects-help", "Архив скрывает проект из обычного списка, не удаляя задачи и теги. Архивный проект можно восстановить в любое время."));
 
   function createProjectManagerSection(id, title, emptyText) {
     const section = make("section", "project-manager-section");
@@ -3601,13 +3633,13 @@
     const empty = make("p", "project-manager-empty", emptyText);
     section.append(heading, list, empty);
     heading.append(titleNode, count);
-    manageProjectsDialog.append(section);
+    manageProjectsPage.append(section);
     return { count, list, empty };
   }
 
   const activeProjectSection = createProjectManagerSection("active-projects", "Активные", "Активных проектов пока нет.");
   const archivedProjectSection = createProjectManagerSection("archived-projects", "Архивные", "В архиве пока нет проектов.");
-  document.body.append(manageProjectsDialog);
+  $(".settings-panels").append(manageProjectsPage);
 
   function renderProjectManagerList(section, projects, actionLabel, actionClass, onAction) {
     section.list.replaceChildren();
@@ -3635,12 +3667,9 @@
     renderProjectManagerList(archivedProjectSection, archivedProjects, "Восстановить", "is-restore", restoreProject);
   }
 
-  function openManageProjectsDialog() {
-    if (manageProjectsDialog.open) return;
-    if (els.settingsDialog.open) els.settingsDialog.close();
+  function openManageProjectsPage() {
     renderProjectManager();
-    manageProjectsDialog.showModal();
-    closeManageProjectsButton.focus({ preventScroll: true });
+    openSettingsSubpage("projects");
   }
 
   function archiveProject(slug) {
@@ -3663,20 +3692,8 @@
     toast(`Проект «${projectLabel(slug)}» восстановлен`);
   }
 
-  manageProjectsButton.addEventListener("click", openManageProjectsDialog);
-  closeManageProjectsButton.addEventListener("click", () => manageProjectsDialog.close());
-  manageProjectsDialog.addEventListener("click", (event) => {
-    if (event.target === manageProjectsDialog) manageProjectsDialog.close();
-  });
-  manageProjectsDialog.addEventListener("close", () => els.settingsOpen.focus({ preventScroll: true }));
-  manageProjectsDialog.addEventListener("keydown", (event) => {
-    // Keep workspace shortcuts from leaking out of the modal without blocking input typing.
-    event.stopPropagation();
-    if (event.key === "Escape") {
-      event.preventDefault();
-      manageProjectsDialog.close();
-    }
-  });
+  manageProjectsButton.addEventListener("click", openManageProjectsPage);
+  manageProjectsBackButton.addEventListener("click", closeSettingsSubpage);
   initializeSortables();
   /* Keep the title and save status fixed while the workspace and properties scroll independently. */
   const taskPanelHeader = make("div", "task-panel-header");

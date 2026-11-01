@@ -13,9 +13,9 @@ def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_ren
 
     css = client.get("/static/themed-controls.css").text
     for selector in (
-        ".board-toolbar > .search-box",
+        ".toolbar-main-group > .search-box",
         ".board-toolbar .filter-box",
-        ".board-toolbar > .search-box:focus-within",
+        ".toolbar-main-group > .search-box:focus-within",
         ".board-toolbar .search-shortcut-keycap",
         ".board-toolbar .toolbar-icon",
     ):
@@ -449,7 +449,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.14" in html
+    assert "/static/themed-controls.css?v=0.1.15" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',

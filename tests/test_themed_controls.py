@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.14' in html
+    assert '/static/themed-controls.css?v=0.1.15' in html
     assert '/static/themed-selects.js?v=0.1.8' in html
 
     css_response = client.get("/static/themed-controls.css")
@@ -21,8 +21,7 @@ def test_theme_aware_controls_assets_are_loaded(client):
         ".theme-select-trigger",
         ".theme-select-menu[hidden]",
         '.theme-select-option[aria-selected="true"]',
-        "@media (min-width: 641px) and (max-width: 1000px)",
-        ".board-toolbar > .search-box",
+        ".toolbar-main-group > .search-box",
         "flex: 1 1 100%;",
         ".board-toolbar .filter-box .theme-select-trigger",
         "border-color: transparent;",

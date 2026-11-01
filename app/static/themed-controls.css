@@ -239,34 +239,6 @@
   .theme-select-option { font-size: 12px; }
 }
 
-/* Keep toolbar controls from overlapping when the viewport gets narrower. */
-@media (min-width: 641px) and (max-width: 1000px) {
-  .board-toolbar {
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .board-toolbar > .search-box {
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: 0;
-  }
-  .board-toolbar .project-filter-box {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-  .board-toolbar .project-filter-box .theme-select {
-    flex: 1 1 auto;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-  }
-  .board-toolbar .project-filter-box .theme-select-trigger {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
 /* Align the task reference badge and panel actions on a single 36px grid. */
 .task-title-row {
   align-items: center;
@@ -391,13 +363,13 @@
   flex-wrap: wrap;
 }
 .board-toolbar,
-.board-toolbar > .search-box,
-.board-toolbar > .search-box *,
+.toolbar-main-group > .search-box,
+.toolbar-main-group > .search-box *,
 .board-toolbar .filter-box,
 .board-toolbar .filter-box * {
   box-sizing: border-box;
 }
-.board-toolbar > .search-box,
+.board-toolbar .search-box,
 .board-toolbar .filter-box {
   height: var(--toolbar-control-height);
   min-height: var(--toolbar-control-height);
@@ -405,15 +377,15 @@
   border-radius: var(--toolbar-control-radius);
   line-height: 1;
 }
-.board-toolbar > .search-box,
+.board-toolbar .search-box,
 .board-toolbar .filter-box {
   padding-inline: var(--toolbar-control-padding-x);
   gap: 9px;
 }
-.board-toolbar > .search-box {
+.toolbar-main-group > .search-box {
   flex: 1 1 280px;
   width: 100%;
-  max-width: 340px;
+  max-width: none;
   min-width: 0;
   background: var(--surface);
 }
@@ -429,7 +401,7 @@
   line-height: 1.2;
 }
 .board-toolbar .search-box input::placeholder { color: var(--muted); opacity: 1; }
-.board-toolbar > .search-box:focus-within {
+.toolbar-main-group > .search-box:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 17%, transparent);
 }
@@ -485,24 +457,9 @@
   line-height: 1;
   white-space: nowrap;
 }
-@media (min-width: 641px) and (max-width: 1000px) {
-  .board-toolbar { align-items: center; gap: 8px; }
-  .board-toolbar > .search-box {
-    flex: 1 1 100%;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-  .board-toolbar .project-filter-box { flex: 1 1 0; min-width: 0; }
-  .board-toolbar .project-filter-box .theme-select {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-}
 @media (max-width: 640px) {
   .board-toolbar { gap: 8px; }
-  .board-toolbar > .search-box {
+  .toolbar-main-group > .search-box {
     flex: 1 1 100%;
     width: 100%;
     max-width: none;
@@ -527,7 +484,7 @@
 }
 @media (max-width: 360px) {
   .board-toolbar { gap: 6px; }
-  .board-toolbar > .search-box { padding-inline: 9px; gap: 7px; }
+  .toolbar-main-group > .search-box { padding-inline: 9px; gap: 7px; }
   .board-toolbar .project-filter-box { padding-inline: 7px; gap: 6px; }
   .board-toolbar .search-shortcut-keycap { padding-inline: 5px; }
 }

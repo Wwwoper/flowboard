@@ -4,7 +4,7 @@ from __future__ import annotations
 
 def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.13' in html
+    assert '/static/board-workspace.css?v=0.1.14' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
@@ -107,3 +107,31 @@ def test_board_toolbar_uses_two_groups_with_actions_aligned_to_the_end(client):
     assert ".project-toolbar-group { flex: 0 0 220px; min-width: 0; }" in css
     assert ".project-filter-box .theme-select { flex: 1 1 auto; width: 100%; max-width: none; min-width: 0; }" in css
     assert ".workset-toolbar-group:has(> .workset-filter-box[hidden])" in css
+
+
+def test_toolbar_search_expands_and_filters_wrap_as_a_single_group(client):
+    html = client.get("/").text
+    board_css = client.get("/static/board-workspace.css").text
+    themed_css = client.get("/static/themed-controls.css").text
+
+    assert "/static/board-workspace.css?v=0.1.14" in html
+    assert ".toolbar-main-group {" in board_css
+    assert "flex: 1 1 640px;" in board_css
+    assert "flex-wrap: nowrap;" in board_css
+    assert "max-width: none;" in board_css
+    assert ".toolbar-filters-group {" in board_css
+    assert "max-width: none;" in themed_css
+    assert "@media (min-width: 641px) and (max-width: 1000px)" not in themed_css
+    assert ".board-toolbar > .search-box" not in themed_css
+
+
+def test_selected_workset_checkmark_is_on_the_right_of_its_existing_icon(client):
+    css = client.get("/static/board-workspace.css").text
+    selected_selector = ".workset-filter-menu .theme-select-option[aria-selected=\"true\"]"
+    selected_rule = css.split(f"{selected_selector} {{", 1)[1]
+    checkmark_rule = selected_rule.split(f"{selected_selector}::before {{", 1)[1]
+
+    assert "padding-right: 28px;" in selected_rule.split("}", 1)[0]
+    assert "padding-left: 28px;" not in selected_rule.split("}", 1)[0]
+    assert "right: 10px;" in checkmark_rule.split("}", 1)[0]
+    assert "left: 10px;" not in checkmark_rule.split("}", 1)[0]

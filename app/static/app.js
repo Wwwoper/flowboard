@@ -541,8 +541,11 @@
         ? "Нет активных наборов. Создайте новый через «Действия»"
         : "Создайте первый набор задач";
     const filterBox = els.worksetFilter.closest(".workset-filter-box");
-    filterBox?.classList.toggle("is-empty", !hasSelectableWorksets);
-    if (filterBox) filterBox.title = hasSelectableWorksets ? "" : emptyHint;
+    if (filterBox) {
+      filterBox.hidden = !hasSelectableWorksets;
+      filterBox.classList.toggle("is-empty", !hasSelectableWorksets);
+      filterBox.title = hasSelectableWorksets ? "" : emptyHint;
+    }
     els.worksetFilter.disabled = !hasSelectableWorksets;
     els.worksetFilter.title = hasSelectableWorksets ? "" : emptyHint;
     els.worksetFilter.replaceChildren(new Option(

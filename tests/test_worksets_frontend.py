@@ -37,6 +37,9 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "#workset-filter" in client.get("/static/themed-selects.js").text
     assert 'class="toolbar-group project-toolbar-group"' in html
     assert 'class="toolbar-group workset-toolbar-group"' in html
+    assert 'class="toolbar-filters-group" aria-label="Фильтры доски"' in html
+    assert 'class="toolbar-actions-group"' in html
+    assert html.index('id="task-filter-menu"') < html.index('class="toolbar-actions-group"')
     assert html.index('id="project-filter"') < html.index('id="workset-filter"')
     assert 'value="__create_project__">＋ Создать проект…</option>' in html
     assert html.index('id="workset-filter"') < html.index('id="task-filter-menu"')
@@ -47,10 +50,10 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' not in html
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.53" in html
+    assert "/static/app.js?v=0.5.54" in html
     assert "/static/themed-selects.js?v=0.1.7" in html
     assert "/static/style.css?v=0.5.33" in html
-    assert "/static/board-workspace.css?v=0.1.9" in html
+    assert "/static/board-workspace.css?v=0.1.10" in html
     toolbar_css = client.get("/static/board-workspace.css").text
     assert ".board-toolbar .filter-box {" in toolbar_css
     assert "background: var(--gh-control, var(--surface));" in toolbar_css
@@ -69,11 +72,18 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'els.worksetFilter.disabled = !hasSelectableWorksets;' in script
     assert 'Создайте первый набор задач' in script
     assert 'hasSelectableWorksets ? "Все задачи проекта" : "Все задачи"' in script
-    assert 'filterBox?.classList.toggle("is-empty", !hasSelectableWorksets)' in script
+    assert 'filterBox.hidden = !hasSelectableWorksets;' in script
+    assert 'filterBox.classList.toggle("is-empty", !hasSelectableWorksets);' in script
     assert 'class="workset-context" aria-live="polite"' in html
     assert 'els.worksetContext.hidden = false;' in script
     assert 'height: 28px; min-height: 28px;' in toolbar_css
     assert '.workset-filter-box.is-empty .theme-select-chevron { display: none; }' in toolbar_css
+    assert '.board-toolbar > .search-box' in toolbar_css
+    assert 'min-width: 280px;' in toolbar_css
+    assert 'max-width: 480px;' in toolbar_css
+    assert 'max-width: 260px;' in toolbar_css
+    assert '.task-filter-count[hidden] { display: none !important; }' in toolbar_css
+    assert '@container (max-width: 300px)' in toolbar_css
     assert '.workset-filter-menu .theme-select-option[aria-selected="true"]::before' in toolbar_css
     assert '.workset-filter-menu .theme-select-option[aria-selected="true"]:hover' in toolbar_css
     assert '.board-toolbar .filter-box:has(.theme-select-trigger:focus-visible)' in toolbar_css
@@ -85,4 +95,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.9" in html
+    assert "/static/board-workspace.css?v=0.1.10" in html

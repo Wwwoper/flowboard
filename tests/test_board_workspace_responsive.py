@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import re
 
 
 def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.11' in html
+    assert '/static/board-workspace.css?v=0.1.12' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "min-height: 100dvh;" in css
+    assert "height: 100dvh;" in css
+    assert "min-height: 100dvh;" not in css
     assert ".app-shell > main" in css
     assert "flex: 1 1 auto;" in css
     assert "height: auto;" in css
@@ -43,7 +43,7 @@ def test_narrow_layout_uses_page_scrolling_and_wraps_toolbar_controls(client):
     assert ".board { grid-template-columns: minmax(0, 1fr);" in base_css
     assert ".task-list, .task-list:empty { min-height: 20px; }" in base_css
     assert ".board-toolbar { flex-wrap: wrap; }" in css
-    assert ".board-toolbar > .search-box" in css
+    assert ".toolbar-main-group > .search-box" in css
     assert "flex: 1 1 100%;" in css
     assert ".project-filter-box {" in css
     assert 'id="task-filter-menu"' in html
@@ -94,16 +94,16 @@ def test_board_and_task_panel_keep_long_content_wrappable_at_small_viewports(cli
     assert ".attachment-list { flex: 0 0 auto; max-height: 180px; min-height: 0; }" in css
 
 
-def test_board_toolbar_keeps_actions_adjacent_to_filters(client):
+def test_board_toolbar_uses_two_groups_with_actions_aligned_to_the_end(client):
     html = client.get("/").text
     css = client.get("/static/board-workspace.css").text
 
+    assert 'class="toolbar-main-group"' in html
     assert 'class="toolbar-filters-group" aria-label="Фильтры доски"' in html
     assert 'class="toolbar-actions-group"' in html
-    assert "gap: 12px;" in css
-    assert "margin-left: 0;" in css
-    assert all(
-        "margin-left: auto;" not in rule
-        for rule in re.findall(r"\.toolbar-actions-group\s*\{([^}]*)\}", css)
-    )
+    assert html.index('class="toolbar-main-group"') < html.index('class="toolbar-actions-group"')
+    assert ".toolbar-main-group {" in css
+    assert "margin-left: auto;" in css
+    assert ".project-toolbar-group { flex: 0 0 220px; min-width: 0; }" in css
+    assert ".project-filter-box .theme-select { flex: 1 1 auto; width: 100%; max-width: none; min-width: 0; }" in css
     assert ".workset-toolbar-group:has(> .workset-filter-box[hidden])" in css

@@ -972,6 +972,8 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   height: calc(100% - 86px);
 }
 .settings-dialog.is-subpage .settings-layout { grid-template-columns: minmax(0, 1fr); }
+.settings-dialog.is-subpage .settings-tabs { display: none; }
+.settings-tab[hidden] { display: none; }
 .settings-tabs {
   display: flex;
   flex-direction: column;

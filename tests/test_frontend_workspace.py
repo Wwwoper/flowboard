@@ -44,7 +44,7 @@ def test_project_workspace_controls_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.31" in html
+    assert "/static/style.css?v=0.5.32" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -187,7 +187,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.31" in html
+    assert "/static/style.css?v=0.5.32" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -355,6 +355,10 @@ def test_settings_tools_open_as_nested_pages_and_keep_the_settings_dialog_open(c
     assert 'els.archiveDialog.showModal()' not in script
     assert 'manageProjectsDialog.showModal()' not in script
 
+    css = client.get("/static/style.css").text
+    assert ".settings-dialog.is-subpage .settings-tabs { display: none; }" in css
+    assert ".settings-tab[hidden] { display: none; }" in css
+
 def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(client):
     html = client.get("/").text
     assert 'id="archive-settings-page" class="settings-subpage archive-settings-page"' in html
@@ -374,7 +378,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
     assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.31" in html
+    assert "/static/style.css?v=0.5.32" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -410,7 +414,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.31" in html
+    assert "/static/style.css?v=0.5.32" in html
     assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text

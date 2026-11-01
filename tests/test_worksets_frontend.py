@@ -42,7 +42,7 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "window.prompt(" not in script
     assert "/static/app.js?v=0.5.51" in html
     assert "/static/themed-selects.js?v=0.1.5" in html
-    assert "/static/style.css?v=0.5.31" in html
+    assert "/static/style.css?v=0.5.32" in html
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
     assert "Показать ещё" in script

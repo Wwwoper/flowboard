@@ -180,19 +180,50 @@
     const rect = instance.trigger.getBoundingClientRect();
     const margin = 8;
     const availableWidth = Math.max(160, window.innerWidth - margin * 2);
-    instance.menu.style.minWidth = `${Math.min(Math.max(rect.width, 190), availableWidth)}px`;
-    instance.menu.style.maxWidth = `${availableWidth}px`;
     instance.menu.classList.remove("opens-up", "align-right");
-    instance.menu.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - margin - 190))}px`;
-    instance.menu.style.top = `${Math.min(rect.bottom + 5, Math.max(margin, window.innerHeight - 48))}px`;
 
-    const menuRect = instance.menu.getBoundingClientRect();
-    if (menuRect.right > window.innerWidth - margin) {
-      instance.menu.style.left = `${Math.max(margin, window.innerWidth - menuRect.width - margin)}px`;
-    }
-    if (menuRect.bottom > window.innerHeight - margin) {
-      instance.menu.classList.add("opens-up");
-      instance.menu.style.top = `${Math.max(margin, rect.top - menuRect.height - 5)}px`;
+    if (instance.dialog) {
+      // A modal dialog is rendered in the browser's top layer. Keep its popup
+      // inside that dialog so it is not painted underneath the modal surface.
+      const dialogRect = instance.dialog.getBoundingClientRect();
+      const bounds = {
+        left: dialogRect.left + instance.dialog.clientLeft,
+        top: dialogRect.top + instance.dialog.clientTop,
+        width: instance.dialog.clientWidth,
+        height: instance.dialog.clientHeight,
+      };
+      const dialogWidth = Math.max(160, bounds.width - margin * 2);
+      instance.menu.style.position = "absolute";
+      instance.menu.style.minWidth = `${Math.min(Math.max(rect.width, 190), dialogWidth)}px`;
+      instance.menu.style.maxWidth = `${dialogWidth}px`;
+      instance.menu.style.maxHeight = `${Math.max(100, Math.min(280, bounds.height - margin * 2))}px`;
+      instance.menu.style.left = `${Math.max(margin, Math.min(rect.left - bounds.left, bounds.width - margin - 190))}px`;
+      instance.menu.style.top = `${Math.min(rect.bottom - bounds.top + 5, Math.max(margin, bounds.height - 48))}px`;
+
+      const menuRect = instance.menu.getBoundingClientRect();
+      if (menuRect.right > bounds.left + bounds.width - margin) {
+        instance.menu.style.left = `${Math.max(margin, bounds.width - menuRect.width - margin)}px`;
+      }
+      if (menuRect.bottom > bounds.top + bounds.height - margin) {
+        instance.menu.classList.add("opens-up");
+        instance.menu.style.top = `${Math.max(margin, rect.top - bounds.top - menuRect.height - 5)}px`;
+      }
+    } else {
+      instance.menu.style.position = "fixed";
+      instance.menu.style.minWidth = `${Math.min(Math.max(rect.width, 190), availableWidth)}px`;
+      instance.menu.style.maxWidth = `${availableWidth}px`;
+      instance.menu.style.maxHeight = "";
+      instance.menu.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - margin - 190))}px`;
+      instance.menu.style.top = `${Math.min(rect.bottom + 5, Math.max(margin, window.innerHeight - 48))}px`;
+
+      const menuRect = instance.menu.getBoundingClientRect();
+      if (menuRect.right > window.innerWidth - margin) {
+        instance.menu.style.left = `${Math.max(margin, window.innerWidth - menuRect.width - margin)}px`;
+      }
+      if (menuRect.bottom > window.innerHeight - margin) {
+        instance.menu.classList.add("opens-up");
+        instance.menu.style.top = `${Math.max(margin, rect.top - menuRect.height - 5)}px`;
+      }
     }
 
     const items = availableOptions(instance);
@@ -253,10 +284,11 @@
     menu.setAttribute("role", "listbox");
     menu.setAttribute("aria-label", labelFor(select));
     menu.hidden = true;
-    document.body.appendChild(menu);
+    const dialog = select.closest("dialog");
+    (dialog || document.body).appendChild(menu);
     trigger.setAttribute("aria-controls", menu.id);
 
-    const instance = { select, wrapper, trigger, valueLabel: label, valueIcon, menu, label: labelFor(select) };
+    const instance = { select, wrapper, trigger, valueLabel: label, valueIcon, menu, dialog, label: labelFor(select) };
     instances.set(select, instance);
     trigger.addEventListener("click", () => {
       if (openInstance === instance && !menu.hidden) close(instance);

@@ -4,7 +4,7 @@ from __future__ import annotations
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
     assert '/static/themed-controls.css?v=0.1.16' in html
-    assert '/static/themed-selects.js?v=0.1.9' in html
+    assert '/static/themed-selects.js?v=0.1.10' in html
 
     css_response = client.get("/static/themed-controls.css")
     assert css_response.status_code == 200
@@ -55,6 +55,10 @@ def test_theme_aware_controls_assets_are_loaded(client):
         'event.key === "ArrowDown"',
         'new Event("change", { bubbles: true })',
         'new MutationObserver',
+        'const dialog = select.closest("dialog");',
+        '(dialog || document.body).appendChild(menu);',
+        'instance.menu.style.position = "absolute";',
+        'modal dialog is rendered in the browser',
         'instance.wrapper.classList.remove("task-type-bug", "task-type-feature", "task-type-docs", "task-type-refactor")',
         'item.classList.add(`task-type-${option.value}`)',
     ):

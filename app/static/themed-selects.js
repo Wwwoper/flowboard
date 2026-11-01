@@ -38,10 +38,42 @@
     });
   }
 
+  function createWorksetIcon(kind) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("workset-select-icon");
+    const paths = kind === "workset"
+      ? ["m10 2 8 4.5-8 4.5-8-4.5L10 2Z", "m2 10 8 5 8-5", "m2 13.5 8 4.5 8-4.5"]
+      : ["m2.5 5 2 2 3.5-3.5", "M10 5h7.5", "m2.5 11 2 2 3.5-3.5", "M10 11h7.5", "m2.5 17 2 2 3.5-3.5", "M10 17h7.5"];
+    paths.forEach((d) => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", "1.5");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(path);
+    });
+    return svg;
+  }
+
   function syncValue(instance) {
     const selected = selectedOption(instance.select);
-    const valueLabel = selected?.textContent.trim() || "Выбрать значение";
+    const optionLabel = selected?.textContent.trim() || "Выбрать значение";
+    const valueLabel = selected?.dataset.triggerLabel || optionLabel;
     if (instance.valueLabel.textContent !== valueLabel) instance.valueLabel.textContent = valueLabel;
+    if (instance.select.id === "workset-filter") {
+      const kind = selected?.dataset.kind || "tasks";
+      if (instance.valueIcon.dataset.kind !== kind) {
+        instance.valueIcon.replaceWith(createWorksetIcon(kind));
+        instance.valueIcon = instance.trigger.querySelector(".workset-select-icon");
+        instance.valueIcon.dataset.kind = kind;
+      }
+    }
     const isEmptyWorksetFilter = instance.select.id === "workset-filter" && instance.select.disabled;
     const disabledHint = isEmptyWorksetFilter ? instance.select.title : "";
     instance.trigger.setAttribute(
@@ -83,7 +115,16 @@
       item.tabIndex = -1;
       item.disabled = option.disabled;
       item.dataset.value = option.value;
-      item.textContent = option.textContent.trim();
+      if (instance.select.id === "workset-filter") {
+        const kind = option.dataset.kind || "tasks";
+        const icon = createWorksetIcon(kind);
+        icon.dataset.kind = kind;
+        const label = document.createElement("span");
+        label.textContent = option.textContent.trim();
+        item.append(icon, label);
+      } else {
+        item.textContent = option.textContent.trim();
+      }
       item.addEventListener("click", () => {
         if (option.disabled) return;
         instance.select.value = option.value;
@@ -179,6 +220,7 @@
     trigger.setAttribute("aria-label", labelFor(select));
     const label = document.createElement("span");
     label.className = "theme-select-value";
+    const valueIcon = select.id === "workset-filter" ? createWorksetIcon("tasks") : null;
     const chevron = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     chevron.setAttribute("viewBox", "0 0 16 16");
     chevron.setAttribute("width", "14");
@@ -193,7 +235,12 @@
     path.setAttribute("stroke-linecap", "round");
     path.setAttribute("stroke-linejoin", "round");
     chevron.appendChild(path);
-    trigger.append(label, chevron);
+    if (valueIcon) {
+      valueIcon.dataset.kind = "tasks";
+      trigger.append(valueIcon, label, chevron);
+    } else {
+      trigger.append(label, chevron);
+    }
     wrapper.appendChild(trigger);
 
     const menu = document.createElement("div");
@@ -206,7 +253,7 @@
     document.body.appendChild(menu);
     trigger.setAttribute("aria-controls", menu.id);
 
-    const instance = { select, wrapper, trigger, valueLabel: label, menu, label: labelFor(select) };
+    const instance = { select, wrapper, trigger, valueLabel: label, valueIcon, menu, label: labelFor(select) };
     instances.set(select, instance);
     trigger.addEventListener("click", () => {
       if (openInstance === instance && !menu.hidden) close(instance);

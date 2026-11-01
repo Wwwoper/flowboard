@@ -4,7 +4,7 @@ from __future__ import annotations
 def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_rendered(client):
     html = client.get("/").text
     assert 'class="board-toolbar" aria-label="Поиск и фильтры"' in html
-    assert html.count('class="toolbar-icon"') == 4
+    assert html.count('class="toolbar-icon"') == 3
     assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
     assert 'placeholder="Поиск…"' in html
     assert 'value="__create_project__">＋ Создать проект…</option>' in html
@@ -42,7 +42,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.54" in html
+    assert "/static/app.js?v=0.5.55" in html
     assert "/static/style.css?v=0.5.33" in html
 
 
@@ -189,7 +189,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.54" in html
+    assert "/static/app.js?v=0.5.55" in html
     assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
@@ -386,7 +386,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.54" in html
+    assert "/static/app.js?v=0.5.55" in html
     assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' in html

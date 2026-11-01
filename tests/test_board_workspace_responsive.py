@@ -4,7 +4,7 @@ from __future__ import annotations
 
 def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.12' in html
+    assert '/static/board-workspace.css?v=0.1.13' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css

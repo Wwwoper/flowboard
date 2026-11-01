@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.5">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.14">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.12">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.1.13">
 </head>
 <body>
   <div class="app-shell">
@@ -110,9 +110,8 @@
             </div>
             <div class="toolbar-group workset-toolbar-group" aria-label="Рабочий набор">
               <label class="filter-box workset-filter-box">
-                <svg class="toolbar-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 4.5h12v11H4zM7 8h6M7 11h4"></path></svg>
                 <span class="visually-hidden">Рабочий набор</span>
-                <select id="workset-filter" aria-label="Рабочий набор"><option value="">Все задачи проекта</option></select>
+                <select id="workset-filter" aria-label="Рабочий набор"><option value="" data-kind="tasks">Задачи</option></select>
               </label>
             </div>
             <details id="task-filter-menu" class="task-filter-menu">
@@ -687,7 +686,7 @@
   </aside>
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
-  <script src="/static/themed-selects.js?v=0.1.7" defer></script>
-  <script src="/static/app.js?v=0.5.54" defer></script>
+  <script src="/static/themed-selects.js?v=0.1.8" defer></script>
+  <script src="/static/app.js?v=0.5.55" defer></script>
 </body>
 </html>

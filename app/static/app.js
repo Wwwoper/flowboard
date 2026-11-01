@@ -548,18 +548,23 @@
     }
     els.worksetFilter.disabled = !hasSelectableWorksets;
     els.worksetFilter.title = hasSelectableWorksets ? "" : emptyHint;
-    els.worksetFilter.replaceChildren(new Option(
-      hasSelectableWorksets ? "Все задачи проекта" : "Все задачи",
-      "",
-    ));
+    const tasksOption = new Option("Задачи", "");
+    tasksOption.dataset.kind = "tasks";
+    els.worksetFilter.replaceChildren(tasksOption);
     activeWorksets.forEach((workset) => {
-      els.worksetFilter.appendChild(new Option(
+      const option = new Option(
         `${workset.name} · ${workset.done_count}/${workset.task_count}`,
         String(workset.id),
-      ));
+      );
+      option.dataset.kind = "workset";
+      option.dataset.triggerLabel = `Набор: ${workset.name}`;
+      els.worksetFilter.appendChild(option);
     });
     if (selectedWorkset?.status === "completed") {
-      els.worksetFilter.appendChild(new Option(`История: ${selectedWorkset.name}`, selected));
+      const historyOption = new Option(`История: ${selectedWorkset.name}`, selected);
+      historyOption.dataset.kind = "workset";
+      historyOption.dataset.triggerLabel = `Набор: ${selectedWorkset.name} · история`;
+      els.worksetFilter.appendChild(historyOption);
     }
     els.worksetFilter.value = selectedWorkset ? selected : "";
     els.renameWorkset.disabled = !selectedWorkset;

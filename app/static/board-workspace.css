@@ -728,7 +728,7 @@
   display: flex;
   flex: 0 1 auto;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
@@ -745,11 +745,15 @@
 .project-toolbar-group { flex: 0 0 220px; min-width: 0; }
 .project-filter-box { flex: 1 1 auto; width: 100%; min-width: 0; }
 .project-filter-box .theme-select { flex: 1 1 auto; width: 100%; max-width: none; min-width: 0; }
-.workset-toolbar-group { flex: 0 1 260px; min-width: 0; }
-.workset-filter-box { flex: 1 1 auto; width: 100%; max-width: 260px; min-width: 0; }
-.workset-filter-box .theme-select { width: 100%; max-width: 100%; min-width: 0; }
+.workset-toolbar-group { flex: 0 1 260px; min-width: 220px; }
+.workset-filter-box { flex: 1 1 auto; width: 100%; max-width: 260px; min-width: 220px; }
+.workset-filter-box .theme-select { flex: 1 1 auto; width: 100%; max-width: 100%; min-width: 0; }
 .workset-filter-box .theme-select-trigger,
 .workset-filter-box .theme-select-value { max-width: 100%; }
+.workset-filter-box .theme-select-trigger { width: 100%; }
+.workset-select-icon { flex: 0 0 16px; width: 16px; height: 16px; color: currentColor; }
+.workset-filter-menu .theme-select-option { display: flex; align-items: center; gap: 9px; }
+.workset-filter-menu .theme-select-option .workset-select-icon { color: var(--ink-soft); }
 .workset-toolbar-group:has(> .workset-filter-box[hidden]) { display: none; }
 .task-filter-menu { flex: 0 0 auto; }
 .task-filter-count[hidden] { display: none !important; }
@@ -790,13 +794,13 @@
     max-width: none;
     min-width: 0;
   }
-  .toolbar-filters-group { flex: 0 1 auto; flex-wrap: nowrap; }
+  .toolbar-filters-group { flex: 0 1 auto; flex-wrap: wrap; }
   .project-toolbar-group { flex: 0 1 190px; min-width: 140px; }
   .project-filter-box,
   .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
-  .workset-toolbar-group { flex: 0 1 260px; min-width: 0; }
+  .workset-toolbar-group { flex: 0 1 260px; min-width: 220px; }
   .workset-filter-box,
-  .workset-filter-box .theme-select { width: 100%; max-width: 260px; min-width: 0; }
+  .workset-filter-box .theme-select { width: 100%; max-width: 260px; min-width: 220px; }
   .toolbar-actions-group { margin-left: auto; }
 }
 
@@ -804,10 +808,10 @@
   .board-toolbar { gap: 8px; }
   .toolbar-main-group { gap: 8px; }
   .toolbar-filters-group { flex: 1 1 100%; flex-wrap: wrap; gap: 7px; }
-  .project-toolbar-group,
-  .workset-toolbar-group { flex: 1 1 160px; }
+  .project-toolbar-group { flex: 1 1 160px; }
+  .workset-toolbar-group { flex: 0 1 260px; min-width: 220px; }
   .project-filter-box,
-  .workset-filter-box { width: 100%; max-width: none; }
+  .workset-filter-box { width: 100%; max-width: 260px; min-width: 220px; }
   .project-filter-box .theme-select,
   .workset-filter-box .theme-select { width: 100%; max-width: none; }
   .toolbar-actions-group { margin-left: auto; }

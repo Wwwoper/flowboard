@@ -1443,3 +1443,94 @@ dialog.workset-history-dialog:not([open]) { display: none; }
   .task-filter-menu { order: 5; }
   .task-filter-chips { order: 6; }
 }
+
+
+/* Fenced Markdown code blocks and Pygments syntax highlighting. */
+.markdown-preview pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  tab-size: 4;
+}
+.markdown-preview pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  white-space: inherit;
+}
+.markdown-preview :not(pre) > code {
+  padding: 1px 4px;
+  background: var(--surface);
+  border-radius: 4px;
+}
+.markdown-preview pre .c,
+.markdown-preview pre .c1,
+.markdown-preview pre .cm,
+.markdown-preview pre .ch,
+.markdown-preview pre .cp,
+.markdown-preview pre .cpf { color: #6a737d; }
+.markdown-preview pre .k,
+.markdown-preview pre .kc,
+.markdown-preview pre .kd,
+.markdown-preview pre .kn,
+.markdown-preview pre .kp,
+.markdown-preview pre .kr,
+.markdown-preview pre .kt { color: #d73a49; }
+.markdown-preview pre .s,
+.markdown-preview pre .sa,
+.markdown-preview pre .sb,
+.markdown-preview pre .sc,
+.markdown-preview pre .dl,
+.markdown-preview pre .sd,
+.markdown-preview pre .s1,
+.markdown-preview pre .s2 { color: #032f62; }
+.markdown-preview pre .m,
+.markdown-preview pre .mb,
+.markdown-preview pre .mf,
+.markdown-preview pre .mh,
+.markdown-preview pre .mi,
+.markdown-preview pre .mo { color: #005cc5; }
+.markdown-preview pre .nf,
+.markdown-preview pre .fm { color: #6f42c1; }
+.markdown-preview pre .o,
+.markdown-preview pre .ow { color: #d73a49; }
+.markdown-preview pre .nb,
+.markdown-preview pre .bp { color: #005cc5; }
+[data-theme="dark"] .markdown-preview pre .c,
+[data-theme="dark"] .markdown-preview pre .c1,
+[data-theme="dark"] .markdown-preview pre .cm,
+[data-theme="dark"] .markdown-preview pre .ch,
+[data-theme="dark"] .markdown-preview pre .cp,
+[data-theme="dark"] .markdown-preview pre .cpf { color: #8b949e; }
+[data-theme="dark"] .markdown-preview pre .k,
+[data-theme="dark"] .markdown-preview pre .kc,
+[data-theme="dark"] .markdown-preview pre .kd,
+[data-theme="dark"] .markdown-preview pre .kn,
+[data-theme="dark"] .markdown-preview pre .kp,
+[data-theme="dark"] .markdown-preview pre .kr,
+[data-theme="dark"] .markdown-preview pre .kt { color: #ff7b72; }
+[data-theme="dark"] .markdown-preview pre .s,
+[data-theme="dark"] .markdown-preview pre .sa,
+[data-theme="dark"] .markdown-preview pre .sb,
+[data-theme="dark"] .markdown-preview pre .sc,
+[data-theme="dark"] .markdown-preview pre .dl,
+[data-theme="dark"] .markdown-preview pre .sd,
+[data-theme="dark"] .markdown-preview pre .s1,
+[data-theme="dark"] .markdown-preview pre .s2 { color: #a5d6ff; }
+[data-theme="dark"] .markdown-preview pre .m,
+[data-theme="dark"] .markdown-preview pre .mb,
+[data-theme="dark"] .markdown-preview pre .mf,
+[data-theme="dark"] .markdown-preview pre .mh,
+[data-theme="dark"] .markdown-preview pre .mi,
+[data-theme="dark"] .markdown-preview pre .mo,
+[data-theme="dark"] .markdown-preview pre .nb,
+[data-theme="dark"] .markdown-preview pre .bp { color: #79c0ff; }
+[data-theme="dark"] .markdown-preview pre .nf,
+[data-theme="dark"] .markdown-preview pre .fm { color: #d2a8ff; }
+[data-theme="dark"] .markdown-preview pre .o,
+[data-theme="dark"] .markdown-preview pre .ow { color: #ff7b72; }
+
+[data-theme="dark"] .markdown-preview pre code { background: transparent; }

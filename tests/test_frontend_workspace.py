@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-dialog",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.48" in html
-    assert "/static/style.css?v=0.5.29" in html
+    assert "/static/app.js?v=0.5.49" in html
+    assert "/static/style.css?v=0.5.30" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -66,13 +66,27 @@ def test_frontend_includes_project_search_undo_focus_and_density_behaviors(clien
     assert 'if (wasFocused && previousState.status !== "done") setFocusedTask(taskId);' in script
     assert 'function applyDensity(density, persist = false)' in script
     assert 'event.key === "/"' in script
-    assert 'event.key.toLocaleLowerCase("en") === "p"' in script
+    assert 'event.code === "KeyK"' in script
+    assert 'event.code === "KeyP"' in script
+    assert 'event.code === "KeyN"' in script
+    assert 'event.key.toLocaleLowerCase("en")' not in script
+    assert "Буквенные сочетания работают при любой раскладке" in client.get("/").text
     dragdrop = client.get("/static/dragdrop.js")
     assert dragdrop.status_code == 200
     assert (
         'this.options.onStart({ item, from: this.element, oldIndex: this.oldIndex })'
         in dragdrop.text
     )
+
+
+def test_markdown_code_blocks_preserve_formatting_and_support_horizontal_scroll(client):
+    css = client.get("/static/style.css").text
+
+    assert ".markdown-preview pre {" in css
+    assert "overflow-x: auto;" in css
+    assert "white-space: pre;" in css
+    assert ".markdown-preview pre code {" in css
+    assert "[data-theme=\"dark\"] .markdown-preview pre code { background: transparent; }" in css
 
 
 def test_frontend_styles_support_compact_density_focus_and_image_previews(client):
@@ -173,8 +187,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.48" in html
-    assert "/static/style.css?v=0.5.29" in html
+    assert "/static/app.js?v=0.5.49" in html
+    assert "/static/style.css?v=0.5.30" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -321,8 +335,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.48" in html
-    assert "/static/style.css?v=0.5.29" in html
+    assert "/static/app.js?v=0.5.49" in html
+    assert "/static/style.css?v=0.5.30" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
@@ -357,7 +371,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.29" in html
+    assert "/static/style.css?v=0.5.30" in html
     assert '/static/github-theme.css?v=0.2.4' in html
 
     style = client.get("/static/style.css").text

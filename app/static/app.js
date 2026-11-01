@@ -3273,19 +3273,19 @@
       }
     }
     if (els.settingsDialog.open) return;
-    if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("en") === "k") {
+    if ((event.metaKey || event.ctrlKey) && event.code === "KeyK") {
       event.preventDefault();
       els.search.focus();
       els.search.select();
       return;
     }
-    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLocaleLowerCase("en") === "p") {
+    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === "KeyP") {
       event.preventDefault();
       if (!els.projectDialog.open) openProjectDialog();
       return;
     }
     if (isTyping || event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.key.toLocaleLowerCase("en") === "n") {
+    if (event.code === "KeyN") {
       event.preventDefault();
       els.quickTitle.focus();
     } else if (event.key === "/") {

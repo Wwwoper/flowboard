@@ -79,6 +79,40 @@ def test_safe_markdown_preview_escapes_html(client):
     assert "alert('xss')" not in html or "&lt;script&gt;" in html
 
 
+def test_safe_markdown_preview_highlights_fenced_code_safely(client):
+    response = client.post(
+        "/api/preview-markdown",
+        json={
+            "text": (
+                "```python\ndef greet(name):\n    return f'Hello, {name}'\n```\n\n"
+                "```unknown-flowboard-language\n<unsafe>\n```"
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    html = response.json()["html"]
+    assert '<pre><code class="language-python">' in html
+    assert '<span class="k">def</span>' in html
+    assert '<span class="nf">greet</span>' in html
+    assert '<pre><code class="language-unknown-flowboard-language">' in html
+    assert "&lt;unsafe&gt;" in html
+    assert "<unsafe>" not in html
+    assert "<script>" not in html
+
+
+def test_safe_markdown_preview_keeps_inline_code_unhighlighted(client):
+    response = client.post(
+        "/api/preview-markdown",
+        json={"text": "Use `print('hello')` inside a paragraph."},
+    )
+
+    assert response.status_code == 200
+    html = response.json()["html"]
+    assert "<code>print('hello')</code>" in html
+    assert "<span" not in html
+
+
 def test_safe_markdown_preview_renders_interactive_checklists_safely(client):
     response = client.post(
         "/api/preview-markdown",
@@ -128,7 +162,7 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.48" in response.text
+    assert "/static/app.js?v=0.5.49" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):

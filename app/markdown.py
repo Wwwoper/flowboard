@@ -6,9 +6,12 @@ import re
 
 import bleach
 from markdown_it import MarkdownIt
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import get_lexer_by_name
+from pygments.util import ClassNotFound
 from markdown_it.token import Token
 
-MARKDOWN = MarkdownIt("default", {"html": False, "linkify": False, "typographer": False})
 ALLOWED_TAGS = {
     "a",
     "blockquote",
@@ -28,12 +31,32 @@ ALLOWED_TAGS = {
     "p",
     "pre",
     "strong",
+    "span",
     "ul",
 }
 ALLOWED_ATTRIBUTES = {
     "a": ["href", "title", "rel"],
     "input": ["type", "checked", "data-task-checkbox", "aria-label"],
+    "code": ["class"],
+    "span": ["class"],
 }
+
+
+def _highlight_code(code: str, language: str, _attrs: str) -> str | None:
+    """Highlight fenced code when its language is known to Pygments."""
+    if not language:
+        return None
+    try:
+        lexer = get_lexer_by_name(language)
+    except ClassNotFound:
+        return None
+    return highlight(code, lexer, HtmlFormatter(nowrap=True))
+
+
+MARKDOWN = MarkdownIt(
+    "default",
+    {"html": False, "linkify": False, "typographer": False, "highlight": _highlight_code},
+)
 
 
 def _render_task_list_checkboxes(state) -> None:

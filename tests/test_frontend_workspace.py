@@ -42,7 +42,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.55" in html
+    assert "/static/app.js?v=0.5.56" in html
     assert "/static/style.css?v=0.5.33" in html
 
 
@@ -150,6 +150,22 @@ def test_quick_add_can_assign_optional_task_type(client):
     assert 'els.quickTaskType.open = false;' in script
     assert "createTask(title, status, taskType)" in script
     assert 'setQuickTaskType("")' in script
+    assert 'const quickAdd = els.quickForm.closest(".quick-add")' in script
+    assert 'quickAdd.dataset.taskType = state.quickTaskType' in script
+    assert 'delete quickAdd.dataset.taskType' in script
+    picker_css = client.get("/static/board-workspace.css").text
+    type_tokens = {
+        "bug": ("gh-red-fg", "gh-red-bg"),
+        "feature": ("gh-green-fg", "gh-green-bg"),
+        "docs": ("gh-yellow-fg", "gh-yellow-bg"),
+        "refactor": ("gh-purple-fg", "gh-purple-bg"),
+    }
+    for task_type, (foreground, background) in type_tokens.items():
+        assert f'.quick-add[data-task-type="{task_type}"]' in picker_css
+        assert f'--quick-type-fg: var(--{foreground}' in picker_css
+        assert f'--quick-type-bg: var(--{background}' in picker_css
+    assert '.quick-add[data-task-type] .quick-task-type > summary.quick-task-type-trigger' in picker_css
+    assert '.quick-add[data-task-type] .quick-add-entry' in picker_css
     create_task = script.split("async function createTask(", 1)[1].split("async function undoCreation(", 1)[0]
     assert 'task_type: taskType || ""' in create_task
     assert 'taskFilters: readTaskFiltersFromUrl()' in script
@@ -189,7 +205,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.55" in html
+    assert "/static/app.js?v=0.5.56" in html
     assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
@@ -386,7 +402,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.55" in html
+    assert "/static/app.js?v=0.5.56" in html
     assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' in html

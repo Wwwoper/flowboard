@@ -134,7 +134,6 @@
     searchShortcut: $("#search-shortcut"),
     projectFilter: $("#project-filter"),
     worksetFilter: $("#workset-filter"),
-    worksetContext: $("#workset-context"),
     createWorkset: $("#create-workset"),
     renameWorkset: $("#rename-workset"),
     worksetHistory: $("#workset-history"),
@@ -568,7 +567,6 @@
     }
     els.worksetFilter.value = selectedWorkset ? selected : "";
     els.renameWorkset.disabled = !selectedWorkset;
-    renderWorksetContext(selectedWorkset);
     const historicalView = selectedWorkset?.status === "completed";
     els.quickTitle.disabled = historicalView;
     els.quickForm.querySelector('button[type="submit"]').disabled = historicalView;
@@ -577,24 +575,6 @@
       : "Добавить задачу…";
   }
 
-
-  function renderWorksetContext(workset = state.worksets.find((item) => item.id === state.worksetId)) {
-    els.worksetContext.replaceChildren();
-    els.worksetContext.hidden = false;
-    if (!workset) return;
-    els.worksetContext.appendChild(make("span", "workset-context-label", `Набор: ${workset.name} · ${workset.done_count} из ${workset.task_count}`));
-    const clear = make("button", "workset-context-clear", "Все задачи проекта ×");
-    clear.type = "button";
-    clear.setAttribute("aria-label", "Показать все задачи проекта");
-    clear.title = "Сбросить фильтр рабочего набора";
-    clear.addEventListener("click", () => {
-      state.worksetId = null;
-      persistWorksetState();
-      populateWorksetFilter();
-      renderBoard();
-    });
-    els.worksetContext.appendChild(clear);
-  }
 
   async function loadWorksets() {
     if (!state.project) {
@@ -1201,6 +1181,9 @@
     const label = state.quickTaskType ? TASK_TYPE_LABELS[state.quickTaskType] : "Без типа";
     els.quickTaskTypeLabel.textContent = `Тип: ${label}`;
     $("summary", els.quickTaskType).setAttribute("aria-label", `Тип новой задачи: ${label}`);
+    const quickAdd = els.quickForm.closest(".quick-add");
+    if (state.quickTaskType) quickAdd.dataset.taskType = state.quickTaskType;
+    else delete quickAdd.dataset.taskType;
     $$("[data-task-type]", els.quickTaskType).forEach((button) => {
       const selected = button.dataset.taskType === state.quickTaskType;
       button.setAttribute("aria-pressed", String(selected));

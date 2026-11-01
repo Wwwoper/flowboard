@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def test_workset_controls_and_per_project_context_are_present(client):
+def test_workset_controls_are_available_without_a_separate_context_row(client):
     html = client.get("/").text
     script = client.get("/static/app.js").text
     for element_id in (
@@ -9,7 +9,6 @@ def test_workset_controls_and_per_project_context_are_present(client):
         "create-workset",
         "rename-workset",
         "workset-history",
-        "workset-context",
         "task-workset",
         "workset-history-dialog",
         "workset-editor-dialog",
@@ -51,10 +50,10 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'id="wip-warning"' not in html
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.55" in html
+    assert "/static/app.js?v=0.5.56" in html
     assert "/static/themed-selects.js?v=0.1.8" in html
     assert "/static/style.css?v=0.5.33" in html
-    assert "/static/board-workspace.css?v=0.1.14" in html
+    assert "/static/board-workspace.css?v=0.1.15" in html
     toolbar_css = client.get("/static/board-workspace.css").text
     assert ".board-toolbar .filter-box {" in toolbar_css
     assert "background: var(--gh-control, var(--surface));" in toolbar_css
@@ -82,9 +81,9 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert 'createWorksetIcon(kind)' in select_script
     assert 'filterBox.hidden = !hasSelectableWorksets;' in script
     assert 'filterBox.classList.toggle("is-empty", !hasSelectableWorksets);' in script
-    assert 'class="workset-context" aria-live="polite"' in html
-    assert 'els.worksetContext.hidden = false;' in script
-    assert 'height: 28px; min-height: 28px;' in toolbar_css
+    assert 'id="workset-context"' not in html
+    assert "renderWorksetContext" not in script
+    assert "workset-context" not in script
     assert '.workset-filter-box.is-empty .theme-select-chevron { display: none; }' in toolbar_css
     assert '.toolbar-main-group > .search-box' in toolbar_css
     assert 'min-width: min(100%, 280px);' in toolbar_css
@@ -106,4 +105,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.14" in html
+    assert "/static/board-workspace.css?v=0.1.15" in html

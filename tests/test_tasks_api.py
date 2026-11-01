@@ -162,7 +162,7 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.55" in response.text
+    assert "/static/app.js?v=0.5.56" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):

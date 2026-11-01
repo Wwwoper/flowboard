@@ -51,8 +51,7 @@
   .page-heading,
   .quick-add,
   .focus-bar,
-  .board-toolbar,
-  .workset-context {
+  .board-toolbar {
     flex-shrink: 0;
   }
 
@@ -347,10 +346,6 @@
 .workset-actions-menu > summary { display: grid; place-items: center; width: 36px; height: 36px; list-style: none; cursor: pointer; font-size: 20px; }
 .workset-actions-menu > summary::-webkit-details-marker { display: none; }
 .workset-actions-popover { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; }
-.workset-context { display: flex; align-items: center; flex-wrap: nowrap; gap: 9px; height: 28px; min-height: 28px; margin: -1px 0 10px; overflow: hidden; color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
-.workset-context-label { min-width: 0; overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.workset-context-clear { flex: 0 0 auto; border: 0; padding: 2px 5px; border-radius: 5px; color: var(--accent); background: transparent; font: inherit; white-space: nowrap; cursor: pointer; }
-.workset-context-clear:hover { background: var(--accent-pale); }
 .column-empty { min-height: 0; }
 .task-workset-chip { display: inline-flex; align-items: center; max-width: 100%; padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: var(--surface-soft); font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
 .task-workset-field { width: 100%; max-width: none; margin: 0; }
@@ -609,6 +604,38 @@
   text-align: left;
 }
 .quick-type-option[aria-pressed="true"] { border-color: var(--line-strong); font-weight: 700; }
+
+/* Keep the quick-entry field and selected type trigger in the same semantic color. */
+.quick-add[data-task-type="bug"] {
+  --quick-type-fg: var(--gh-red-fg, var(--red));
+  --quick-type-bg: var(--gh-red-bg, var(--accent-pale));
+}
+.quick-add[data-task-type="feature"] {
+  --quick-type-fg: var(--gh-green-fg, var(--green));
+  --quick-type-bg: var(--gh-green-bg, var(--accent-pale));
+}
+.quick-add[data-task-type="docs"] {
+  --quick-type-fg: var(--gh-yellow-fg, var(--orange));
+  --quick-type-bg: var(--gh-yellow-bg, var(--accent-pale));
+}
+.quick-add[data-task-type="refactor"] {
+  --quick-type-fg: var(--gh-purple-fg, var(--accent-dark));
+  --quick-type-bg: var(--gh-purple-bg, var(--accent-pale));
+}
+.quick-add[data-task-type] .quick-add-entry {
+  border: 1px solid color-mix(in srgb, var(--quick-type-fg) 28%, var(--line));
+  border-radius: 8px;
+  background: var(--quick-type-bg);
+  transition: background .15s ease, border-color .15s ease;
+}
+.quick-add[data-task-type] .quick-add-form {
+  padding-inline: 10px;
+}
+.quick-add[data-task-type] .quick-task-type > summary.quick-task-type-trigger {
+  color: var(--quick-type-fg);
+  border-color: color-mix(in srgb, var(--quick-type-fg) 28%, var(--line));
+  background: var(--quick-type-bg);
+}
 
 /* Board height follows the available viewport; visible scrollbars signal long columns. */
 @media (min-width: 1181px) {

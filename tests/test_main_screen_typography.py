@@ -48,8 +48,8 @@ def test_main_screen_uses_shared_typography_and_spacing_tokens(client):
     # Font sizes scale with the root font size; long words and titles can wrap.
     assert "clamp(1.625rem, 2.4vw, 1.875rem)" in css
     assert "overflow-wrap: anywhere;" in css
-    assert 'href="/static/style.css?v=0.5.32"' in html
-    assert 'href="/static/board-workspace.css?v=0.1.6"' in html
+    assert 'href="/static/style.css?v=0.5.33"' in html
+    assert 'href="/static/board-workspace.css?v=0.1.7"' in html
     assert ".toolbar-menu-trigger" in css
     assert ".settings-open-button::after,\n.topbar-import-button::after { display: none; }" in css
 
@@ -65,3 +65,34 @@ def test_main_screen_typography_tokens_are_not_overridden_by_small_viewport_rule
         ':root[data-density="compact"] .task-card-title {', 1
     )[1].split('}', 1)[0]
     assert "font-size: var(--type-task-title);" in compact_rule
+
+
+def _contrast_ratio(foreground: str, background: str) -> float:
+    def luminance(color: str) -> float:
+        channels = [int(color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [
+            value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+            for value in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    lighter, darker = sorted((luminance(foreground), luminance(background)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def test_secondary_text_token_meets_wcag_aa_on_default_light_surfaces(client):
+    css = client.get("/static/style.css").text
+    root = css.split(":root {", 1)[1].split("}", 1)[0]
+    muted = re.search(r"--muted:\s*(#[0-9a-fA-F]{6})", root)
+    page = re.search(r"--page:\s*(#[0-9a-fA-F]{6})", root)
+    surface = re.search(r"--surface:\s*(#[0-9a-fA-F]{6})", root)
+    assert muted and page and surface
+    assert _contrast_ratio(muted.group(1), page.group(1)) >= 4.5
+    assert _contrast_ratio(muted.group(1), surface.group(1)) >= 4.5
+    dark = css.split(':root[data-theme="dark"] {', 1)[1].split("}", 1)[0]
+    dark_muted = re.search(r"--muted:\s*(#[0-9a-fA-F]{6})", dark)
+    dark_surface = re.search(r"--surface:\s*(#[0-9a-fA-F]{6})", dark)
+    dark_soft_surface = re.search(r"--surface-soft:\s*(#[0-9a-fA-F]{6})", dark)
+    assert dark_muted and dark_surface and dark_soft_surface
+    assert _contrast_ratio(dark_muted.group(1), dark_surface.group(1)) >= 4.5
+    assert _contrast_ratio(dark_muted.group(1), dark_soft_surface.group(1)) >= 4.5

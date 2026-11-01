@@ -6,20 +6,19 @@ import re
 def test_quick_add_uses_russian_labels_and_preserves_technical_type_values(client):
     html = client.get("/").text
     expected = {
-        "bug": ("Ошибка", "Ошибка — технический тег bug"),
-        "feature": ("Функция", "Функция — технический тег feature"),
-        "docs": ("Документация", "Документация — технический тег docs"),
-        "refactor": ("Рефакторинг", "Рефакторинг — технический тег refactor"),
+        "bug": "Ошибка",
+        "feature": "Функция",
+        "docs": "Документация",
+        "refactor": "Рефакторинг",
     }
 
-    for technical_value, (label, title) in expected.items():
+    for technical_value, label in expected.items():
         match = re.search(
-            rf'<button[^>]*data-task-type="{technical_value}"[^>]*title="([^"]+)"[^>]*>([^<]+)</button>',
+            rf'<button[^>]*data-task-type="{technical_value}"[^>]*>([^<]+)</button>',
             html,
         )
         assert match is not None
-        assert match.group(1) == title
-        assert match.group(2) == label
+        assert match.group(1) == label
 
 
 def test_task_type_labels_are_shared_across_cards_editor_filters_and_archive(client):

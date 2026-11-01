@@ -1,15 +1,19 @@
 def test_board_workspace_uses_fixed_height_and_scrollable_desktop_columns(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.6' in html
+    assert '/static/board-workspace.css?v=0.1.7' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "height: max(260px, calc(100dvh - 345px));" in css
+    assert "height: max(260px, calc(100dvh - 300px));" in css
     assert "align-items: stretch;" in css
     assert "height: 100%;" in css
     assert "min-height: 0;" in css
     assert "flex: 1 1 0%;" in css
     assert "overflow-y: auto;" in css
+    assert "scrollbar-width: thin;" in css
+    assert "::-webkit-scrollbar-thumb" in css
+    assert "scrollbar-width: thin;" in css
+    assert "::-webkit-scrollbar-thumb" in css
     assert "overscroll-behavior-y: contain;" in css
     assert ".board-column.is-empty > .task-list" in css
 

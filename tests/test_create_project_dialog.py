@@ -14,16 +14,21 @@ def test_create_project_uses_themed_dialog_with_inline_validation_and_no_browser
         'id="cancel-create-project"',
         'id="submit-create-project"',
         'class="app-modal create-project-dialog"',
-        'aria-label="Создать проект" title="Создать проект"',
+        'value="__create_project__">＋ Создать проект…</option>',
         'Используйте латинские буквы, цифры и дефис. Например: storefront.',
     ):
         assert fragment in html
-    assert "/static/themed-controls.css?v=0.1.13" in html
-    assert "/static/app.js?v=0.5.51" in html
+    assert "/static/themed-controls.css?v=0.1.14" in html
+    assert "/static/app.js?v=0.5.52" in html
 
     script = client.get("/static/app.js").text
     assert "window.prompt(" not in script
     assert "function openCreateProjectDialog()" in script
+    assert "if (els.projectFilter.value === CREATE_PROJECT_OPTION)" in script
+    assert (
+        'els.projectFilter.closest(".theme-select")?.querySelector(".theme-select-trigger")?.focus'
+        in script
+    )
     assert "async function createProjectFromDialog(event)" in script
     assert "if (createProjectBusy) return;" in script
     assert "Проект с таким ключом уже существует." in script

@@ -19,8 +19,13 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "task.workset_id !== state.worksetId" in script
     assert "Перенести задачу из набора" in script
     assert "previousDetails.workset_id || updated.workset_id" in script
-    assert "doingCount > state.wipLimit" in script
+    assert (
+        'count.textContent = status === "doing" ? `${statusTasks.length}/${state.wipLimit}`'
+        in script
+    )
     assert "workset-actions-menu" in html
+    assert 'class="button button-small button-quiet workset-actions-trigger"' in html
+    assert '>Действия</summary>' in html
     assert 'class="workset-actions-popover theme-select-menu"' in html
     assert 'document.addEventListener("pointerdown", (event) =>' in script
     assert 'worksetActionsMenu.contains(event.target)' in script
@@ -32,17 +37,20 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "#workset-filter" in client.get("/static/themed-selects.js").text
     assert 'class="toolbar-group project-toolbar-group"' in html
     assert 'class="toolbar-group workset-toolbar-group"' in html
-    assert html.index('id="project-filter"') < html.index('id="add-project"')
-    assert html.index('id="add-project"') < html.index('id="workset-filter"')
+    assert html.index('id="project-filter"') < html.index('id="workset-filter"')
+    assert 'value="__create_project__">＋ Создать проект…</option>' in html
     assert html.index('id="workset-filter"') < html.index('id="task-filter-menu"')
     assert 'els.taskWorkset.closest(".task-workset-field")' in script
     assert "#task-workset" in client.get("/static/themed-selects.js").text
-    assert 'id="wip-warning"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
+    assert 'id="count-doing"' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
+    assert '0/3' in html.split('data-column="doing"', 1)[1].split('</header>', 1)[0]
+    assert 'id="wip-warning"' not in html
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.51" in html
+    assert "/static/app.js?v=0.5.52" in html
     assert "/static/themed-selects.js?v=0.1.5" in html
-    assert "/static/style.css?v=0.5.32" in html
+    assert "/static/style.css?v=0.5.33" in html
+    assert "/static/board-workspace.css?v=0.1.7" in html
     assert 'aria-modal="true"' in html
     assert 'aria-label="Закрыть"' in html
     assert "Показать ещё" in script
@@ -50,4 +58,4 @@ def test_workset_controls_and_per_project_context_are_present(client):
     assert "Состав" in script
     assert 'membershipLocked = currentWorkset?.status === "completed"' in script
     assert "Состав завершённого рабочего набора нельзя менять" in script
-    assert "/static/board-workspace.css?v=0.1.6" in html
+    assert "/static/board-workspace.css?v=0.1.7" in html

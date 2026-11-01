@@ -2,6 +2,7 @@
   "use strict";
 
   const STATUSES = ["todo", "doing", "waiting", "done"];
+  const CREATE_PROJECT_OPTION = "__create_project__";
   const MAX_TASK_TEXT_LENGTH = 30000;
   const STATUS_LABELS = {
     todo: "К выполнению",
@@ -128,6 +129,7 @@
     quickForm: $("#quick-add-form"),
     quickTitle: $("#quick-title"),
     quickTaskType: $("#quick-task-type"),
+    quickTaskTypeLabel: $("#quick-task-type-label"),
     search: $("#search-input"),
     searchShortcut: $("#search-shortcut"),
     projectFilter: $("#project-filter"),
@@ -146,7 +148,6 @@
     worksetEditorError: $("#workset-editor-error"),
     cancelWorksetEditor: $("#cancel-workset-editor"),
     saveWorksetEditor: $("#save-workset-editor"),
-    addProject: $("#add-project"),
     taskFilterMenu: $("#task-filter-menu"),
     taskFilterTrigger: $("#task-filter-trigger"),
     taskFilterCount: $("#task-filter-count"),
@@ -222,7 +223,6 @@
     taskMeta: $("#task-meta"),
     toastRegion: $("#toast-region"),
     toggleDone: $("#toggle-done"),
-    wipWarning: $("#wip-warning"),
     settingsOpen: $("#open-settings"),
     settingsDialog: $("#settings-dialog"),
     settingsClose: $("#close-settings"),
@@ -549,10 +549,9 @@
     const historicalView = selectedWorkset?.status === "completed";
     els.quickTitle.disabled = historicalView;
     els.quickForm.querySelector('button[type="submit"]').disabled = historicalView;
-    $(".quick-add-icon").disabled = historicalView;
     els.quickTitle.placeholder = historicalView
       ? "Завершённый набор доступен только для просмотра"
-      : "Добавить задачу… и нажать Enter";
+      : "Добавить задачу…";
   }
 
 
@@ -1026,6 +1025,7 @@
     state.projects = [...new Set([...state.projects, ...detected])].sort((a, b) => a.localeCompare(b, "ru"));
     els.projectFilter.replaceChildren(new Option("Все проекты", ""));
     state.projects.forEach((slug) => els.projectFilter.appendChild(new Option(projectLabel(slug), slug)));
+    els.projectFilter.appendChild(new Option("＋ Создать проект…", CREATE_PROJECT_OPTION));
     if (!state.projects.includes(state.project)) state.project = "";
     els.projectFilter.value = state.project;
     persistProjectState();
@@ -1175,13 +1175,16 @@
   function setQuickTaskType(type) {
     const normalizedType = String(type || "").toLowerCase();
     state.quickTaskType = Object.hasOwn(TASK_TYPE_LABELS, normalizedType) ? normalizedType : "";
+    const label = state.quickTaskType ? TASK_TYPE_LABELS[state.quickTaskType] : "Без типа";
+    els.quickTaskTypeLabel.textContent = `Тип: ${label}`;
+    $("summary", els.quickTaskType).setAttribute("aria-label", `Тип новой задачи: ${label}`);
     $$("[data-task-type]", els.quickTaskType).forEach((button) => {
       const selected = button.dataset.taskType === state.quickTaskType;
       button.setAttribute("aria-pressed", String(selected));
     });
   }
 
-  function taskDescriptionExcerpt(description, title = "", limit = 112) {
+  function taskDescriptionExcerpt(description, title = "", limit = 240) {
     const source = String(description || "").replace(/\r\n?/g, "\n");
     const lines = source.split("\n");
     const firstLine = lines[0].trim().replace(/^#{1,6}\s+/, "");
@@ -1369,8 +1372,6 @@
   function renderBoard() {
     syncFocusedTask();
     const visibleTasks = state.tasks.filter(matchesFilters);
-    let doingCount = 0;
-
     for (const status of STATUSES) {
       const column = $(`.board-column[data-column="${status}"]`);
       const list = $(`.task-list[data-status="${status}"]`);
@@ -1378,15 +1379,21 @@
       const preference = state.columnPreferences[status];
       const sorter = $(`[data-column-sort="${status}"]`);
       if (sorter && sorter.value !== preference.sort) sorter.value = preference.sort;
-      if (status === "doing") doingCount = statusTasks.length;
       statusTasks = sortColumnTasks(statusTasks, preference.sort);
-      $(`#count-${status}`).textContent = String(statusTasks.length);
+      const count = $(`#count-${status}`);
+      count.textContent = status === "doing" ? `${statusTasks.length}/${state.wipLimit}` : String(statusTasks.length);
+      count.classList.toggle("is-over-limit", status === "doing" && statusTasks.length > state.wipLimit);
+      if (status === "doing") {
+        count.title = `В работе ${statusTasks.length} из ${state.wipLimit} задач по мягкому лимиту`;
+        count.setAttribute("aria-label", `В работе ${statusTasks.length} из ${state.wipLimit} задач по мягкому лимиту`);
+      }
       list.dataset.sortMode = preference.sort;
       list.replaceChildren();
 
       let tasksToRender = statusTasks;
       if (status === "done") {
         const canCollapseDone = statusTasks.length > 5;
+        column.classList.toggle("has-done-overflow", canCollapseDone);
         if (!canCollapseDone) state.doneExpanded = false;
         if (!state.doneExpanded) tasksToRender = statusTasks.slice(0, 5);
         const isExpanded = canCollapseDone && state.doneExpanded;
@@ -1397,6 +1404,7 @@
         els.toggleDone.setAttribute("aria-label", label);
         els.toggleDone.title = label;
         els.toggleDone.setAttribute("aria-expanded", String(isExpanded));
+        $("span", els.toggleDone).textContent = isExpanded ? "Свернуть" : "Ещё";
       }
 
       tasksToRender.forEach((task) => list.appendChild(makeTaskCard(task)));
@@ -1412,10 +1420,6 @@
       }
     }
 
-    const overLimit = doingCount > state.wipLimit;
-    els.wipWarning.textContent = `${doingCount}/${state.wipLimit} · лимит`;
-    els.wipWarning.title = `В работе ${doingCount} задач при мягком лимите ${state.wipLimit}`;
-    els.wipWarning.hidden = !overLimit;
     renderFocusBar();
   }
 
@@ -2749,9 +2753,20 @@
     const button = event.target.closest("[data-task-type]");
     if (!button) return;
     setQuickTaskType(button.dataset.taskType);
+    els.quickTaskType.open = false;
     // Keep the quick-entry flow moving: choose a type, then submit with Enter.
     els.quickTitle.focus({ preventScroll: true });
   });
+  document.addEventListener("click", (event) => {
+    if (!els.quickTaskType.contains(event.target)) els.quickTaskType.open = false;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !els.quickTaskType.open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    els.quickTaskType.open = false;
+    $("summary", els.quickTaskType).focus();
+  }, true);
 
   els.quickForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -2765,7 +2780,7 @@
       setQuickTaskType("");
       els.quickTitle.focus();
       els.quickForm.dataset.newStatus = "todo";
-      els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";
+      els.quickTitle.placeholder = "Добавить задачу…";
       toast(
         status === "todo" ? "Задача добавлена" : `Задача добавлена в колонку «${STATUS_LABELS[status]}»`,
         "success",
@@ -2783,6 +2798,11 @@
     renderBoard();
   });
   els.projectFilter.addEventListener("change", async () => {
+    if (els.projectFilter.value === CREATE_PROJECT_OPTION) {
+      els.projectFilter.value = state.project;
+      window.setTimeout(openCreateProjectDialog, 0);
+      return;
+    }
     state.project = els.projectFilter.value;
     state.worksetId = null;
     persistProjectState();
@@ -2826,7 +2846,6 @@
     els.worksetEditorError.hidden = true;
     worksetEditorTarget = null;
   });
-  els.addProject.addEventListener("click", openCreateProjectDialog);
   createProjectForm.addEventListener("submit", createProjectFromDialog);
   createProjectCancel.addEventListener("click", closeCreateProjectDialog);
   createProjectClose.addEventListener("click", closeCreateProjectDialog);
@@ -2841,7 +2860,7 @@
       focusQuickTitleAfterCreateProject = false;
       els.quickTitle.focus({ preventScroll: true });
     } else {
-      els.addProject.focus({ preventScroll: true });
+      els.projectFilter.closest(".theme-select")?.querySelector(".theme-select-trigger")?.focus({ preventScroll: true });
     }
   });
   els.taskFilterMenu.addEventListener("click", (event) => event.stopPropagation());
@@ -2855,7 +2874,7 @@
       els.quickTitle.placeholder = `Новая задача в колонке «${STATUS_LABELS[button.dataset.addStatus]}»…`;
       els.quickForm.dataset.newStatus = button.dataset.addStatus;
     } else {
-      els.quickTitle.placeholder = "Добавить задачу… и нажать Enter";
+      els.quickTitle.placeholder = "Добавить задачу…";
       els.quickForm.dataset.newStatus = "todo";
     }
   }));
@@ -3550,6 +3569,7 @@
     state.projects
       .filter((slug) => !archived.has(slug))
       .forEach((slug) => els.projectFilter.appendChild(new Option(projectLabel(slug), slug)));
+    els.projectFilter.appendChild(new Option("＋ Создать проект…", CREATE_PROJECT_OPTION));
     if (!state.projects.includes(state.project) || archived.has(state.project)) state.project = "";
     els.projectFilter.value = state.project;
     persistProjectState();

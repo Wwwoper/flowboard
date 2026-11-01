@@ -49,11 +49,15 @@ def test_task_card_information_order_and_optional_sections(client):
 
 def test_task_card_excerpt_and_long_labels_remain_compact_and_wrappable(client):
     script = client.get("/static/app.js").text
-    assert 'function taskDescriptionExcerpt(description, title = "", limit = 112)' in script
+    assert 'function taskDescriptionExcerpt(description, title = "", limit = 240)' in script
 
     css = client.get("/static/style.css").text
     assert "-webkit-line-clamp: 2" in css
+    assert ':root[data-density="compact"] .task-card-excerpt' in css
     assert "overflow-wrap: anywhere" in css
+    board_css = client.get("/static/board-workspace.css").text
+    assert "font-size: 11px;" in board_css
+    assert "color: var(--ink-soft);" in board_css
     assert ".task-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }" in css
 
 
@@ -75,7 +79,7 @@ def test_task_description_excerpt_preserves_text_and_removes_only_confirmed_dupl
         ("[Ссылка](https://example.com)", "", 112),
         ("**Выделенный** и `код`", "", 112),
         ("   ", "", 112),
-        ("x" * 150, "", 112),
+        ("x" * 300, "", 240),
     ]
     payload = json.dumps(cases, ensure_ascii=False)
     node_script = (
@@ -99,7 +103,7 @@ def test_task_description_excerpt_preserves_text_and_removes_only_confirmed_dupl
     assert excerpts[6] == "Ссылка"
     assert excerpts[7] == "Выделенный и код"
     assert excerpts[8] == ""
-    assert len(excerpts[9]) == 112 and excerpts[9].endswith("…")
+    assert len(excerpts[9]) == 240 and excerpts[9].endswith("…")
 
 
 def test_attachment_count_accessible_pluralization(client):

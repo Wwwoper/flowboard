@@ -20,4 +20,9 @@ def test_main_screen_header_compacts_vertical_rhythm_without_shrinking_controls(
     # The change is purely presentational; the quick-add and keyboard hooks remain.
     assert 'id="quick-add-form"' in html
     assert 'id="quick-task-type"' in html
-    assert 'class="quick-add-hint"' in html
+    assert (
+        'title="Нажмите N, чтобы перейти к быстрому созданию задачи"' in html
+    )
+    assert 'class="quick-task-type-trigger"' in html
+    assert 'class="quick-add-hint"' not in html
+    assert 'class="quick-add-icon quick-add-control"' not in html

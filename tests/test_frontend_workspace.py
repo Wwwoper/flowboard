@@ -4,9 +4,9 @@ from __future__ import annotations
 def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_rendered(client):
     html = client.get("/").text
     assert 'class="board-toolbar" aria-label="Поиск и фильтры"' in html
-    assert html.count('class="toolbar-icon"') == 5
+    assert html.count('class="toolbar-icon"') == 4
     assert 'id="search-shortcut" class="quick-add-keycap search-shortcut-keycap"' in html
-    assert 'aria-label="Создать проект" title="Создать проект"' in html
+    assert 'value="__create_project__">＋ Создать проект…</option>' in html
     assert 'id="shortcuts-settings-page" class="settings-subpage"' in html
     assert "⌘/Ctrl K" in html.split('id="shortcuts-settings-page"', 1)[1]
 
@@ -14,13 +14,12 @@ def test_search_filter_toolbar_controls_are_aligned_and_platform_shortcut_is_ren
     for selector in (
         ".board-toolbar > .search-box",
         ".board-toolbar .filter-box",
-        ".board-toolbar .add-project-button",
         ".board-toolbar > .search-box:focus-within",
         ".board-toolbar .search-shortcut-keycap",
         ".board-toolbar .toolbar-icon",
     ):
         assert selector in css
-    assert "--toolbar-control-height: 36px" in css
+    assert "--toolbar-control-height: 40px" in css
 
     script = client.get("/static/app.js").text
     assert 'const shortcutPlatform = navigator.userAgentData?.platform || navigator.platform || "";' in script
@@ -34,7 +33,6 @@ def test_project_workspace_controls_are_served(client):
     html = response.text
     for element_id in (
         "project-filter",
-        "add-project",
         "project-dialog",
         "project-command-search",
         "focus-bar",
@@ -43,8 +41,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.32" in html
+    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/style.css?v=0.5.33" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -117,7 +115,7 @@ def test_frontend_offers_undo_for_task_edits_and_attachment_changes(client):
 
 def test_task_cards_have_scan_friendly_project_type_description_and_tag_hierarchy(client):
     script = client.get("/static/app.js").text
-    assert 'function taskDescriptionExcerpt(description, title = "", limit = 112)' in script
+    assert 'function taskDescriptionExcerpt(description, title = "", limit = 240)' in script
     assert "const project = projectForTask(task);" in script
     assert "TASK_TYPE_LABELS = {" in script
     assert "hiddenTags.slice(0, 2)" in script
@@ -138,7 +136,8 @@ def test_task_cards_have_scan_friendly_project_type_description_and_tag_hierarch
 
 def test_quick_add_can_assign_optional_task_type(client):
     html = client.get("/").text
-    assert 'id="quick-task-type"' in html
+    assert '<details id="quick-task-type" class="quick-task-type">' in html
+    assert 'id="quick-task-type-label">Тип: Без типа</span>' in html
     assert 'data-task-type="" aria-pressed="true"' in html
     for task_type in ("bug", "feature", "docs", "refactor"):
         assert f'data-task-type="{task_type}"' in html
@@ -146,6 +145,8 @@ def test_quick_add_can_assign_optional_task_type(client):
     script = client.get("/static/app.js").text
     assert 'quickTaskType: ""' in script
     assert "function setQuickTaskType(type)" in script
+    assert 'els.quickTaskTypeLabel.textContent = `Тип: ${label}`' in script
+    assert 'els.quickTaskType.open = false;' in script
     assert "createTask(title, status, taskType)" in script
     assert 'setQuickTaskType("")' in script
     create_task = script.split("async function createTask(", 1)[1].split("async function undoCreation(", 1)[0]
@@ -154,6 +155,7 @@ def test_quick_add_can_assign_optional_task_type(client):
 
     css = client.get("/static/style.css").text
     assert ".quick-task-type" in css
+    assert ".quick-task-type-options" in client.get("/static/board-workspace.css").text
     assert '.quick-type-option[aria-pressed="true"]' in css
     assert "@media (max-width: 640px)" in css
 
@@ -186,8 +188,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.32" in html
+    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/style.css?v=0.5.33" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -306,9 +308,15 @@ def test_main_board_promotes_task_import_and_moves_backup_to_settings(client):
     assert 'els.activeCount.textContent' not in script
     assert 'els.doingCount.textContent' not in script
     assert 'els.filterSummary.textContent' not in script
-    assert 'let doingCount = 0;' in script
-    assert 'if (status === "doing") doingCount = statusTasks.length;' in script
-    assert 'const overLimit = doingCount > state.wipLimit;' in script
+    assert (
+        'count.textContent = status === "doing" ? `${statusTasks.length}/${state.wipLimit}`'
+        in script
+    )
+    assert (
+        'count.classList.toggle("is-over-limit", status === "doing" && '
+        'statusTasks.length > state.wipLimit)'
+        in script
+    )
     assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script
     assert 'els.settingsDialog.addEventListener("close", () => {' in script
     assert 'els.settingsDialog.addEventListener("cancel", (event) => {' in script
@@ -377,9 +385,10 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.51" in html
-    assert "/static/style.css?v=0.5.32" in html
+    assert "/static/app.js?v=0.5.52" in html
+    assert "/static/style.css?v=0.5.33" in html
     assert 'id="toggle-done" class="done-toggle"' in html
+    assert '<span>Ещё</span>' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert '<path d="m7 10 5 5 5-5"/>' in html
 
@@ -414,8 +423,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_does_not_highlight_form_frames(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.32" in html
-    assert '/static/github-theme.css?v=0.2.4' in html
+    assert "/static/style.css?v=0.5.33" in html
+    assert '/static/github-theme.css?v=0.2.5' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -439,7 +448,7 @@ def test_input_focus_does_not_highlight_form_frames(client):
 
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
-    assert "/static/themed-controls.css?v=0.1.13" in html
+    assert "/static/themed-controls.css?v=0.1.14" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
@@ -484,11 +493,13 @@ def test_column_header_actions_have_contextual_names_and_comfortable_hit_areas(c
         assert f'aria-label="Добавить задачу в колонку «{label}»"' in html
 
     css = client.get("/static/style.css").text
+    board_css = client.get("/static/board-workspace.css").text
     assert ".column-add { display: grid; place-items: center; flex: 0 0 32px;" in css
-    assert "width: 32px; height: 32px;" in css
+    assert "flex-basis: 40px;" in board_css
+    assert "width: 40px;" in board_css
     assert ".column-options-toggle:focus-visible" in css
     assert ".column-add:focus-visible" in css
-    assert "flex: 0 0 32px;" in css
+    assert ".column-options-toggle {" in css
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
 

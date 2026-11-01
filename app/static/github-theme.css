@@ -238,12 +238,6 @@ button:focus-visible,
 }
 
 
-.quick-add-icon {
-  color: var(--accent);
-  background: var(--accent-pale);
-  border-radius: 6px;
-}
-
 .quick-add-form input,
 .search-box input,
 .filter-box select {
@@ -251,8 +245,7 @@ button:focus-visible,
 }
 
 .quick-add-form input::placeholder,
-.search-box input::placeholder,
-.quick-add-hint {
+.search-box input::placeholder {
   color: var(--muted);
 }
 
@@ -411,13 +404,6 @@ kbd {
 .task-card.is-focused {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--gh-focus);
-}
-
-.wip-warning {
-  color: var(--gh-yellow-fg);
-  background: var(--gh-yellow-bg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
 }
 
 .column-empty {
@@ -724,12 +710,6 @@ kbd {
 [data-theme="dark"] .column-add:hover {
   color: var(--accent);
   background: var(--gh-control-hover);
-}
-
-[data-theme="dark"] .wip-warning {
-  color: var(--gh-yellow-fg);
-  background: var(--gh-yellow-bg);
-  border-color: var(--line);
 }
 
 [data-theme="dark"] .task-card {

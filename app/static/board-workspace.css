@@ -30,8 +30,8 @@
 
 @media (min-width: 1181px) {
   .board {
-    height: max(260px, calc(100vh - 345px));
-    height: max(260px, calc(100dvh - 345px));
+    height: max(260px, calc(100vh - 300px));
+    height: max(260px, calc(100dvh - 300px));
     min-height: 0;
     align-items: stretch;
   }
@@ -43,8 +43,7 @@
     min-height: 0;
   }
 
-  .board-column > .column-header,
-  .board-column > .wip-warning {
+  .board-column > .column-header {
     flex: 0 0 auto;
   }
 
@@ -139,14 +138,6 @@
   height: 36px;
 }
 
-.quick-add-hint {
-  min-height: 32px;
-  gap: 7px;
-  padding-left: 9px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
 .quick-task-type {
   gap: 5px;
   padding-left: 9px;
@@ -187,10 +178,6 @@
     max-width: 100%;
     min-width: 0;
   }
-  .add-project-button {
-    flex: 0 0 auto;
-    min-height: 36px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -201,13 +188,6 @@
   .board-toolbar { gap: 7px; padding: 12px 0 8px; }
   .search-box { flex: 1 1 100%; min-width: 0; }
   .project-filter-box { flex: 1 1 calc(50% - 5px); }
-  .add-project-button {
-    flex: 0 0 36px;
-    width: 36px;
-    min-width: 36px;
-    padding: 0 !important;
-  }
-  .add-project-label { display: none; }
 }
 
 /* Completed cards keep the same readable typography and spacing as other columns. */
@@ -239,12 +219,6 @@
 :root .board-column.is-drop-target {
   background: color-mix(in srgb, var(--accent-pale) 64%, var(--gh-column, var(--surface-soft)));
   border-color: var(--accent);
-}
-
-:root .wip-warning {
-  color: var(--gh-yellow-fg);
-  background: color-mix(in srgb, var(--gh-yellow-bg) 82%, var(--surface));
-  border-color: color-mix(in srgb, var(--gh-yellow-fg) 32%, var(--line));
 }
 
 :root .task-card {
@@ -285,9 +259,7 @@
 }
 
 .page-subtitle,
-.column-empty,
-.quick-add-hint,
-.wip-warning {
+.column-empty {
   font-size: var(--type-hint);
   line-height: var(--line-height-body);
   overflow-wrap: anywhere;
@@ -348,10 +320,7 @@
 .workset-context-label { font-weight: 650; }
 .workset-context-clear { border: 0; padding: 2px 5px; border-radius: 5px; color: var(--accent); background: transparent; font: inherit; cursor: pointer; }
 .workset-context-clear:hover { background: var(--accent-pale); }
-.wip-warning { display: inline-flex; align-items: center; flex: 0 0 auto; margin: 0 0 0 auto; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--gh-yellow-fg) 35%, var(--line)); border-radius: 999px; color: var(--gh-yellow-fg); background: var(--gh-yellow-bg); font-size: 10px; line-height: 1.3; }
 .column-empty { min-height: 0; }
-.quick-add-hint { padding: 0; border: 0; background: transparent; font-size: 12px; }
-.quick-add-hint > span::before { content: "— "; }
 .task-workset-chip { display: inline-flex; align-items: center; max-width: 100%; padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: var(--surface-soft); font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
 .task-workset-field { width: 100%; max-width: none; margin: 0; }
 .task-workset-field .theme-select { width: 100%; }
@@ -377,15 +346,226 @@
 }
 
 @media (min-width: 1181px) {
-  .board-column { min-height: max(260px, calc(100dvh - 345px)); }
+  .board-column { min-height: max(260px, calc(100dvh - 300px)); }
 }
 .board-column.is-empty > .column-empty {
   margin: 4px 3px 10px;
   padding: 8px 9px;
   font-size: 12px;
 }
-.wip-warning:not([hidden]) + .column-add { margin-left: 0; }
-.quick-add-hint { min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; font-size: 12px; }
-@media (max-width: 520px) {
-  .quick-add-hint { padding: 0; border: 0; }
+/* Homepage toolbar and quick-add controls use one compact, consistent rhythm. */
+@media (min-width: 1181px) {
+  .board-toolbar { flex-wrap: nowrap; align-items: center; }
+  .board-toolbar > .search-box {
+    flex: 1 1 280px;
+    width: auto;
+    max-width: none;
+    min-width: 200px;
+  }
+  .project-toolbar-group { flex: 0 1 190px; min-width: 150px; }
+  .project-filter-box { width: 100%; min-width: 0; }
+  .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
+  .workset-toolbar-group { flex: 0 1 300px; min-width: 230px; }
+  .workset-filter-box { flex: 1 1 auto; min-width: 0; }
+  .workset-filter-box .theme-select { width: 100%; min-width: 0; }
+}
+
+.board-toolbar .search-box,
+.board-toolbar .filter-box,
+.workset-actions-menu > summary,
+.task-filter-menu > summary {
+  min-height: 40px;
+  height: 40px;
+  border-radius: 9px;
+}
+.board-toolbar .search-box,
+.board-toolbar .filter-box {
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+}
+.board-toolbar .search-box input::placeholder { color: var(--ink-soft); opacity: 1; }
+.board-toolbar .filter-box .theme-select-trigger { min-height: 38px; }
+.workset-actions-menu > summary.workset-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 94px;
+  height: 40px;
+  padding: 8px 11px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  list-style: none;
+  cursor: pointer;
+}
+.workset-actions-menu > summary::-webkit-details-marker { display: none; }
+.workset-actions-menu > summary.workset-actions-trigger:hover,
+.workset-actions-menu[open] > summary.workset-actions-trigger {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+.task-filter-menu > summary { min-height: 40px; }
+
+/* A single, compact type picker replaces the row of filter-like type chips. */
+.quick-add { flex-wrap: nowrap; }
+.quick-add-entry { flex: 1 1 auto; min-width: 0; }
+.quick-add-form { min-width: 0; }
+.quick-add-form input { min-width: 0; }
+.quick-task-type {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.quick-task-type > summary.quick-task-type-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 132px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.3;
+  list-style: none;
+  cursor: pointer;
+}
+.quick-task-type > summary::-webkit-details-marker { display: none; }
+.quick-task-type > summary:hover,
+.quick-task-type[open] > summary {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+.quick-task-type > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick-task-type-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.quick-type-option {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 38px;
+  height: auto;
+  padding: 8px 10px;
+  border-radius: 6px;
+  text-align: left;
+}
+.quick-type-option[aria-pressed="true"] { border-color: var(--line-strong); font-weight: 700; }
+
+/* Board height follows the available viewport; visible scrollbars signal long columns. */
+@media (min-width: 1181px) {
+  .board { height: max(260px, calc(100dvh - 300px)); }
+  .board-column > .task-list {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink-soft) 48%, transparent) transparent;
+    box-shadow: inset 0 -8px 8px -8px var(--line-strong);
+  }
+  .board-column > .task-list::-webkit-scrollbar { width: 8px; }
+  .board-column > .task-list::-webkit-scrollbar-track { background: transparent; }
+  .board-column > .task-list::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink-soft) 42%, transparent);
+    background-clip: padding-box;
+  }
+  .board-column > .task-list::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--ink-soft) 68%, transparent);
+    background-clip: padding-box;
+  }
+}
+
+/* Larger header hit targets and an explicit completed-list action. */
+.column-add {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+.column-options { top: 8px; right: 47px; }
+.column-options-toggle {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+.done-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 72px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 8px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 650;
+}
+.done-toggle svg { width: 14px; height: 14px; }
+.done-toggle span { white-space: nowrap; }
+.board-column-done.has-done-overflow .column-options { right: 95px; }
+
+/* Readable card metadata and consistent compact/comfortable previews. */
+.task-card-excerpt,
+:root[data-density="compact"] .task-card-excerpt {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--ink-soft);
+}
+.task-card-footer,
+.board-column-done .done-card .task-card-footer {
+  min-height: 28px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.task-updated { color: var(--ink-soft); font-size: inherit; }
+.column-empty { color: var(--ink-soft); }
+.column-count.is-over-limit {
+  color: var(--gh-yellow-fg);
+  border-color: color-mix(in srgb, var(--gh-yellow-fg) 40%, var(--line));
+  background: var(--gh-yellow-bg);
+}
+
+@media (max-width: 1180px) {
+  .board-toolbar { flex-wrap: wrap; }
+  .board-toolbar > .search-box { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .project-toolbar-group { flex: 1 1 170px; min-width: 0; }
+  .project-filter-box, .project-filter-box .theme-select { width: 100%; max-width: none; min-width: 0; }
+  .workset-toolbar-group { flex: 1 1 250px; min-width: 0; }
+  .workset-filter-box { flex: 1 1 auto; min-width: 0; }
+  .workset-filter-box .theme-select { width: 100%; min-width: 0; }
+}
+@media (max-width: 760px) {
+  .quick-add { flex-wrap: wrap; }
+  .quick-add-entry { flex: 1 1 100%; }
+  .quick-add-form { flex: 1 1 100%; }
+  .quick-task-type { flex: 0 0 auto; margin-left: auto; padding-left: 0; border-left: 0; }
+  .board-toolbar .search-box,
+  .board-toolbar .filter-box,
+  .workset-actions-menu > summary,
+  .task-filter-menu > summary { min-height: 40px; height: 40px; }
+  .done-toggle { min-width: 68px; }
 }

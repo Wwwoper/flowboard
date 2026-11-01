@@ -16,7 +16,7 @@ def test_board_surface_hierarchy_uses_theme_tokens_for_surfaces_and_states(clien
         "border-color: color-mix(in srgb, var(--line) 42%,",
         ":root .board-column.is-drop-target",
         "background: color-mix(in srgb, var(--accent-pale) 64%,",
-        ".wip-warning { display: inline-flex; align-items: center; flex: 0 0 auto;",
+        ".column-count.is-over-limit {",
         "var(--gh-yellow-bg)",
         ":root .task-card:hover",
         "var(--line-strong)",

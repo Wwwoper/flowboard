@@ -3,11 +3,11 @@ from __future__ import annotations
 
 def test_board_workspace_uses_fixed_height_desktop_columns_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.6' in html
+    assert '/static/board-workspace.css?v=0.1.7' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
-    assert "height: max(260px, calc(100dvh - 345px));" in css
+    assert "height: max(260px, calc(100dvh - 300px));" in css
     assert "min-height: 0;" in css
     assert "align-items: stretch;" in css
     assert "display: flex;" in css
@@ -57,7 +57,10 @@ def test_theme_surfaces_focus_states_and_header_hit_areas_use_shared_tokens(clie
     assert ".column-add:focus-visible" in base_css
     assert ".column-options-toggle:focus-visible" in base_css
     assert ".done-toggle:focus-visible" in base_css
-    assert "width: 32px; height: 32px;" in base_css
+    assert "width: 40px;" in board_css
+    assert "height: 40px;" in board_css
+    assert ".done-toggle {" in board_css
+    assert "min-height: 40px;" in board_css
     assert 'id="toggle-done" class="done-toggle"' in html
     assert 'aria-label="Показать остальные завершённые задачи"' in html
     assert "function validateTheme(value)" in manager_js

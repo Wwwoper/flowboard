@@ -52,7 +52,7 @@ def test_workset_controls_are_available_without_a_separate_context_row(client):
     assert "window.prompt(" not in script
     assert "/static/app.js?v=0.5.59" in html
     assert "/static/themed-selects.js?v=0.1.10" in html
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
     assert "/static/board-workspace.css?v=0.1.18" in html
     toolbar_css = client.get("/static/board-workspace.css").text
     assert ".board-toolbar .filter-box {" in toolbar_css

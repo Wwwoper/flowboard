@@ -259,5 +259,7 @@ def test_appearance_settings_group_controls_and_show_active_palette(client):
     assert '.toast-position-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }' in css
     assert '.toast-position-option:has(input:checked) { border: 2px solid var(--accent);' in css
     assert '@media (prefers-reduced-motion: reduce)' in css
-    assert '.settings-panel[data-settings-panel="appearance"] .settings-section-description' in css
+    assert '.settings-section { margin-top: 20px; padding-top: 16px;' in css
+    assert '.settings-section-description { margin: 5px 0 12px;' in css
+    assert '.settings-panel[data-settings-panel="appearance"] .settings-section' not in css
     assert '.settings-dialog .theme-manager-select-row > .theme-manager-select-wrapper' in css

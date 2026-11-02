@@ -2,7 +2,7 @@ def test_toast_notifications_follow_theme_and_can_be_dismissed(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "/static/app.js?v=0.5.59" in response.text
-    assert "/static/style.css?v=0.5.34" in response.text
+    assert "/static/style.css?v=0.5.35" in response.text
 
     script = client.get("/static/app.js").text
     css = client.get("/static/style.css").text
@@ -21,7 +21,7 @@ def test_toast_position_can_be_selected_and_persisted_in_appearance_settings(cli
     css = client.get("/static/style.css").text
 
     assert "/static/app.js?v=0.5.59" in html
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
     assert '<div class="settings-section toast-position-settings">' in html
     assert 'id="toast-position-options" class="toast-position-options"' in html
     for position, label in (

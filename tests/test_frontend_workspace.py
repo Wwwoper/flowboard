@@ -43,7 +43,7 @@ def test_project_workspace_controls_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.59" in html
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -210,7 +210,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
     ):
         assert f'id="{element_id}"' in html
     assert "/static/app.js?v=0.5.59" in html
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -407,7 +407,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
     assert "/static/app.js?v=0.5.59" in html
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
     assert 'data-tooltip="Показать остальные завершённые задачи"' in html
@@ -446,7 +446,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.34" in html
+    assert "/static/style.css?v=0.5.35" in html
     assert '/static/github-theme.css?v=0.2.5' in html
     assert '/static/themed-controls.css?v=0.1.16' in html
     assert '/static/board-workspace.css?v=0.1.18' in html
@@ -596,3 +596,28 @@ console.log(JSON.stringify({{matched, typeCount, noneMatches}}));
         "typeCount": 2,
         "noneMatches": True,
     }
+
+
+def test_settings_pages_share_compact_cards_spacing_and_left_aligned_back_navigation(client):
+    html = client.get("/").text
+    assert "/static/style.css?v=0.5.35" in html
+
+    script = client.get("/static/app.js").text
+    assert 'manageProjectsHeader.append(manageProjectsTitleBlock, manageProjectsBackButton);' in script
+    assert 'make("section", "project-manager-section")' in script
+    assert 'make("div", "project-manager-item")' in script
+    assert 'project-manager-action ${actionClass}' in script
+
+    css = client.get("/static/style.css").text
+    assert (
+        '.settings-subpage-header { display: flex; align-items: flex-start; '
+        'flex-direction: column; gap: 10px; margin-bottom: 18px; }'
+    ) in css
+    assert '.settings-subpage-header h3 { margin: 0; font-size: 17px; letter-spacing: -.2px; }' in css
+    assert '.settings-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }' in css
+    assert '.settings-section-description { margin: 5px 0 12px; color: var(--muted); font-size: 12px;' in css
+    assert '  border-radius: 10px;\n  color: var(--ink);\n  background: var(--surface);' in css
+    assert '.project-manager-item { display: flex; align-items: center;' in css
+    assert '.project-manager-action.is-archive,\n.project-manager-action.is-restore { color: var(--ink-soft); }' in css
+    assert 'background: var(--surface-soft); font-size: 12px; line-height: 1.5; }' in css
+    assert '.settings-panel[data-settings-panel="appearance"] .settings-section' not in css

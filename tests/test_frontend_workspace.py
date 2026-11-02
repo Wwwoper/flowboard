@@ -42,8 +42,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.58" in html
-    assert "/static/style.css?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.59" in html
+    assert "/static/style.css?v=0.5.34" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -209,8 +209,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.58" in html
-    assert "/static/style.css?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.59" in html
+    assert "/static/style.css?v=0.5.34" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -406,8 +406,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.58" in html
-    assert "/static/style.css?v=0.5.33" in html
+    assert "/static/app.js?v=0.5.59" in html
+    assert "/static/style.css?v=0.5.34" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
     assert 'data-tooltip="Показать остальные завершённые задачи"' in html
@@ -446,11 +446,11 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.33" in html
+    assert "/static/style.css?v=0.5.34" in html
     assert '/static/github-theme.css?v=0.2.5' in html
     assert '/static/themed-controls.css?v=0.1.16' in html
     assert '/static/board-workspace.css?v=0.1.18' in html
-    assert '/static/app.js?v=0.5.58' in html
+    assert '/static/app.js?v=0.5.59' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -501,11 +501,10 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
         '<h4>Архив задач</h4>',
         'id="open-archive"',
         'id="organization-settings-actions"',
-        'id="theme-delete-help"',
-        'id="theme-reset-help"',
+        'id="theme-palette-preview" class="theme-palette-preview" role="img"',
         'id="theme-toggle-icon" class="toolbar-menu-item-icon theme-toggle-icon"',
-        'id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled aria-describedby="theme-reset-help" title="Восстановить стандартную тему"',
-        'id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item"',
+        'id="reset-theme-button" class="button button-quiet toolbar-menu-item" type="button" disabled title="Восстановить стандартную тему"',
+        'id="delete-theme-button" class="button button-quiet button-danger-quiet toolbar-menu-item" type="button" disabled hidden',
     ):
         assert fragment in html
 
@@ -514,7 +513,8 @@ def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     assert ".toolbar-menu-section" in controls
 
     script = client.get("/static/app.js").text
-    assert 'Активна встроенная тема. Сохранено тем: ${themes.length}' in script
+    assert 'Активна встроенная тема · Сохранено: ${themes.length}' in script
+    assert 'els.deleteThemeButton.hidden = !hasCustomTheme;' in script
     assert '$("#organization-settings-actions").append(manageProjectsButton);' in script
     assert '$("#settings-panel-other .settings-option-list").append(manageProjectsButton);' not in script
     assert 'selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true })' in script

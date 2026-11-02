@@ -60,7 +60,7 @@ def test_custom_theme_controls_and_script_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert '/static/theme-manager.js?v=0.2.1' in html
-    assert '/static/app.js?v=0.5.58' in html
+    assert '/static/app.js?v=0.5.59' in html
     assert '/static/github-theme.css?v=0.2.5' in html
     assert 'id="saved-themes-select"' in html
     assert 'id="delete-theme-button"' in html
@@ -236,3 +236,28 @@ function boot(mode = "light") {
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_appearance_settings_group_controls_and_show_active_palette(client):
+    html = client.get("/").text
+    assert 'class="appearance-toggle-card"' in html
+    assert 'id="theme-palette-preview"' in html
+    assert 'id="custom-theme-status"' in html
+    assert 'id="delete-theme-button"' in html and 'disabled hidden' in html
+
+    script = (ROOT / "app" / "static" / "app.js").read_text()
+    assert 'els.deleteThemeButton.hidden = !hasCustomTheme;' in script
+    assert 'function updateThemePalettePreview()' in script
+    assert 'updateThemePalettePreview();' in script
+    assert 'window.FlowboardThemeManager?.applyCurrentPalette();\n    updateThemePalettePreview();' in script
+    assert 'getComputedStyle(document.documentElement)' in script
+    for token in ("accent", "accent-dark", "surface-soft", "gh-marker-doing", "gh-marker-done"):
+        assert f'"{token}"' in script
+    assert 'Активна пользовательская тема «${themeName}»' in script
+
+    css = (ROOT / "app" / "static" / "style.css").read_text()
+    assert '.toast-position-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }' in css
+    assert '.toast-position-option:has(input:checked) { border: 2px solid var(--accent);' in css
+    assert '@media (prefers-reduced-motion: reduce)' in css
+    assert '.settings-panel[data-settings-panel="appearance"] .settings-section-description' in css
+    assert '.settings-dialog .theme-manager-select-row > .theme-manager-select-wrapper' in css

@@ -246,6 +246,7 @@
     deleteThemeButton: $("#delete-theme-button"),
     themeImportFile: $("#theme-import-file"),
     customThemeStatus: $("#custom-theme-status"),
+    themePalettePreview: $("#theme-palette-preview"),
     densityToggle: $("#density-toggle"),
     densityToggleLabel: $("#density-toggle-label"),
     shortcutsButton: $("#shortcuts-button"),
@@ -290,6 +291,7 @@
     const isDark = normalizedTheme === "dark";
     document.documentElement.dataset.theme = normalizedTheme;
     window.FlowboardThemeManager?.applyCurrentPalette();
+    updateThemePalettePreview();
     els.themeToggle.setAttribute("aria-pressed", String(isDark));
     els.themeToggle.setAttribute(
       "aria-label",
@@ -335,9 +337,32 @@
     const themeName = manager.getCustomThemeName() || "";
     els.resetThemeButton.disabled = !hasCustomTheme;
     els.deleteThemeButton.disabled = !hasCustomTheme;
+    els.deleteThemeButton.hidden = !hasCustomTheme;
     els.customThemeStatus.textContent = hasCustomTheme
-      ? `Активна пользовательская тема. Сохранено тем: ${themes.length}`
-      : `Активна встроенная тема. Сохранено тем: ${themes.length}`;
+      ? `Активна пользовательская тема «${themeName}» · Сохранено: ${themes.length}`
+      : `Активна встроенная тема · Сохранено: ${themes.length}`;
+
+    updateThemePalettePreview();
+  }
+
+  function updateThemePalettePreview() {
+    if (!els.themePalettePreview) return;
+    const palette = getComputedStyle(document.documentElement);
+    const paletteTokens = [
+      ["accent", "Акцентный цвет"],
+      ["accent-dark", "Контрастный акцент"],
+      ["surface-soft", "Вторичная поверхность"],
+      ["gh-marker-doing", "Маркер активной задачи"],
+      ["gh-marker-done", "Маркер выполненной задачи"],
+    ];
+    const swatches = paletteTokens.map(([token, label]) => {
+      const swatch = document.createElement("span");
+      swatch.className = "theme-palette-swatch";
+      swatch.style.backgroundColor = palette.getPropertyValue(`--${token}`).trim();
+      swatch.title = label;
+      return swatch;
+    });
+    els.themePalettePreview.replaceChildren(...swatches);
   }
 
   function applyDensity(density, persist = false) {

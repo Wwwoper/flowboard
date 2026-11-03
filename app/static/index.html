@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.35">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.36">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.5">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.16">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
@@ -170,7 +170,7 @@
                   <button class="column-options-reset" type="button" data-column-reset="todo">Сбросить настройки</button>
                 </div>
               </div>
-              <button class="column-add" data-add-status="todo" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «К выполнению»">＋</button>
+              <button class="column-add" hidden data-add-status="todo" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «К выполнению»">＋</button>
             </div>
           </header>
           <div class="task-list" data-status="todo" aria-label="Задачи к выполнению"></div>
@@ -203,7 +203,7 @@
                   <button class="column-options-reset" type="button" data-column-reset="doing">Сбросить настройки</button>
                 </div>
               </div>
-              <button class="column-add" data-add-status="doing" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «В работе»">＋</button>
+              <button class="column-add" hidden data-add-status="doing" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «В работе»">＋</button>
             </div>
           </header>
           <div class="task-list" data-status="doing" aria-label="Задачи в работе"></div>
@@ -236,7 +236,7 @@
                   <button class="column-options-reset" type="button" data-column-reset="waiting">Сбросить настройки</button>
                 </div>
               </div>
-              <button class="column-add" data-add-status="waiting" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «Ожидает»">＋</button>
+              <button class="column-add" hidden data-add-status="waiting" type="button" data-tooltip="Добавить" aria-label="Добавить задачу в колонку «Ожидает»">＋</button>
             </div>
           </header>
           <div class="task-list" data-status="waiting" aria-label="Ожидающие задачи"></div>
@@ -477,7 +477,7 @@
       </div>
       <div class="create-project-field">
         <label for="create-project-key">Ключ проекта</label>
-        <input id="create-project-key" class="text-field" name="project-key" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="create-project-help create-project-error" aria-invalid="false">
+        <input id="create-project-key" class="text-field" name="project-key" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="create-project-help create-project-error" aria-invalid="false">
         <p id="create-project-help" class="create-project-help">Используйте латинские буквы, цифры и дефис. Например: storefront. Буквы будут приведены к нижнему регистру, пробелы — к дефисам.</p>
         <p id="create-project-error" class="create-project-error" role="alert" aria-live="polite" hidden></p>
       </div>
@@ -702,6 +702,6 @@
 
   <script src="/static/dragdrop.js?v=0.3.2" defer></script>
   <script src="/static/themed-selects.js?v=0.1.10" defer></script>
-  <script src="/static/app.js?v=0.5.59" defer></script>
+  <script src="/static/app.js?v=0.5.60" defer></script>
 </body>
 </html>

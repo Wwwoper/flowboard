@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 
 def test_create_project_uses_themed_dialog_with_inline_validation_and_no_browser_prompt(client):
     response = client.get("/")
@@ -19,7 +21,7 @@ def test_create_project_uses_themed_dialog_with_inline_validation_and_no_browser
     ):
         assert fragment in html
     assert "/static/themed-controls.css?v=0.1.16" in html
-    assert "/static/app.js?v=0.5.59" in html
+    assert "/static/app.js?v=0.5.60" in html
 
     script = client.get("/static/app.js").text
     assert "window.prompt(" not in script
@@ -48,3 +50,18 @@ def test_create_project_uses_themed_dialog_with_inline_validation_and_no_browser
         ".create-project-actions",
     ):
         assert selector in controls
+
+
+def test_column_add_controls_are_hidden_without_removing_the_existing_flow(client):
+    html = client.get("/").text
+    script = (Path(__file__).parents[1] / "app/static/app.js").read_text()
+    assert html.count('class="column-add" hidden data-add-status=') == 3
+    assert '$$("[data-add-status]").forEach' in script
+    assert 'button.dataset.addStatus' in script
+
+
+def test_project_creation_message_points_to_project_settings(client):
+    script = (Path(__file__).parents[1] / "app/static/app.js").read_text()
+    assert "Проект «${projectLabel(slug)}» создан." in script
+    assert "Управление проектами" in script
+    assert "Переименовать проект" in script

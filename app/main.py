@@ -30,6 +30,7 @@ from app.models import (
     ImportResult,
     ImportSkipped,
     MarkdownPreviewRequest,
+    ProjectRename,
     TaskCreate,
     TaskDetail,
     TaskPatch,
@@ -648,6 +649,58 @@ def _stored_extension(filename: str) -> str:
 def index() -> FileResponse:
     # Always revalidate the HTML so new asset version query strings reach browsers.
     return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.patch("/api/projects/{project_slug}")
+def rename_project(
+    project_slug: str,
+    payload: ProjectRename,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> dict[str, Any]:
+    if not PROJECT_SLUG_RE.fullmatch(project_slug):
+        raise HTTPException(status_code=422, detail="Некорректный ключ проекта")
+    new_slug = payload.new_slug
+    if project_slug == new_slug:
+        raise HTTPException(status_code=400, detail="Новое название совпадает с текущим")
+
+    target_tag = f"project:{new_slug}"
+    target_exists = any(
+        any(tag.strip().lower() == target_tag for tag in str(row[0] or "").split(","))
+        for row in connection.execute("SELECT tags FROM tasks").fetchall()
+    ) or connection.execute(
+        "SELECT 1 FROM worksets WHERE project_slug = ? LIMIT 1", (new_slug,)
+    ).fetchone() is not None or connection.execute(
+        "SELECT 1 FROM workset_events WHERE project_slug = ? LIMIT 1", (new_slug,)
+    ).fetchone() is not None
+    if target_exists:
+        raise HTTPException(status_code=409, detail="Проект с таким ключом уже существует")
+
+    old_tag = f"project:{project_slug}"
+    updated_tasks = 0
+    for row in connection.execute("SELECT id, tags FROM tasks").fetchall():
+        tags = [tag.strip() for tag in str(row["tags"] or "").split(",") if tag.strip()]
+        if not any(tag.lower() == old_tag for tag in tags):
+            continue
+        updated_tags = ", ".join(target_tag if tag.lower() == old_tag else tag for tag in tags)
+        connection.execute("UPDATE tasks SET tags = ? WHERE id = ?", (updated_tags, row["id"]))
+        updated_tasks += 1
+
+    updated_worksets = connection.execute(
+        "UPDATE worksets SET project_slug = ? WHERE project_slug = ?",
+        (new_slug, project_slug),
+    ).rowcount
+    updated_events = connection.execute(
+        "UPDATE workset_events SET project_slug = ? WHERE project_slug = ?",
+        (new_slug, project_slug),
+    ).rowcount
+    connection.commit()
+    return {
+        "old_slug": project_slug,
+        "new_slug": new_slug,
+        "updated_tasks": updated_tasks,
+        "updated_worksets": updated_worksets,
+        "updated_events": updated_events,
+    }
 
 
 @app.get("/api/tasks", response_model=list[TaskSummary])

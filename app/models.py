@@ -127,6 +127,18 @@ class MarkdownPreviewRequest(StrictModel):
     text: str = Field(default="", max_length=MAX_TASK_TEXT_LENGTH)
 
 
+class ProjectRename(StrictModel):
+    new_slug: str = Field(min_length=1, max_length=80)
+
+    @field_validator("new_slug")
+    @classmethod
+    def validate_project_slug(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value):
+            raise ValueError("Некорректный ключ проекта")
+        return value
+
+
 class WorksetCreate(StrictModel):
     project_slug: str = Field(min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=100)

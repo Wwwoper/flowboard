@@ -1553,3 +1553,11 @@ dialog.workset-history-dialog:not([open]) { display: none; }
 [data-theme="dark"] .markdown-preview pre .ow { color: #ff7b72; }
 
 [data-theme="dark"] .markdown-preview pre code { background: transparent; }
+
+/* Column-level creation remains wired for future use but is hidden in the current workflow. */
+.column-add[hidden] { display: none; }
+
+.project-manager-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+@media (max-width: 520px) {
+  .project-manager-actions { flex-wrap: wrap; justify-content: flex-end; }
+}

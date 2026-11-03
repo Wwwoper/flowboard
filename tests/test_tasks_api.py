@@ -162,7 +162,7 @@ def test_index_revalidates_html_and_references_versioned_assets(client):
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.59" in response.text
+    assert "/static/app.js?v=0.5.60" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):
@@ -257,3 +257,53 @@ def test_task_type_migration_report_endpoint_returns_a_stable_shape(client):
         "migrated": 0, "removed": 0, "conflicts": [],
         "backup_file": None, "backup_created": False,
     }
+
+
+def test_rename_project_updates_active_archived_tasks_worksets_and_history(client):
+    active = client.post(
+        "/api/tasks", json={"title": "active", "tags": "project:old-name, urgent"}
+    ).json()
+    archived = client.post(
+        "/api/tasks", json={"title": "archived", "tags": "project:old-name, keep"}
+    ).json()
+    assert client.patch(f"/api/tasks/{archived['id']}", json={"status": "done"}).status_code == 200
+    assert client.post(f"/api/archive/tasks/{archived['id']}").status_code == 200
+
+    workset = client.post(
+        "/api/worksets", json={"project_slug": "old-name", "name": "Release"}
+    ).json()
+    assert client.post(
+        f"/api/worksets/{workset['id']}/tasks", json={"task_id": active["id"]}
+    ).status_code == 200
+
+    response = client.patch(
+        "/api/projects/old-name", json={"new_slug": "new-name"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "old_slug": "old-name",
+        "new_slug": "new-name",
+        "updated_tasks": 2,
+        "updated_worksets": 1,
+        "updated_events": 2,
+    }
+
+    active_after = client.get("/api/tasks").json()
+    archived_after = client.get("/api/archive/tasks").json()
+    assert next(task for task in active_after if task["id"] == active["id"])["tags"] == "project:new-name, urgent"
+    assert next(task for task in archived_after if task["id"] == archived["id"])["tags"] == "project:new-name, keep"
+    assert client.get("/api/worksets", params={"project": "new-name"}).json()[0]["id"] == workset["id"]
+    history = client.get("/api/worksets/history", params={"project": "new-name"}).json()
+    assert history["events"]
+    assert client.get("/api/worksets", params={"project": "old-name"}).json() == []
+    assert client.patch("/api/projects/new-name", json={"new_slug": "new-name"}).status_code == 400
+
+
+def test_rename_project_rejects_invalid_or_existing_slug(client):
+    create_task(client, "first")
+    response = client.patch("/api/projects/first", json={"new_slug": "bad slug"})
+    assert response.status_code == 422
+
+    client.post("/api/tasks", json={"title": "existing", "tags": "project:already-used"})
+    response = client.patch("/api/projects/first", json={"new_slug": "already-used"})
+    assert response.status_code == 409

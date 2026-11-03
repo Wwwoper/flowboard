@@ -2623,6 +2623,9 @@
   });
 
   let createProjectBusy = false;
+  let projectDialogMode = "create";
+  let renamingProjectSlug = "";
+  let focusManageProjectsAfterDialogClose = false;
   let focusQuickTitleAfterCreateProject = false;
 
   function requestImageDeleteConfirmation(filename) {
@@ -2671,17 +2674,64 @@
     createProjectClose.disabled = busy;
     createProjectCancel.disabled = busy;
     createProjectSubmit.disabled = busy;
-    createProjectSubmit.textContent = busy ? "Создание…" : "Создать проект";
+    createProjectSubmit.textContent = busy
+      ? (projectDialogMode === "rename" ? "Сохранение…" : "Создание…")
+      : (projectDialogMode === "rename" ? "Сохранить" : "Создать проект");
   }
 
   function openCreateProjectDialog() {
     if (createProjectBusy || createProjectDialog.open) return;
     focusQuickTitleAfterCreateProject = false;
+    focusManageProjectsAfterDialogClose = false;
+    projectDialogMode = "create";
+    renamingProjectSlug = "";
+    $("#create-project-heading").textContent = "Создать проект";
+    $(".eyebrow", createProjectForm).textContent = "НОВЫЙ ПРОЕКТ";
+    createProjectSubmit.textContent = "Создать проект";
     createProjectForm.reset();
     setCreateProjectError("");
     setCreateProjectBusy(false);
     createProjectDialog.showModal();
     createProjectKey.focus({ preventScroll: true });
+  }
+
+  function openRenameProjectDialog(slug) {
+    if (createProjectBusy || createProjectDialog.open) return;
+    focusQuickTitleAfterCreateProject = false;
+    focusManageProjectsAfterDialogClose = true;
+    projectDialogMode = "rename";
+    renamingProjectSlug = slug;
+    $("#create-project-heading").textContent = "Переименовать проект";
+    $(".eyebrow", createProjectForm).textContent = "НАСТРОЙКИ ПРОЕКТА";
+    createProjectSubmit.textContent = "Сохранить";
+    createProjectForm.reset();
+    createProjectKey.value = slug;
+    setCreateProjectError("");
+    setCreateProjectBusy(false);
+    createProjectDialog.showModal();
+    createProjectKey.focus({ preventScroll: true });
+    createProjectKey.select();
+  }
+
+  async function renameProject(oldSlug, newSlug) {
+    await api(`/api/projects/${encodeURIComponent(oldSlug)}`, {
+      method: "PATCH",
+      body: { new_slug: newSlug },
+    });
+
+    state.projects = [...new Set(state.projects.map((slug) => slug === oldSlug ? newSlug : slug))]
+      .sort((a, b) => a.localeCompare(b, "ru"));
+    archivedProjectSlugs = [...new Set(archivedProjectSlugs.map((slug) => slug === oldSlug ? newSlug : slug))];
+    if (state.project === oldSlug) state.project = newSlug;
+    const savedWorkset = readStorage(`flowboard-workset:${oldSlug}`);
+    if (savedWorkset) writeStorage(`flowboard-workset:${newSlug}`, savedWorkset);
+    writeStorage(`flowboard-workset:${oldSlug}`, "");
+    persistProjectState();
+
+    await loadTasks();
+    await loadArchivedTasks();
+    renderProjectManager();
+    toast(`Проект переименован: «${projectLabel(oldSlug)}» → «${projectLabel(newSlug)}»`);
   }
 
   function closeCreateProjectDialog() {
@@ -2707,6 +2757,11 @@
       createProjectKey.focus({ preventScroll: true });
       return;
     }
+    if (projectDialogMode === "rename" && slug === renamingProjectSlug) {
+      setCreateProjectError("Укажите новое название проекта.");
+      createProjectKey.focus({ preventScroll: true });
+      return;
+    }
     if (state.projects.includes(slug)) {
       setCreateProjectError("Проект с таким ключом уже существует.");
       createProjectKey.focus({ preventScroll: true });
@@ -2715,14 +2770,19 @@
 
     setCreateProjectBusy(true);
     try {
-      // Let the progress state render before the existing local creation flow runs.
       await new Promise((resolve) => window.setTimeout(resolve, 0));
-      addProject();
-      focusQuickTitleAfterCreateProject = true;
+      if (projectDialogMode === "rename") {
+        await renameProject(renamingProjectSlug, slug);
+      } else {
+        addProject();
+        focusQuickTitleAfterCreateProject = true;
+      }
       setCreateProjectBusy(false);
       createProjectDialog.close();
-    } catch {
-      setCreateProjectError("Не удалось создать проект. Проверьте введённые данные и попробуйте ещё раз.");
+    } catch (error) {
+      setCreateProjectError(error.message || (projectDialogMode === "rename"
+        ? "Не удалось переименовать проект. Попробуйте ещё раз."
+        : "Не удалось создать проект. Проверьте введённые данные и попробуйте ещё раз."));
     } finally {
       setCreateProjectBusy(false);
       if (createProjectDialog.open && createProjectError.textContent) {
@@ -2757,7 +2817,7 @@
       renderBoard();
       toast(error.message, "error");
     });
-    toast(`Проект «${projectLabel(slug)}» выбран. Новые задачи получат тег ${projectTag(slug)}.`);
+    toast(`Проект «${projectLabel(slug)}» создан. Переименовать его или переместить в архив можно в настройках → Управление проектами.`);
   }
 
   async function handleFocusDone() {
@@ -2899,6 +2959,9 @@
     if (focusQuickTitleAfterCreateProject) {
       focusQuickTitleAfterCreateProject = false;
       els.quickTitle.focus({ preventScroll: true });
+    } else if (focusManageProjectsAfterDialogClose) {
+      focusManageProjectsAfterDialogClose = false;
+      manageProjectsButton.focus({ preventScroll: true });
     } else {
       els.projectFilter.closest(".theme-select")?.querySelector(".theme-select-trigger")?.focus({ preventScroll: true });
     }
@@ -3709,10 +3772,15 @@
       item.setAttribute("role", "listitem");
       const copy = make("div", "project-manager-copy");
       copy.append(make("span", "project-manager-name", projectLabel(slug)), make("code", "project-manager-key", slug));
+      const actions = make("div", "project-manager-actions");
+      const rename = make("button", "button button-small button-quiet project-manager-action is-rename", "Переименовать");
+      rename.type = "button";
+      rename.addEventListener("click", () => openRenameProjectDialog(slug));
       const action = make("button", `button button-small button-quiet project-manager-action ${actionClass}`, actionLabel);
       action.type = "button";
       action.addEventListener("click", () => onAction(slug));
-      item.append(copy, action);
+      actions.append(rename, action);
+      item.append(copy, actions);
       section.list.append(item);
     });
     section.count.textContent = String(projects.length);

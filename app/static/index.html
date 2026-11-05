@@ -19,12 +19,12 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/tokens.css?v=0.5.68">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.68">
-  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.68">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.68">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.68">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.68">
+  <link rel="stylesheet" href="/static/tokens.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.69">
 </head>
 <body>
   <div class="app-shell">
@@ -154,8 +154,8 @@
             <div class="column-header-actions">
               <div class="column-options" data-column-options="todo">
                 <button class="column-options-toggle" type="button" data-column-options-toggle="todo"
-                  aria-label="Сортировка задач: К выполнению" data-tooltip="Сортировка" aria-expanded="false">☷</button>
-                <div class="column-options-popover" data-column-options-panel="todo" hidden>
+                  aria-label="Сортировка задач: К выполнению" aria-controls="column-options-todo" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div id="column-options-todo" class="column-options-popover" data-column-options-panel="todo" role="group" aria-label="Настройки сортировки: К выполнению" hidden>
                   <label><span>Сортировка</span>
                     <select data-column-sort="todo" aria-label="Сортировка задач">
                       <option value="manual">Ручной порядок</option>
@@ -187,8 +187,8 @@
             <div class="column-header-actions">
               <div class="column-options" data-column-options="doing">
                 <button class="column-options-toggle" type="button" data-column-options-toggle="doing"
-                  aria-label="Сортировка задач: В работе" data-tooltip="Сортировка" aria-expanded="false">☷</button>
-                <div class="column-options-popover" data-column-options-panel="doing" hidden>
+                  aria-label="Сортировка задач: В работе" aria-controls="column-options-doing" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div id="column-options-doing" class="column-options-popover" data-column-options-panel="doing" role="group" aria-label="Настройки сортировки: В работе" hidden>
                   <label><span>Сортировка</span>
                     <select data-column-sort="doing" aria-label="Сортировка задач">
                       <option value="manual">Ручной порядок</option>
@@ -220,8 +220,8 @@
             <div class="column-header-actions">
               <div class="column-options" data-column-options="waiting">
                 <button class="column-options-toggle" type="button" data-column-options-toggle="waiting"
-                  aria-label="Сортировка задач: Ожидает" data-tooltip="Сортировка" aria-expanded="false">☷</button>
-                <div class="column-options-popover" data-column-options-panel="waiting" hidden>
+                  aria-label="Сортировка задач: Ожидает" aria-controls="column-options-waiting" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div id="column-options-waiting" class="column-options-popover" data-column-options-panel="waiting" role="group" aria-label="Настройки сортировки: Ожидает" hidden>
                   <label><span>Сортировка</span>
                     <select data-column-sort="waiting" aria-label="Сортировка задач">
                       <option value="manual">Ручной порядок</option>
@@ -254,8 +254,8 @@
               <button id="toggle-done" class="done-toggle" type="button" aria-label="Показать остальные завершённые задачи" data-tooltip="Показать остальные завершённые задачи" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></button>
               <div class="column-options" data-column-options="done">
                 <button class="column-options-toggle" type="button" data-column-options-toggle="done"
-                  aria-label="Сортировка задач: Готово" data-tooltip="Сортировка" aria-expanded="false">☷</button>
-                <div class="column-options-popover" data-column-options-panel="done" hidden>
+                  aria-label="Сортировка задач: Готово" aria-controls="column-options-done" data-tooltip="Сортировка" aria-expanded="false">☷</button>
+                <div id="column-options-done" class="column-options-popover" data-column-options-panel="done" role="group" aria-label="Настройки сортировки: Готово" hidden>
                   <label><span>Сортировка</span>
                     <select data-column-sort="done" aria-label="Сортировка задач">
                       <option value="manual">Ручной порядок</option>
@@ -461,7 +461,7 @@
     </div>
   </dialog>
 
-  <dialog id="project-dialog" class="shortcuts-dialog project-dialog" aria-labelledby="project-dialog-heading">
+  <dialog id="project-dialog" class="shortcuts-dialog project-dialog" aria-labelledby="project-dialog-heading" aria-modal="true">
     <div class="shortcuts-dialog-header">
       <div><p class="eyebrow">НАВИГАЦИЯ</p><h2 id="project-dialog-heading">Перейти к проекту</h2></div>
       <button id="close-project-dialog" class="icon-button" type="button" aria-label="Закрыть">×</button>
@@ -529,7 +529,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title">
+  <dialog id="attachment-preview-dialog" class="attachment-preview-dialog" aria-labelledby="attachment-preview-title" aria-modal="true">
     <div class="attachment-preview-dialog-header">
       <h2 id="attachment-preview-title">Предпросмотр изображения</h2>
       <div class="attachment-preview-dialog-actions">
@@ -553,7 +553,7 @@
     </div>
     <div id="workset-history-content" class="workset-history-content"></div>
   </dialog>
-  <dialog id="workset-editor-dialog" class="app-modal create-project-dialog" aria-labelledby="workset-editor-heading">
+  <dialog id="workset-editor-dialog" class="app-modal create-project-dialog" aria-labelledby="workset-editor-heading" aria-modal="true">
     <form id="workset-editor-form" class="create-project-form" novalidate>
       <div class="shortcuts-dialog-header">
         <div><p class="eyebrow">РАБОЧИЙ НАБОР</p><h2 id="workset-editor-heading">Новый рабочий набор</h2></div>
@@ -570,7 +570,7 @@
     </form>
   </dialog>
   <div id="panel-overlay" class="panel-overlay" hidden></div>
-  <aside id="task-panel" class="task-panel" aria-labelledby="task-title-display-text" aria-hidden="true">
+  <aside id="task-panel" class="task-panel" role="dialog" aria-labelledby="task-title-display-text" aria-hidden="true" tabindex="-1">
     <form id="task-form" class="task-form">
       <input id="panel-task-id" type="hidden">
       <div class="task-title-field">
@@ -650,7 +650,7 @@
       </div>
 
       <section id="task-description-section" class="task-description-section task-editor-workspace">
-        <div class="task-workspace-tabs" role="tablist" aria-label="Рабочая область задачи">
+        <div class="task-workspace-tabs" role="tablist" aria-label="Рабочая область задачи" aria-orientation="horizontal">
           <button id="task-description-tab" class="task-workspace-tab" type="button" role="tab" aria-selected="true" aria-controls="task-description-panel" tabindex="0">Описание</button>
           <button id="task-result-tab" class="task-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="task-result-panel" tabindex="-1">
             <span>Результат</span><span id="task-result-indicator" class="task-result-indicator" aria-hidden="true" hidden></span>

@@ -1351,6 +1351,7 @@
     card.appendChild(footer);
     card.addEventListener("click", (event) => {
       if (event.target.closest("button, a, .task-type-chip")) return;
+      card.focus({ preventScroll: true });
       openTaskPanel(task.id);
     });
     card.addEventListener("keydown", (event) => {
@@ -1717,14 +1718,54 @@
     }
   }
 
+  let taskPanelReturnFocus = null;
+  let returnToSettingsSubpageAfterPanel = null;
+
   function openPanel() {
     els.overlay.hidden = false;
     els.panel.classList.add("is-open");
     els.panel.setAttribute("aria-hidden", "false");
+    els.panel.setAttribute("aria-modal", "true");
+    document.querySelector(".app-shell")?.setAttribute("inert", "");
     document.body.style.overflow = "hidden";
   }
 
-  let returnToSettingsSubpageAfterPanel = null;
+  function restoreTaskPanelFocus() {
+    const target = taskPanelReturnFocus;
+    taskPanelReturnFocus = null;
+    const isAvailable = target?.isConnected
+      && !target.closest("[hidden], [inert], [aria-hidden='true']")
+      && (!target.closest("dialog") || target.closest("dialog").open);
+    (isAvailable ? target : els.quickTitle).focus({ preventScroll: true });
+  }
+
+  function handleTaskPanelKeydown(event) {
+    if (event.key === "Escape" && !els.taskMoreMenu.hidden) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeTaskMoreMenu(true);
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(els.panel.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => element.getClientRects().length > 0
+      && getComputedStyle(element).visibility !== "hidden");
+    if (!focusable.length) {
+      event.preventDefault();
+      els.panel.focus({ preventScroll: true });
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !els.panel.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !els.panel.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function closePanel() {
     clearTaskDraftSaveTimer();
@@ -1734,6 +1775,8 @@
     els.expandTaskWorkspace.setAttribute("aria-label", "Развернуть редактор");
     els.expandTaskWorkspace.title = "Развернуть редактор";
     els.panel.setAttribute("aria-hidden", "true");
+    els.panel.removeAttribute("aria-modal");
+    document.querySelector(".app-shell")?.removeAttribute("inert");
     els.attachmentList.querySelectorAll(".attachment-preview").forEach((image) => {
       if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
     });
@@ -1757,13 +1800,14 @@
     els.taskMoreMenu.hidden = true;
     els.taskMoreToggle.setAttribute("aria-expanded", "false");
     els.archiveTask.hidden = true;
-    if (returnToSettingsSubpageAfterPanel) {
-      returnToSettingsSubpageAfterPanel = null;
-      void openArchive();
-    }
+    const shouldReturnToArchive = Boolean(returnToSettingsSubpageAfterPanel);
+    returnToSettingsSubpageAfterPanel = null;
+    restoreTaskPanelFocus();
+    if (shouldReturnToArchive) void openArchive();
   }
 
   async function openTaskPanel(taskId) {
+    if (els.overlay.hidden) taskPanelReturnFocus = document.activeElement;
     try {
       const task = await api(`/api/tasks/${taskId}`);
       state.selectedTask = task;
@@ -1817,8 +1861,9 @@
       setTaskAutosaveStatus("saved", "Все изменения сохранены");
       openPanel();
       void requestMarkdownPreview();
-      window.setTimeout(() => els.taskTitleDisplay.focus({ preventScroll: true }), 100);
+      els.taskTitleDisplay.focus({ preventScroll: true });
     } catch (error) {
+      if (els.overlay.hidden) taskPanelReturnFocus = null;
       toast(error.message, "error");
     }
   }
@@ -3091,20 +3136,23 @@
     if (expanded) els.chooseFiles.focus({ preventScroll: true });
   });
   els.attachmentInput.addEventListener("change", () => uploadFiles(els.attachmentInput.files));
+  function closeTaskMoreMenu(restoreFocus = false) {
+    if (els.taskMoreMenu.hidden) return;
+    els.taskMoreMenu.hidden = true;
+    els.taskMoreToggle.setAttribute("aria-expanded", "false");
+    if (restoreFocus) els.taskMoreToggle.focus({ preventScroll: true });
+  }
+
   els.taskMoreToggle.addEventListener("click", () => {
     const expanded = els.taskMoreMenu.hidden;
     els.taskMoreMenu.hidden = !expanded;
     els.taskMoreToggle.setAttribute("aria-expanded", String(expanded));
   });
   [els.exportTask, els.focusTask, els.archiveTask, els.closeTask, els.deleteTask].forEach((button) => button.addEventListener("click", () => {
-    els.taskMoreMenu.hidden = true;
-    els.taskMoreToggle.setAttribute("aria-expanded", "false");
+    closeTaskMoreMenu();
   }));
   document.addEventListener("click", (event) => {
-    if (!els.taskMoreMenu.hidden && !event.target.closest(".task-more-actions")) {
-      els.taskMoreMenu.hidden = true;
-      els.taskMoreToggle.setAttribute("aria-expanded", "false");
-    }
+    if (!els.taskMoreMenu.hidden && !event.target.closest(".task-more-actions")) closeTaskMoreMenu();
   });
   els.panel.addEventListener("paste", handleTaskPanelPaste);
   els.attachmentPreviewClose.addEventListener("click", closeAttachmentPreview);
@@ -3158,6 +3206,17 @@
     panel.hidden = !shouldOpen;
     button.setAttribute("aria-expanded", String(shouldOpen));
   }));
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const panel = $$('[data-column-options-panel]').find((item) => !item.hidden);
+    if (!panel) return;
+    event.preventDefault();
+    event.stopPropagation();
+    panel.hidden = true;
+    const toggle = $(`[data-column-options-toggle="${panel.dataset.columnOptionsPanel}"]`);
+    toggle?.setAttribute("aria-expanded", "false");
+    toggle?.focus({ preventScroll: true });
+  }, true);
 
   $$('[data-column-sort]').forEach((select) => select.addEventListener("change", () => {
     const status = select.dataset.columnSort;
@@ -3407,6 +3466,7 @@
   }
 
   document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown);
+  els.panel.addEventListener("keydown", handleTaskPanelKeydown);
   els.taskDescriptionTab.addEventListener("click", () => setTaskWorkspaceTab("description"));
   els.taskResultTab.addEventListener("click", () => setTaskWorkspaceTab("result"));
   els.taskDescriptionTab.addEventListener("keydown", handleTaskWorkspaceTabKeydown);
@@ -3617,7 +3677,6 @@
   });
   els.settingsDialog.addEventListener("close", () => {
     closeSettingsSubpage({ focus: false });
-    els.settingsOpen.focus({ preventScroll: true });
   });
   els.settingsDialog.addEventListener("cancel", (event) => {
     event.preventDefault();
@@ -3625,16 +3684,30 @@
     else els.settingsDialog.close();
   });
   els.shortcutsBack.addEventListener("click", closeSettingsSubpage);
+  const settingsTabList = $(".settings-tabs");
+  const settingsTabsUseHorizontalLayout = window.matchMedia?.("(max-width: 640px)");
+
+  function updateSettingsTabOrientation() {
+    const isHorizontal = settingsTabsUseHorizontalLayout?.matches ?? window.innerWidth <= 640;
+    settingsTabList.setAttribute("aria-orientation", isHorizontal ? "horizontal" : "vertical");
+  }
+
+  updateSettingsTabOrientation();
+  settingsTabsUseHorizontalLayout?.addEventListener("change", updateSettingsTabOrientation);
+
   $$('[data-settings-tab]').forEach((tab) => {
     tab.addEventListener("click", () => selectSettingsTab(tab.dataset.settingsTab));
     tab.addEventListener("keydown", (event) => {
-      if (!["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+      const orientation = settingsTabList.getAttribute("aria-orientation");
+      const nextKey = orientation === "horizontal" ? "ArrowRight" : "ArrowDown";
+      const previousKey = orientation === "horizontal" ? "ArrowLeft" : "ArrowUp";
+      if (![nextKey, previousKey, "Home", "End"].includes(event.key)) return;
       const tabs = $$('[data-settings-tab]');
       const currentIndex = tabs.indexOf(tab);
       let nextIndex = currentIndex;
       if (event.key === "Home") nextIndex = 0;
       else if (event.key === "End") nextIndex = tabs.length - 1;
-      else if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+      else if (event.key === nextKey) nextIndex = (currentIndex + 1) % tabs.length;
       else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
       event.preventDefault();
       selectSettingsTab(tabs[nextIndex].dataset.settingsTab, { focus: true });

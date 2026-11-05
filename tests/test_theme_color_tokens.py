@@ -3,8 +3,8 @@ from __future__ import annotations
 
 def test_primary_actions_follow_the_active_theme_accent(client):
     html = client.get("/").text
-    assert '/static/github-theme.css?v=0.5.68' in html
-    assert '/static/themed-controls.css?v=0.5.68' in html
+    assert '/static/github-theme.css?v=0.5.69' in html
+    assert '/static/themed-controls.css?v=0.5.69' in html
 
     css = client.get("/static/github-theme.css").text
     assert ".button-primary {" in css

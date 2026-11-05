@@ -23,7 +23,7 @@ from app.ai_guidelines import (
     AI_TASK_GUIDELINES_OVERRIDE_KEY,
     read_ai_task_guidelines,
 )
-from app.config import settings
+from app.config import MAX_TASK_TEXT_LENGTH, settings
 from app.db import connect, get_db, initialize_database
 from app.exporter import build_markdown_export, build_zip_export, export_filename
 from app.importer import ParsedTask, parse_markdown_file, utc_now
@@ -93,7 +93,13 @@ def _ai_task_guidelines_override(connection: sqlite3.Connection) -> tuple[str, s
         stored = json.loads(row["value"])
         text = stored["text"]
         updated_at = stored["updated_at"]
-        if not isinstance(text, str) or not isinstance(updated_at, str):
+        if (
+            not isinstance(text, str)
+            or not text.strip()
+            or len(text) > MAX_TASK_TEXT_LENGTH
+            or not isinstance(updated_at, str)
+            or not updated_at.strip()
+        ):
             raise ValueError("Invalid stored guideline override")
     except (TypeError, ValueError, KeyError) as exc:
         raise HTTPException(

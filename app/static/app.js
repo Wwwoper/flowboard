@@ -384,28 +384,22 @@
     applyDensity(state.density === "compact" ? "comfortable" : "compact", true);
   }
 
+  const apiClient = window.FlowboardApi.createClient();
+
   async function api(url, options = {}) {
-    const request = { ...options, cache: "no-store", headers: { ...(options.headers || {}) } };
-    if (request.body && !(request.body instanceof FormData) && typeof request.body !== "string") {
-      request.headers["Content-Type"] = "application/json";
-      request.body = JSON.stringify(request.body);
-    }
-    const response = await fetch(url, request);
-    if (response.status === 204) return null;
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json") ? await response.json() : await response.text();
-    if (!response.ok) {
-      const message = typeof data === "object" && data !== null ? data.detail : data;
-      const errorMessage = Array.isArray(message)
-        ? message.map((entry) => entry.msg || String(entry)).join("; ")
-        : (message || `Ошибка ${response.status}`);
-      if (response.status === 409 && String(errorMessage).includes("Результат выполнения")) {
+    try {
+      return await apiClient.request(url, options);
+    } catch (error) {
+      if (error.status === 409 && String(error.message).includes("Результат выполнения")) {
         const match = String(url).match(/^\/api\/tasks\/(\d+)/);
-        if (match) void focusResultField(Number(match[1]));
+        if (match) {
+          void focusResultField(Number(match[1])).catch(() => {
+            toast("Не удалось открыть поле результата. Повторите действие.", "error");
+          });
+        }
       }
-      throw new Error(errorMessage);
+      throw error;
     }
-    return data;
   }
 
   async function focusResultField(taskId) {
@@ -2059,11 +2053,7 @@
         trigger.appendChild(details);
         trigger.addEventListener("click", () => { void openAttachmentPreview(attachment); });
         item.appendChild(trigger);
-        fetch(`/api/files/${attachment.id}`, { cache: "no-store" })
-          .then((response) => {
-            if (!response.ok) throw new Error("Не удалось загрузить предпросмотр");
-            return response.blob();
-          })
+        apiClient.requestBlob(`/api/files/${attachment.id}`)
           .then((blob) => {
             if (!preview.isConnected) return;
             const objectUrl = URL.createObjectURL(blob);
@@ -2128,9 +2118,7 @@
     if (!els.attachmentPreviewDialog.open) els.attachmentPreviewDialog.showModal();
 
     try {
-      const response = await fetch(`/api/files/${attachment.id}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Не удалось загрузить изображение");
-      const blob = await response.blob();
+      const blob = await apiClient.requestBlob(`/api/files/${attachment.id}`);
       if (token !== state.attachmentPreviewToken || !els.attachmentPreviewDialog.open) return;
       state.attachmentPreviewUrl = URL.createObjectURL(blob);
       els.attachmentPreviewImage.src = state.attachmentPreviewUrl;
@@ -2303,9 +2291,9 @@
   async function snapshotAttachmentFiles(attachments) {
     const files = [];
     for (const attachment of attachments || []) {
-      const response = await fetch(`/api/files/${attachment.id}`, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Не удалось сохранить вложение «${attachment.filename}» для отмены удаления`);
-      const blob = await response.blob();
+      const blob = await apiClient.requestBlob(`/api/files/${attachment.id}`).catch((error) => {
+        throw new Error(`Не удалось сохранить вложение «${attachment.filename}» для отмены удаления: ${error.message}`);
+      });
       files.push(new File([blob], attachment.filename, { type: blob.type || "application/octet-stream" }));
     }
     return files;
@@ -2478,9 +2466,9 @@
     if (!confirmed) return;
     if (!(await saveCurrentTaskDraft())) return;
     try {
-      const response = await fetch(`/api/files/${attachmentId}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Не удалось сохранить вложение для отмены удаления");
-      const blob = await response.blob();
+      const blob = await apiClient.requestBlob(`/api/files/${attachmentId}`).catch((error) => {
+        throw new Error(`Не удалось сохранить вложение для отмены удаления: ${error.message}`);
+      });
       const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
       const taskId = state.selectedTask?.id;
       await api(`/api/files/${attachmentId}`, { method: "DELETE" });
@@ -2608,7 +2596,9 @@
     const item = event.item;
     const list = event.to;
     if (!item || !list || !STATUSES.includes(list.dataset.status)) {
-      void loadTasks();
+      void loadTasks().catch((error) => {
+        toast(`Не удалось обновить доску: ${error.message}`, "error");
+      });
       return;
     }
     const sameColumn = event.from === event.to;
@@ -2634,7 +2624,9 @@
       savePosition: sameColumn || state.columnPreferences[list.dataset.status].sort === "manual",
       wasFocused,
     };
-    void queueTaskMove(move);
+    void queueTaskMove(move).catch((error) => {
+      toast(`Не удалось сохранить перемещение: ${error.message}`, "error");
+    });
   }
 
   function initializeSortables() {

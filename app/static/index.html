@@ -19,12 +19,12 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/tokens.css?v=0.5.76">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.76">
-  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.76">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.76">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.76">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.76">
+  <link rel="stylesheet" href="/static/tokens.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.77">
 </head>
 <body>
   <div class="app-shell">
@@ -418,14 +418,23 @@
             <span id="ai-guidelines-version">Базовая версия: —</span>
             <span id="ai-guidelines-updated" hidden></span>
           </div>
-          <div class="ai-guidelines-editor-section">
-            <label class="field-label" for="ai-guidelines-editor">Текст регламента (Markdown)</label>
-            <textarea id="ai-guidelines-editor" class="text-field ai-guidelines-editor" spellcheck="false" aria-describedby="ai-guidelines-help ai-guidelines-status" placeholder="Загрузка регламента…" disabled></textarea>
-            <p id="ai-guidelines-help" class="settings-section-description">Поддерживается Markdown. Предпросмотр формируется сервером с отключённым HTML и очисткой опасных ссылок.</p>
+          <div class="ai-guidelines-workspace">
+            <div class="ai-guidelines-tabs" role="tablist" aria-label="Регламент ИИ" aria-orientation="horizontal">
+              <button id="ai-guidelines-edit-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="true" aria-controls="ai-guidelines-edit-panel" tabindex="0">Редактирование</button>
+              <button id="ai-guidelines-preview-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-guidelines-preview-panel" tabindex="-1">Предпросмотр</button>
+            </div>
+            <section id="ai-guidelines-edit-panel" class="ai-guidelines-tab-panel ai-guidelines-editor-section" role="tabpanel" aria-labelledby="ai-guidelines-edit-tab">
+              <label class="visually-hidden" for="ai-guidelines-editor">Текст регламента (Markdown)</label>
+              <textarea id="ai-guidelines-editor" class="text-field ai-guidelines-editor" spellcheck="false" aria-describedby="ai-guidelines-help ai-guidelines-status" placeholder="Загрузка регламента…" disabled></textarea>
+              <p id="ai-guidelines-help" class="ai-guidelines-help">Поддерживается Markdown. HTML отключён, опасные ссылки очищаются сервером.</p>
+            </section>
+            <section id="ai-guidelines-preview-panel" class="ai-guidelines-tab-panel ai-guidelines-preview-panel" role="tabpanel" aria-labelledby="ai-guidelines-preview-tab" hidden>
+              <div id="ai-guidelines-preview" class="markdown-preview ai-guidelines-preview" aria-live="polite"><p>Предпросмотр появится после загрузки регламента.</p></div>
+            </section>
           </div>
           <div class="ai-guidelines-actions" role="group" aria-label="Действия с регламентом">
-            <button id="save-ai-guidelines" class="button button-primary" type="button" disabled>Сохранить изменения</button>
-            <button id="copy-ai-guidelines" class="button button-quiet" type="button" disabled>Скопировать регламент</button>
+            <button id="save-ai-guidelines" class="button button-primary" type="button" disabled>Сохранить</button>
+            <button id="copy-ai-guidelines" class="button button-quiet" type="button" disabled>Копировать</button>
             <button id="download-ai-guidelines" class="button button-quiet" type="button" disabled>Скачать Markdown</button>
             <button id="reset-ai-guidelines" class="button button-danger-quiet" type="button" disabled>Восстановить исходную редакцию</button>
           </div>
@@ -433,10 +442,6 @@
             <p id="ai-guidelines-status" class="ai-guidelines-status" role="status" aria-live="polite">Загрузка регламента…</p>
             <button id="retry-ai-guidelines" class="button button-small button-quiet" type="button" hidden>Повторить загрузку</button>
           </div>
-          <section class="ai-guidelines-preview-section" aria-labelledby="ai-guidelines-preview-heading">
-            <h4 id="ai-guidelines-preview-heading">Предпросмотр</h4>
-            <div id="ai-guidelines-preview" class="markdown-preview ai-guidelines-preview" aria-live="polite"><p>Предпросмотр появится после загрузки регламента.</p></div>
-          </section>
         </section>
 
         <section id="shortcuts-settings-page" class="settings-subpage" aria-labelledby="shortcuts-heading" hidden>

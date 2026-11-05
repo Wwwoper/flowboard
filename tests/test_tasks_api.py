@@ -170,7 +170,7 @@ def test_index_revalidates_html_and_exposes_matching_app_version(client):
     assert client.get("/openapi.json").json()["info"]["version"] == APP_VERSION
     assert "__FLOWBOARD_VERSION__" not in response.text
     assert "__FLOWBOARD_BUILD__" not in response.text
-    assert "/static/style.css?v=0.5.76" in response.text
+    assert "/static/style.css?v=0.5.77" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):

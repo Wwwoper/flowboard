@@ -10,6 +10,10 @@ def test_ai_guidelines_settings_page_uses_existing_nested_settings_dialog(client
     for fragment in (
         'id="open-ai-guidelines"',
         'id="ai-guidelines-settings-page" class="settings-subpage ai-guidelines-settings-page"',
+        'id="ai-guidelines-edit-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="true" aria-controls="ai-guidelines-edit-panel" tabindex="0"',
+        'id="ai-guidelines-preview-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-guidelines-preview-panel" tabindex="-1"',
+        'id="ai-guidelines-edit-panel" class="ai-guidelines-tab-panel ai-guidelines-editor-section" role="tabpanel"',
+        'id="ai-guidelines-preview-panel" class="ai-guidelines-tab-panel ai-guidelines-preview-panel" role="tabpanel" aria-labelledby="ai-guidelines-preview-tab" hidden',
         'id="ai-guidelines-editor"',
         'aria-describedby="ai-guidelines-help ai-guidelines-status"',
         'id="ai-guidelines-preview"',
@@ -43,15 +47,28 @@ def test_ai_guidelines_settings_actions_keep_drafts_and_use_safe_preview(client)
         'link.download = "ai-task-guidelines.md"',
         'requestActionConfirmation({',
         'restoreSettingsParent({ focus: false })',
-        'setTimeout(() => void requestAiGuidelinesPreview(), 350)',
+        'setTimeout(() => {',
+        'function setAiGuidelinesTab(tab, focus = false)',
+        'function handleAiGuidelinesTabKeydown(event)',
+        'els.aiGuidelinesEditTab.addEventListener("click"',
+        'els.aiGuidelinesPreviewTab.addEventListener("click"',
+        'els.settingsDialog.classList.toggle("is-ai-guidelines", name === "ai-guidelines")',
     ):
         assert fragment in script
+    input_handler = script.split('els.aiGuidelinesEditor.addEventListener("input", () => {', 1)[1].split("});", 1)[0]
+    assert "saveAiGuidelines" not in input_handler
+    assert 'api("/api/ai-task-guidelines", { method: "PUT"' not in input_handler
     assert "window.confirm(" not in script
 
     css = client.get("/static/style.css").text
     for fragment in (
+        ".settings-dialog.is-ai-guidelines .settings-panels",
+        ".ai-guidelines-workspace",
+        ".ai-guidelines-tabs",
         ".ai-guidelines-editor",
         ".ai-guidelines-preview",
+        ".ai-guidelines-actions",
+        "overflow: hidden",
         "var(--color-surface)",
         "var(--color-border)",
         "@media (max-width: 640px)",

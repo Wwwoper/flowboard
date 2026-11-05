@@ -140,6 +140,7 @@
       updatedAt: null,
       previewRequest: 0,
       previewTimer: null,
+      activeTab: "edit",
     },
   };
   state.columnPreferences = readColumnPreferences();
@@ -282,6 +283,10 @@
     aiGuidelinesStatus: $("#ai-guidelines-status"),
     aiGuidelinesRetry: $("#retry-ai-guidelines"),
     aiGuidelinesPreview: $("#ai-guidelines-preview"),
+    aiGuidelinesEditTab: $("#ai-guidelines-edit-tab"),
+    aiGuidelinesPreviewTab: $("#ai-guidelines-preview-tab"),
+    aiGuidelinesEditPanel: $("#ai-guidelines-edit-panel"),
+    aiGuidelinesPreviewPanel: $("#ai-guidelines-preview-panel"),
     projectDialog: $("#project-dialog"),
     closeProjectDialog: $("#close-project-dialog"),
     projectCommandSearch: $("#project-command-search"),
@@ -3683,6 +3688,33 @@
     }
   }
 
+  function setAiGuidelinesTab(tab, focus = false) {
+    const activeTab = tab === "preview" ? "preview" : "edit";
+    state.aiGuidelines.activeTab = activeTab;
+    const editSelected = activeTab === "edit";
+    els.aiGuidelinesEditTab.setAttribute("aria-selected", String(editSelected));
+    els.aiGuidelinesEditTab.tabIndex = editSelected ? 0 : -1;
+    els.aiGuidelinesEditPanel.hidden = !editSelected;
+    els.aiGuidelinesPreviewTab.setAttribute("aria-selected", String(!editSelected));
+    els.aiGuidelinesPreviewTab.tabIndex = editSelected ? -1 : 0;
+    els.aiGuidelinesPreviewPanel.hidden = editSelected;
+    if (!editSelected && state.aiGuidelines.loaded) {
+      if (state.aiGuidelines.previewTimer) clearTimeout(state.aiGuidelines.previewTimer);
+      state.aiGuidelines.previewTimer = null;
+      void requestAiGuidelinesPreview();
+    }
+    if (focus) (editSelected ? els.aiGuidelinesEditTab : els.aiGuidelinesPreviewTab).focus({ preventScroll: true });
+  }
+
+  function handleAiGuidelinesTabKeydown(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const tab = event.key === "Home" ? "edit"
+      : event.key === "End" ? "preview"
+        : state.aiGuidelines.activeTab === "edit" ? "preview" : "edit";
+    setAiGuidelinesTab(tab, true);
+  }
+
   async function requestAiGuidelinesPreview() {
     const requestId = ++state.aiGuidelines.previewRequest;
     const text = els.aiGuidelinesEditor.value;
@@ -3839,6 +3871,7 @@
     $$('[data-settings-panel]').forEach((panel) => { panel.hidden = true; });
     page.hidden = false;
     els.settingsDialog.classList.add("is-subpage");
+    els.settingsDialog.classList.toggle("is-ai-guidelines", name === "ai-guidelines");
     activeSettingsSubpage = name;
     $(".settings-panels").scrollTop = 0;
     const backButton = page.querySelector(".settings-back-button");
@@ -3851,7 +3884,7 @@
     const page = settingsSubpageFor(activeSettingsSubpage);
     if (page) page.hidden = true;
     activeSettingsSubpage = null;
-    els.settingsDialog.classList.remove("is-subpage");
+    els.settingsDialog.classList.remove("is-subpage", "is-ai-guidelines");
     $$('[data-settings-tab]').forEach((tab) => { tab.hidden = false; });
     const selectedTab = $('[data-settings-tab][aria-selected="true"]');
     $$('[data-settings-panel]').forEach((panel) => {
@@ -3903,12 +3936,19 @@
     if (await openSettingsSubpage("ai-guidelines")) void loadAiGuidelines();
   });
   els.aiGuidelinesBack.addEventListener("click", () => void closeSettingsSubpage());
+  els.aiGuidelinesEditTab.addEventListener("click", () => setAiGuidelinesTab("edit"));
+  els.aiGuidelinesPreviewTab.addEventListener("click", () => setAiGuidelinesTab("preview"));
+  els.aiGuidelinesEditTab.addEventListener("keydown", handleAiGuidelinesTabKeydown);
+  els.aiGuidelinesPreviewTab.addEventListener("keydown", handleAiGuidelinesTabKeydown);
   els.aiGuidelinesEditor.addEventListener("input", () => {
     updateAiGuidelinesControls();
     if (aiGuidelinesHasUnsavedChanges()) setAiGuidelinesStatus("Есть несохранённые изменения.", "pending");
     else setAiGuidelinesStatus("Нет несохранённых изменений.", "info");
     if (state.aiGuidelines.previewTimer) clearTimeout(state.aiGuidelines.previewTimer);
-    state.aiGuidelines.previewTimer = setTimeout(() => void requestAiGuidelinesPreview(), 350);
+    state.aiGuidelines.previewTimer = setTimeout(() => {
+      state.aiGuidelines.previewTimer = null;
+      if (state.aiGuidelines.activeTab === "preview") void requestAiGuidelinesPreview();
+    }, 350);
   });
   els.aiGuidelinesRetry.addEventListener("click", () => void loadAiGuidelines({ force: true }));
   els.aiGuidelinesSave.addEventListener("click", () => void saveAiGuidelines());

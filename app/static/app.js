@@ -111,7 +111,9 @@
     taskTypeDraft: "",
     focusTaskId: Number(readStorage("flowboard-focus-task", "0")) || null,
     density: readStorage("flowboard-density", "comfortable") === "compact" ? "compact" : "comfortable",
-    dragOrigin: null,
+    dragSaveQueue: [],
+    dragSavePromise: null,
+    dragRevision: 0,
     wipLimit: 3,
     maxFileSizeMb: 20,
     previewVisible: false,
@@ -1507,7 +1509,14 @@
   }
 
   async function loadTasks() {
-    state.tasks = await api("/api/tasks");
+    if (state.dragSavePromise) await state.dragSavePromise;
+    const dragRevision = state.dragRevision;
+    const tasks = await api("/api/tasks");
+    if (dragRevision !== state.dragRevision) {
+      if (state.dragSavePromise) await state.dragSavePromise;
+      return loadTasks();
+    }
+    state.tasks = tasks;
     populateProjectFilter();
     try {
       await loadWorksets();
@@ -2507,55 +2516,125 @@
     }
   }
 
-  async function reorderAfterDrop(event) {
+  function resolveTaskMovePosition(move) {
+    const destinationTasks = state.tasks
+      .filter((task) => task.status === move.status && task.id !== move.taskId)
+      .sort((left, right) => Number(left.position) - Number(right.position) || left.id - right.id);
+    const previousIndex = destinationTasks.findIndex((task) => task.id === move.previousTaskId);
+    const nextIndex = destinationTasks.findIndex((task) => task.id === move.nextTaskId);
+    let insertionIndex = destinationTasks.length;
+    if (nextIndex >= 0) insertionIndex = nextIndex;
+    else if (previousIndex >= 0) insertionIndex = previousIndex + 1;
+
+    const previous = destinationTasks[insertionIndex - 1] || null;
+    const next = destinationTasks[insertionIndex] || null;
+    const previousPosition = previous ? Number(previous.position) : null;
+    const nextPosition = next ? Number(next.position) : null;
+    if (previousPosition !== null && nextPosition !== null) {
+      return previousPosition < nextPosition
+        ? (previousPosition + nextPosition) / 2
+        : previousPosition + 0.000001;
+    }
+    if (previousPosition !== null) return previousPosition + 1;
+    if (nextPosition !== null) return nextPosition - 1;
+    return 0;
+  }
+
+  async function flushTaskMoveQueue() {
+    let lastSuccessfulMove = null;
+    while (true) {
+      while (state.dragSaveQueue.length) {
+        const move = state.dragSaveQueue.shift();
+        const task = state.tasks.find((entry) => entry.id === move.taskId);
+        if (!task) {
+          state.dragSaveQueue.length = 0;
+          lastSuccessfulMove = null;
+          renderBoard();
+          toast("Не удалось переместить задачу: карточка больше не найдена на доске", "error");
+          break;
+        }
+
+        const previousState = { status: task.status, position: task.position };
+        const changes = { status: move.status };
+        if (move.savePosition) changes.position = resolveTaskMovePosition(move);
+        try {
+          const updated = await api(`/api/tasks/${move.taskId}`, { method: "PATCH", body: changes });
+          state.tasks = state.tasks.map((entry) => entry.id === updated.id ? { ...entry, ...updated } : entry);
+          lastSuccessfulMove = { ...move, previousState, updated };
+        } catch (error) {
+          const discardedMoves = state.dragSaveQueue.length;
+          state.dragSaveQueue.length = 0;
+          lastSuccessfulMove = null;
+          renderBoard();
+          const suffix = discardedMoves
+            ? ` Последующие перемещения (${discardedMoves}) не отправлены.`
+            : "";
+          toast(`Не удалось сохранить перемещение. Карточка возвращена в последнее сохранённое положение: ${error.message}.${suffix}`, "error");
+          break;
+        }
+      }
+
+      try {
+        await loadWorksets();
+      } catch (error) {
+        clearWorksetContextAfterError();
+        toast(`Не удалось обновить рабочие наборы: ${error.message}`, "error");
+      }
+      if (!state.dragSaveQueue.length) break;
+    }
+
+    renderBoard();
+    if (lastSuccessfulMove) {
+      const { taskId, previousState, wasFocused } = lastSuccessfulMove;
+      toast("Положение задачи сохранено", "success", "Отменить", async () => {
+        await restoreTaskState(taskId, previousState);
+        if (wasFocused && previousState.status !== "done") setFocusedTask(taskId);
+      });
+    }
+  }
+
+  function queueTaskMove(move) {
+    state.dragSaveQueue.push(move);
+    state.dragRevision += 1;
+    if (!state.dragSavePromise) {
+      state.dragSavePromise = flushTaskMoveQueue().finally(() => {
+        state.dragSavePromise = null;
+      });
+    }
+    return state.dragSavePromise;
+  }
+
+  function reorderAfterDrop(event) {
     const item = event.item;
     const list = event.to;
     if (!item || !list || !STATUSES.includes(list.dataset.status)) {
-      await loadTasks();
+      void loadTasks();
       return;
     }
     const sameColumn = event.from === event.to;
     if (sameColumn && state.columnPreferences[list.dataset.status].sort !== "manual") {
-      await loadTasks();
+      renderBoard();
       toast("Чтобы менять порядок перетаскиванием, выберите «Ручной порядок» в настройках колонки.");
       return;
     }
-    const previous = item.previousElementSibling && item.previousElementSibling.classList.contains("task-card") ? item.previousElementSibling : null;
-    const next = item.nextElementSibling && item.nextElementSibling.classList.contains("task-card") ? item.nextElementSibling : null;
-    const prevPosition = previous ? Number(previous.dataset.position) : null;
-    const nextPosition = next ? Number(next.dataset.position) : null;
-    let position;
-    if (prevPosition !== null && nextPosition !== null) {
-      position = prevPosition < nextPosition ? (prevPosition + nextPosition) / 2 : prevPosition + 0.000001;
-    } else if (prevPosition !== null) {
-      position = prevPosition + 1;
-    } else if (nextPosition !== null) {
-      position = nextPosition - 1;
-    } else {
-      position = 0;
-    }
-    try {
-      const taskId = Number(item.dataset.taskId);
-      const previousState = state.dragOrigin || state.tasks.find((task) => task.id === taskId);
-      const wasFocused = state.focusTaskId === taskId;
-      const changes = { status: list.dataset.status };
-      if (sameColumn || state.columnPreferences[list.dataset.status].sort === "manual") {
-        changes.position = position;
-      }
-      await api(`/api/tasks/${taskId}`, { method: "PATCH", body: changes });
-      await loadTasks();
-      if (previousState) {
-        toast("Положение задачи изменено", "success", "Отменить", async () => {
-          await restoreTaskState(taskId, previousState);
-          if (wasFocused && previousState.status !== "done") setFocusedTask(taskId);
-        });
-      }
-      state.dragOrigin = null;
-    } catch (error) {
-      toast(`Не удалось переместить задачу: ${error.message}`, "error");
-      state.dragOrigin = null;
-      await loadTasks();
-    }
+
+    const previous = item.previousElementSibling?.classList.contains("task-card")
+      ? item.previousElementSibling
+      : null;
+    const next = item.nextElementSibling?.classList.contains("task-card")
+      ? item.nextElementSibling
+      : null;
+    const taskId = Number(item.dataset.taskId);
+    const wasFocused = state.focusTaskId === taskId;
+    const move = {
+      taskId,
+      status: list.dataset.status,
+      previousTaskId: previous ? Number(previous.dataset.taskId) : null,
+      nextTaskId: next ? Number(next.dataset.taskId) : null,
+      savePosition: sameColumn || state.columnPreferences[list.dataset.status].sort === "manual",
+      wasFocused,
+    };
+    void queueTaskMove(move);
   }
 
   function initializeSortables() {
@@ -2564,11 +2643,6 @@
         group: "kanban",
         draggable: ".task-card",
         animation: 160,
-        onStart: (event) => {
-          const taskId = Number(event.item?.dataset.taskId);
-          const task = state.tasks.find((item) => item.id === taskId);
-          state.dragOrigin = task ? { status: task.status, position: task.position } : null;
-        },
         onEnd: reorderAfterDrop,
       });
     });

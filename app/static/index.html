@@ -19,7 +19,7 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.37">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.38">
   <link rel="stylesheet" href="/static/github-theme.css?v=0.2.5">
   <link rel="stylesheet" href="/static/themed-controls.css?v=0.1.16">
   <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.2.6">
@@ -697,6 +697,7 @@
       <div class="task-autosave-status" id="task-autosave-status" data-state="saved" role="status" aria-live="polite">
         <span class="task-autosave-indicator" aria-hidden="true"></span>
         <span id="task-autosave-status-text">Все изменения сохранены</span>
+        <button class="button button-small button-quiet" id="task-autosave-retry" type="button" hidden>Повторить</button>
       </div>
     </form>
   </aside>

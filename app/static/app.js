@@ -121,6 +121,7 @@
     resultPreviewRequest: 0,
     draftSaveTimer: null,
     draftSavePromise: null,
+    draftRevision: 0,
     pendingCloseTaskId: null,
     attachmentPreviewUrl: null,
     attachmentPreviewToken: 0,
@@ -212,6 +213,7 @@
     taskMoreMenu: $("#task-more-menu"),
     taskAutosaveStatus: $("#task-autosave-status"),
     taskAutosaveStatusText: $("#task-autosave-status-text"),
+    taskAutosaveRetry: $("#task-autosave-retry"),
     closeTask: $("#close-task"),
     deleteTask: $("#delete-task"),
     exportTask: $("#export-task"),
@@ -1865,10 +1867,12 @@
   function setTaskAutosaveStatus(status, message) {
     els.taskAutosaveStatus.dataset.state = status;
     els.taskAutosaveStatusText.textContent = message;
+    els.taskAutosaveRetry.hidden = status !== "error";
   }
 
   function scheduleTaskDraftSave(delay = 180) {
     if (!state.selectedTask) return;
+    state.draftRevision += 1;
     setTaskAutosaveStatus("pending", "Есть несохранённые изменения");
     clearTaskDraftSaveTimer();
     state.draftSaveTimer = window.setTimeout(() => {
@@ -1890,6 +1894,7 @@
     const task = state.selectedTask;
     if (!task) return true;
     const draft = currentTaskDraft(task);
+    const draftRevision = state.draftRevision;
     if (taskDraftMatches(draft, task)) {
       setTaskAutosaveStatus("saved", "Все изменения сохранены");
       return true;
@@ -1912,9 +1917,6 @@
         const updated = await api(`/api/tasks/${taskId}`, { method: "PATCH", body: draft });
         if (state.selectedTask?.id === taskId) {
           state.selectedTask = { ...state.selectedTask, ...updated };
-          els.taskStatus.value = updated.status;
-          state.taskTypeDraft = updated.task_type || "";
-          els.taskType.value = state.taskTypeDraft;
           if (updated.status === "done" && state.pendingCloseTaskId === taskId) {
             state.pendingCloseTaskId = null;
             els.taskResultRequiredHint.hidden = true;
@@ -1954,7 +1956,8 @@
     }
 
     // If the user changed a field while the request was in flight, save the newer draft too.
-    if (state.selectedTask?.id === taskId && !taskDraftMatches(currentTaskDraft(), state.selectedTask)) {
+    if (state.selectedTask?.id === taskId
+      && (state.draftRevision !== draftRevision || !taskDraftMatches(currentTaskDraft(), state.selectedTask))) {
       setTaskAutosaveStatus("pending", "Есть несохранённые изменения");
       const saved = await saveCurrentTaskDraft();
       toast("Изменения сохранены", "success", "Отменить", () => restoreTaskDetails(taskId, previousDetails));
@@ -3150,6 +3153,7 @@
   });
   els.taskTitle.addEventListener("input", () => {
     els.taskTitleDisplayText.textContent = els.taskTitle.value.trim() || "Введите название задачи";
+    scheduleTaskDraftSave(180);
   });
   els.taskTitle.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -3374,6 +3378,7 @@
   els.taskDescription.addEventListener("input", () => {
     updateTaskDocumentCounters();
     if (state.previewVisible) requestMarkdownPreview();
+    scheduleTaskDraftSave(180);
   });
   els.taskDescription.addEventListener("blur", () => scheduleTaskDraftSave(180));
   els.taskResult.addEventListener("input", () => {
@@ -3392,6 +3397,7 @@
     }
     scheduleTaskDraftSave(180);
   });
+  els.taskAutosaveRetry.addEventListener("click", () => scheduleTaskDraftSave(0));
   els.requireResultToClose.addEventListener("change", () => { void saveTaskSettings(); });
 
   for (const eventName of ["dragenter", "dragover"]) {

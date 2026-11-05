@@ -95,7 +95,7 @@ def test_task_title_editor_closes_on_outside_pointer_after_successful_save(clien
     assert 'if (!els.taskTitle.hidden && !els.taskTitle.contains(target))' in script
     assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
     assert "function finishTitleEditing(focusDisplay = true)" in script
-    assert "/static/app.js?v=0.5.62" in client.get("/").text
+    assert "/static/app.js?v=0.5.63" in client.get("/").text
 
 
 def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
@@ -106,7 +106,7 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.62" in client.get("/").text
+    assert "/static/app.js?v=0.5.63" in client.get("/").text
 
 
 def test_project_change_error_is_rendered_next_to_project_field(client):
@@ -138,3 +138,42 @@ def test_project_change_in_workset_keeps_saved_project_selected(client):
     assert 'return;' in handler
     assert 'updateReservedTaskTag("project", els.taskProject.value);' in handler
     assert handler.index("if (task?.workset_id)") < handler.index('updateReservedTaskTag("project", els.taskProject.value)')
+
+
+def test_task_autosave_retries_failed_requests_with_the_current_draft(client):
+    html = client.get("/").text
+    script = client.get("/static/app.js").text
+
+    assert 'id="task-autosave-retry"' in html
+    assert 'id="task-autosave-retry" type="button" hidden>Повторить</button>' in html
+    assert 'els.taskAutosaveRetry.hidden = status !== "error";' in script
+    assert 'els.taskAutosaveRetry.addEventListener("click", () => scheduleTaskDraftSave(0));' in script
+    assert 'setTaskAutosaveStatus("error", "Не удалось сохранить изменения")' in script
+
+
+def test_task_autosave_keeps_newer_form_values_when_patch_finishes(client):
+    script = client.get("/static/app.js").text
+    save_function = script.split("async function saveCurrentTaskDraft()", 1)[1].split(
+        "async function dismissTaskPanel()", 1
+    )[0]
+
+    assert "draftRevision: 0" in script
+    assert "state.draftRevision += 1;" in script
+    assert "const draftRevision = state.draftRevision;" in save_function
+    assert "state.draftRevision !== draftRevision" in save_function
+    assert "state.selectedTask = { ...state.selectedTask, ...updated };" in save_function
+    assert "els.taskStatus.value = updated.status" not in save_function
+    assert "els.taskType.value = state.taskTypeDraft" not in save_function
+
+
+def test_task_title_and_description_autosave_while_typing(client):
+    script = client.get("/static/app.js").text
+    title_handler = script.split('els.taskTitle.addEventListener("input", () => {', 1)[1].split(
+        "});", 1
+    )[0]
+    description_handler = script.split('els.taskDescription.addEventListener("input", () => {', 1)[1].split(
+        "});", 1
+    )[0]
+
+    assert "scheduleTaskDraftSave(180);" in title_handler
+    assert "scheduleTaskDraftSave(180);" in description_handler

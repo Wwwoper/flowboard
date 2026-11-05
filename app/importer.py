@@ -22,7 +22,7 @@ TASK_RESULT_RE = re.compile(
 )
 EXPORTED_TASK_RE = re.compile(
     r"(?ms)^<!-- kanban-task-start -->\s*\n---\s*\n"
-    r"(?P<meta>.*?)\n---\s*\n(?P<body>.*?)\n<!-- kanban-task-end -->"
+    r"(?P<meta>.*?)\n---\s*\n(?P<body>.*?)(?:\n)?<!-- kanban-task-end -->"
 )
 
 

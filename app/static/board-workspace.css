@@ -919,3 +919,114 @@
   outline: none !important;
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
+
+/* Unified interactive states for controls, task cards and board drop targets. */
+:root {
+  --focus-ring: var(--color-primary);
+}
+
+:root .button.button-quiet,
+:root .icon-button,
+:root .column-add,
+:root .search-box,
+:root .filter-box,
+:root .text-field,
+:root .theme-select-trigger,
+:root .task-card,
+:root .board-column {
+  border-color: var(--color-control-border);
+}
+
+:root .button.button-quiet:hover:not(:disabled),
+:root .icon-button:hover:not(:disabled),
+:root .column-add:hover:not(:disabled),
+:root .search-box:hover,
+:root .filter-box:hover,
+:root .text-field:hover:not(:disabled),
+:root .theme-select-trigger:hover:not(:disabled),
+:root .task-card:hover {
+  border-color: var(--color-primary);
+}
+
+.button.button-quiet:active:not(:disabled),
+.icon-button:active:not(:disabled),
+.column-add:active:not(:disabled),
+.theme-select-trigger:active:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+:root .task-card:hover {
+  background: var(--color-surface-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+:root .task-card:active {
+  cursor: grabbing;
+  background: var(--color-surface-soft);
+}
+
+:root .board-column.is-drop-target {
+  border: 2px solid var(--color-primary);
+  background: var(--color-accent-soft);
+}
+
+:where(button, input, select, textarea, [role="button"]):disabled,
+:where(button, input, select, textarea, [role="button"])[aria-disabled="true"] {
+  opacity: var(--opacity-disabled) !important;
+  cursor: not-allowed !important;
+  transition: none;
+}
+
+:where(input, select, textarea, .text-field)[aria-invalid="true"],
+.theme-select[aria-invalid="true"] .theme-select-trigger {
+  border-color: var(--color-error) !important;
+  background-color: var(--color-error-soft) !important;
+}
+
+:where(input, select, textarea, .text-field)[aria-invalid="true"]:focus-visible,
+.theme-select[aria-invalid="true"] .theme-select-trigger:focus-visible {
+  border-color: var(--color-error) !important;
+}
+
+:root[data-focus-modality="keyboard"] *:focus-visible {
+  outline: var(--focus-width) solid var(--color-primary) !important;
+  outline-offset: var(--focus-offset) !important;
+  box-shadow: none !important;
+}
+
+:root[data-focus-modality="keyboard"] .quick-add:has(.quick-add-form input:focus-visible),
+:root[data-focus-modality="keyboard"] .search-box:has(input:focus-visible),
+:root[data-focus-modality="keyboard"] .filter-box:has(:is(select, .theme-select-trigger):focus-visible),
+:root[data-focus-modality="keyboard"] .toast-position-option:has(input:focus-visible) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 var(--focus-width) color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+:root[data-focus-modality="keyboard"] .quick-add:has(.quick-add-form input:focus-visible) .quick-add-form input:focus-visible,
+:root[data-focus-modality="keyboard"] .search-box:has(input:focus-visible) input:focus-visible,
+:root[data-focus-modality="keyboard"] .filter-box:has(:is(select, .theme-select-trigger):focus-visible) :is(select, .theme-select-trigger):focus-visible,
+:root[data-focus-modality="keyboard"] .toast-position-option:has(input:focus-visible) input:focus-visible {
+  outline: none !important;
+}
+
+:root[data-focus-modality="pointer"] *:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .button:active,
+  .task-card:hover {
+    transform: none !important;
+  }
+}

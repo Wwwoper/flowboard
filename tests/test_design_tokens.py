@@ -8,12 +8,12 @@ def test_design_tokens_load_before_the_existing_stylesheet_cascade(client):
     stylesheet_links = re.findall(r'<link rel="stylesheet" href="([^"]+)"', html)
 
     assert stylesheet_links[:6] == [
-        "/static/tokens.css?v=0.5.66",
-        "/static/style.css?v=0.5.66",
-        "/static/github-theme.css?v=0.5.66",
-        "/static/themed-controls.css?v=0.5.66",
-        "/static/task-editor-redesign.css?v=0.5.66",
-        "/static/board-workspace.css?v=0.5.66",
+        "/static/tokens.css?v=0.5.67",
+        "/static/style.css?v=0.5.67",
+        "/static/github-theme.css?v=0.5.67",
+        "/static/themed-controls.css?v=0.5.67",
+        "/static/task-editor-redesign.css?v=0.5.67",
+        "/static/board-workspace.css?v=0.5.67",
     ]
     assert client.get("/static/tokens.css").status_code == 200
 

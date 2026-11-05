@@ -1771,6 +1771,7 @@
       els.taskResultRequiredHint.hidden = true;
       els.taskProjectError.hidden = true;
       els.taskProjectError.textContent = "";
+      els.taskProject.setAttribute("aria-invalid", "false");
       populateTaskWorksetSelect(task);
       els.taskId.value = String(task.id);
       els.taskTitle.value = task.title;
@@ -1945,6 +1946,7 @@
         if (String(error.message).includes("Сначала удалите задачу из рабочего набора")) {
           els.taskProjectError.textContent = "Задача входит в рабочий набор этого проекта. Сначала уберите её из набора, затем измените проект.";
           els.taskProjectError.hidden = false;
+          els.taskProject.setAttribute("aria-invalid", "true");
         }
         toast(`Не удалось автоматически сохранить изменения: ${error.message}`, "error");
         return false;
@@ -4264,10 +4266,12 @@
       els.taskProject.value = project ? projectTag(project) : "";
       els.taskProjectError.textContent = "Задача входит в рабочий набор этого проекта. Сначала уберите её из набора, затем измените проект.";
       els.taskProjectError.hidden = false;
+      els.taskProject.setAttribute("aria-invalid", "true");
       return;
     }
     els.taskProjectError.hidden = true;
     els.taskProjectError.textContent = "";
+    els.taskProject.setAttribute("aria-invalid", "false");
     updateReservedTaskTag("project", els.taskProject.value);
   });
   els.taskWorkset.addEventListener("change", () => void updateTaskWorkset());

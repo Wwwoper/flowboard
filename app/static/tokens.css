@@ -53,6 +53,7 @@
   --color-text-muted: var(--ink-soft);
   --color-border: var(--line);
   --color-border-strong: var(--line-strong);
+  --color-control-border: color-mix(in srgb, var(--color-text-muted) 75%, var(--color-border));
   --color-primary: var(--accent);
   --color-primary-hover: var(--accent-dark);
   --color-primary-active: var(--accent-dark);

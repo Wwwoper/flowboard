@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.66" in html
-    assert "/static/style.css?v=0.5.66" in html
+    assert "/static/app.js?v=0.5.67" in html
+    assert "/static/style.css?v=0.5.67" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -211,8 +211,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.66" in html
-    assert "/static/style.css?v=0.5.66" in html
+    assert "/static/app.js?v=0.5.67" in html
+    assert "/static/style.css?v=0.5.67" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -408,8 +408,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.66" in html
-    assert "/static/style.css?v=0.5.66" in html
+    assert "/static/app.js?v=0.5.67" in html
+    assert "/static/style.css?v=0.5.67" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
     assert 'data-tooltip="Показать остальные завершённые задачи"' in html
@@ -448,11 +448,11 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.66" in html
-    assert '/static/github-theme.css?v=0.5.66' in html
-    assert '/static/themed-controls.css?v=0.5.66' in html
-    assert '/static/board-workspace.css?v=0.5.66' in html
-    assert '/static/app.js?v=0.5.66' in html
+    assert "/static/style.css?v=0.5.67" in html
+    assert '/static/github-theme.css?v=0.5.67' in html
+    assert '/static/themed-controls.css?v=0.5.67' in html
+    assert '/static/board-workspace.css?v=0.5.67' in html
+    assert '/static/app.js?v=0.5.67' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -466,6 +466,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
         assert "\ntextarea:focus-visible {" not in stylesheet
 
     assert "--focus-ring: var(--gh-focus, color-mix(in srgb, var(--color-primary) 35%, transparent));" in workspace
+    assert "--focus-ring: var(--color-primary);" in workspace
     assert "*:focus {\n  outline: none !important;\n}" in workspace
     assert ':root[data-focus-modality="keyboard"] *:focus-visible' in workspace
     assert ':root[data-focus-modality="pointer"] *:focus-visible' in workspace
@@ -488,7 +489,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
     controls = client.get("/static/themed-controls.css").text
-    assert "/static/themed-controls.css?v=0.5.66" in html
+    assert "/static/themed-controls.css?v=0.5.67" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
@@ -602,7 +603,7 @@ console.log(JSON.stringify({{matched, typeCount, noneMatches}}));
 
 def test_settings_pages_share_compact_cards_spacing_and_left_aligned_back_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.66" in html
+    assert "/static/style.css?v=0.5.67" in html
 
     script = client.get("/static/app.js").text
     assert 'manageProjectsHeader.append(manageProjectsTitleBlock, manageProjectsBackButton);' in script

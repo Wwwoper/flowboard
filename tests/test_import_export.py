@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import io
 import json
+import sqlite3
 import zipfile
+
+from app.config import settings
 
 
 def upload_md(client, files):
@@ -281,3 +284,27 @@ def test_markdown_export_import_round_trip_preserves_long_task_text(client):
     )
     assert restored["description"] == description
     assert restored["result"] == result
+
+
+def test_zip_export_fails_when_registered_attachment_is_missing(client):
+    task = client.post("/api/tasks", json={"title": "Missing attachment backup"}).json()
+    uploaded = client.post(
+        f"/api/tasks/{task['id']}/files",
+        files=[("files", ("missing.txt", b"will be removed", "text/plain"))],
+    )
+    assert uploaded.status_code == 201, uploaded.text
+
+    connection = sqlite3.connect(settings.db_path)
+    try:
+        stored_name = connection.execute(
+            "SELECT stored_name FROM attachments WHERE task_id = ?", (task["id"],)
+        ).fetchone()[0]
+    finally:
+        connection.close()
+    (settings.attachments_dir / str(task["id"]) / stored_name).unlink()
+
+    response = client.get("/api/export?format=zip")
+
+    assert response.status_code == 500
+    assert f"задачи {task['id']}" in response.json()["detail"]
+    assert "missing.txt" in response.json()["detail"]

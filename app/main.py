@@ -1348,13 +1348,19 @@ def export_tasks(format: str = "md", connection: sqlite3.Connection = Depends(ge
             dict(row)
             for row in connection.execute("SELECT * FROM workset_events ORDER BY id").fetchall()
         ]
-        content = build_zip_export(
-            tasks,
-            attachments_by_task,
-            worksets=worksets,
-            workset_memberships=memberships,
-            workset_events=events,
-        )
+        try:
+            content = build_zip_export(
+                tasks,
+                attachments_by_task,
+                worksets=worksets,
+                workset_memberships=memberships,
+                workset_events=events,
+            )
+        except FileNotFoundError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Не удалось создать резервную копию: {error}",
+            ) from error
         filename = export_filename("zip")
         media_type = "application/zip"
     return Response(

@@ -275,3 +275,70 @@ def test_restore_rejects_task_text_over_30000_characters(client, tmp_path, field
 
     with pytest.raises(ValueError, match="Некорректное описание|Некорректный результат"):
         restore_backup(invalid, tmp_path / f"restored-{field}")
+
+
+@pytest.mark.parametrize(
+    ("manifest", "message"),
+    [
+        ([], "Корневой объект"),
+        (None, "Корневой объект"),
+        (True, "Корневой объект"),
+        ({"format_version": True, "tasks": []}, "версия формата"),
+        ({"format_version": 1, "tasks": [[]]}, "Запись задачи"),
+        (
+            {"format_version": 1, "tasks": [{"id": 1, "attachments": [[]]}]},
+            "список вложений",
+        ),
+        ({"format_version": 1, "tasks": [], "worksets": [[]]}, "worksets"),
+        (
+            {"format_version": 1, "tasks": [], "workset_memberships": [[]]},
+            "workset_memberships",
+        ),
+        (
+            {"format_version": 1, "tasks": [], "workset_events": [[]]},
+            "workset_events",
+        ),
+    ],
+)
+def test_restore_rejects_invalid_manifest_structure(tmp_path, manifest, message):
+    archive_path = tmp_path / "invalid-manifest.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("tasks.json", json.dumps(manifest))
+
+    with pytest.raises(ValueError, match=message):
+        restore_backup(archive_path, tmp_path / "restored")
+
+
+def test_restore_rejects_boolean_task_id(client, tmp_path):
+    client.post("/api/tasks", json={"title": "Boolean ID validation"})
+    source = tmp_path / "valid.zip"
+    source.write_bytes(client.get("/api/export?format=zip").content)
+    invalid = tmp_path / "boolean-id.zip"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(invalid, "w") as backup:
+        manifest = json.loads(original.read("tasks.json"))
+        manifest["tasks"][0]["id"] = True
+        backup.writestr("tasks.json", json.dumps(manifest))
+
+    with pytest.raises(ValueError, match="некорректный или повторяющийся ID задачи"):
+        restore_backup(invalid, tmp_path / "boolean-id-restored")
+
+
+def test_restore_rejects_non_string_workset_status(tmp_path):
+    archive_path = tmp_path / "invalid-workset-status.zip"
+    manifest = {
+        "format_version": 1,
+        "tasks": [],
+        "worksets": [
+            {
+                "id": 1,
+                "project_slug": "release",
+                "name": "Release",
+                "status": [],
+            }
+        ],
+    }
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("tasks.json", json.dumps(manifest))
+
+    with pytest.raises(ValueError, match="некорректный рабочий набор"):
+        restore_backup(archive_path, tmp_path / "restored")

@@ -88,6 +88,14 @@ def build_zip_export(
         ]
         manifest["tasks"].append(item)
 
+    for task in tasks:
+        for attachment in attachments_by_task.get(task["id"], []):
+            path = settings.attachments_dir / str(task["id"]) / attachment["stored_name"]
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"Вложение «{attachment['filename']}» задачи {task['id']} отсутствует на диске"
+                )
+
     output = io.BytesIO()
     with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(
@@ -97,10 +105,9 @@ def build_zip_export(
         for task in tasks:
             for attachment in attachments_by_task.get(task["id"], []):
                 path = settings.attachments_dir / str(task["id"]) / attachment["stored_name"]
-                if path.is_file():
-                    archive.write(
-                        path, arcname=f"attachments/{task['id']}/{attachment['stored_name']}"
-                    )
+                archive.write(
+                    path, arcname=f"attachments/{task['id']}/{attachment['stored_name']}"
+                )
     return output.getvalue()
 
 

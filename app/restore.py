@@ -35,8 +35,34 @@ def _read_manifest(archive: zipfile.ZipFile) -> dict[str, Any]:
         raise ValueError("В архиве отсутствует tasks.json") from exc
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("tasks.json повреждён или имеет неверную кодировку") from exc
-    if manifest.get("format_version") != 1 or not isinstance(manifest.get("tasks"), list):
+    if not isinstance(manifest, dict):
+        raise ValueError("Корневой объект tasks.json должен быть JSON-объектом")
+
+    format_version = manifest.get("format_version")
+    if (
+        not isinstance(format_version, int)
+        or isinstance(format_version, bool)
+        or format_version != 1
+    ):
         raise ValueError("Неподдерживаемая версия формата резервной копии")
+
+    task_items = manifest.get("tasks")
+    if not isinstance(task_items, list):
+        raise ValueError("Поле tasks в tasks.json должно быть списком")
+    for index, task in enumerate(task_items):
+        if not isinstance(task, dict):
+            raise ValueError(f"Запись задачи с индексом {index} должна быть JSON-объектом")
+        attachments = task.get("attachments", [])
+        if not isinstance(attachments, list) or any(
+            not isinstance(attachment, dict) for attachment in attachments
+        ):
+            raise ValueError(f"Некорректный список вложений задачи с индексом {index}")
+
+    for field in ("worksets", "workset_memberships", "workset_events"):
+        items = manifest.get(field, [])
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise ValueError(f"Поле {field} должно быть списком JSON-объектов")
+
     return manifest
 
 
@@ -65,7 +91,12 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
         seen_ids: set[int] = set()
         for task in task_items:
             task_id = task.get("id")
-            if not isinstance(task_id, int) or task_id <= 0 or task_id in seen_ids:
+            if (
+                not isinstance(task_id, int)
+                or isinstance(task_id, bool)
+                or task_id <= 0
+                or task_id in seen_ids
+            ):
                 raise ValueError("В tasks.json обнаружен некорректный или повторяющийся ID задачи")
             seen_ids.add(task_id)
             if task.get("status") not in STATUSES:
@@ -178,6 +209,7 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
                         or not isinstance(name, str)
                         or not name.strip()
                         or len(name) > 100
+                        or not isinstance(status, str)
                         or status not in {"active", "completed"}
                     ):
                         raise ValueError(

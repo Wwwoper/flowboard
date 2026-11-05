@@ -23,6 +23,7 @@ from app.db import connect, get_db, initialize_database
 from app.exporter import build_markdown_export, build_zip_export, export_filename
 from app.importer import ParsedTask, parse_markdown_file, utc_now
 from app.markdown import render_safe_markdown
+from app.task_transfer import MAX_ARCHIVE_SIZE, parse_task_archive
 from app.models import (
     ArchiveSettingsPatch,
     ArchiveSettingsRead,
@@ -1284,40 +1285,86 @@ async def import_markdown(
     files: list[UploadFile] = File(...), connection: sqlite3.Connection = Depends(get_db)
 ) -> ImportResult:
     if not files:
-        raise HTTPException(status_code=400, detail="Выберите хотя бы один Markdown-файл")
+        raise HTTPException(status_code=400, detail="Выберите хотя бы один файл для импорта")
 
     created = 0
     skipped: list[ImportSkipped] = []
-    for upload in files:
-        filename = _clean_filename(upload.filename)
-        if not filename.lower().endswith(".md"):
-            skipped.append(
-                ImportSkipped(filename=filename, reason="поддерживаются только файлы .md")
-            )
-            continue
-        raw = await upload.read(10 * 1024 * 1024 + 1)
-        if len(raw) > 10 * 1024 * 1024:
-            skipped.append(
-                ImportSkipped(filename=filename, reason="Markdown-файл превышает лимит 10 МБ")
-            )
-            continue
-        try:
-            content = raw.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            skipped.append(
-                ImportSkipped(filename=filename, reason="файл должен быть в кодировке UTF-8")
-            )
-            continue
+    saved_paths: list[Path] = []
+    try:
+        for upload in files:
+            filename = _clean_filename(upload.filename)
+            suffix = Path(filename).suffix.lower()
+            if suffix == ".zip":
+                raw = await upload.read(MAX_ARCHIVE_SIZE + 1)
+                if len(raw) > MAX_ARCHIVE_SIZE:
+                    skipped.append(
+                        ImportSkipped(filename=filename, reason="ZIP-архив превышает лимит 50 МБ")
+                    )
+                    continue
+                try:
+                    parsed_archive = parse_task_archive(raw)
+                except ValueError as error:
+                    skipped.append(ImportSkipped(filename=filename, reason=str(error)))
+                    continue
 
-        parsed_tasks, skipped_records = parse_markdown_file(filename, content)
-        for parsed in parsed_tasks:
-            _create_task(connection, parsed)
-            created += 1
-        skipped.extend(
-            ImportSkipped(filename=record.filename, reason=record.reason, line=record.line)
-            for record in skipped_records
-        )
-    connection.commit()
+                task_id = _create_task(connection, parsed_archive.task)
+                directory = settings.attachments_dir / str(task_id)
+                for attachment in parsed_archive.attachments:
+                    stored_name = f"{uuid.uuid4().hex}{_stored_extension(attachment.filename)}"
+                    path = directory / stored_name
+                    directory.mkdir(parents=True, exist_ok=True)
+                    saved_paths.append(path)
+                    path.write_bytes(attachment.content)
+                    connection.execute(
+                        """INSERT INTO attachments
+                           (task_id, filename, stored_name, size, created_at)
+                           VALUES (?, ?, ?, ?, ?)""",
+                        (
+                            task_id,
+                            _clean_filename(attachment.filename),
+                            stored_name,
+                            len(attachment.content),
+                            attachment.created_at or utc_now(),
+                        ),
+                    )
+                created += 1
+                continue
+
+            if suffix != ".md":
+                skipped.append(
+                    ImportSkipped(filename=filename, reason="поддерживаются файлы .md и ZIP задачи")
+                )
+                continue
+            raw = await upload.read(10 * 1024 * 1024 + 1)
+            if len(raw) > 10 * 1024 * 1024:
+                skipped.append(
+                    ImportSkipped(filename=filename, reason="Markdown-файл превышает лимит 10 МБ")
+                )
+                continue
+            try:
+                content = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                skipped.append(
+                    ImportSkipped(filename=filename, reason="файл должен быть в кодировке UTF-8")
+                )
+                continue
+
+            parsed_tasks, skipped_records = parse_markdown_file(filename, content)
+            for parsed in parsed_tasks:
+                _create_task(connection, parsed)
+                created += 1
+            skipped.extend(
+                ImportSkipped(filename=record.filename, reason=record.reason, line=record.line)
+                for record in skipped_records
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        for path in saved_paths:
+            path.unlink(missing_ok=True)
+        for directory in {path.parent for path in saved_paths}:
+            _remove_empty_attachment_dir(int(directory.name))
+        raise
     return ImportResult(created=created, skipped=skipped)
 
 

@@ -134,7 +134,7 @@ def test_zip_export_contains_manifest_and_all_attachments(client, tmp_path):
         assert archived_task["attachments"][0]["archive_path"] == attachment_path
 
 
-def test_single_task_export_contains_markdown_and_sibling_attachments(client):
+def test_single_task_export_uses_versioned_json_and_imports_attachments(client):
     task = client.post(
         "/api/tasks",
         json={
@@ -150,15 +150,9 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
         files=[
             ("files", ("notes.txt", b"first file", "text/plain")),
             ("files", ("notes.txt", b"second file", "text/plain")),
-            ("files", (f"task-{task['id']}.md", b"name collision", "text/markdown")),
         ],
     )
     assert attached.status_code == 201, attached.text
-    other = client.post("/api/tasks", json={"title": "Keep out of archive"}).json()
-    client.post(
-        f"/api/tasks/{other['id']}/files",
-        files=[("files", ("secret.txt", b"different task", "text/plain"))],
-    )
 
     response = client.get(f"/api/tasks/{task['id']}/export")
     assert response.status_code == 200, response.text
@@ -166,46 +160,91 @@ def test_single_task_export_contains_markdown_and_sibling_attachments(client):
     assert f'filename="task-{task["id"]}.zip"' in response.headers["content-disposition"]
 
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        names = archive.namelist()
-        markdown_name = f"task-{task['id']}.md"
-        assert markdown_name in names
-        assert "notes.txt" in names
-        assert "notes (2).txt" in names
-        assert f"task-{task['id']} (2).md" in names
-        assert "secret.txt" not in names
-        assert len(names) == 4
-        markdown = archive.read(markdown_name).decode("utf-8")
-        from app.frontmatter_compat import loads
+        assert set(archive.namelist()) == {
+            "task.json",
+            "attachments/0001.txt",
+            "attachments/0002.txt",
+        }
+        manifest = json.loads(archive.read("task.json"))
+        assert manifest["format"] == "flowboard-task"
+        assert manifest["format_version"] == 1
+        assert manifest["task"] == {
+            "title": "Export just this task",
+            "description": "A **Markdown** description.",
+            "result": "Release published and smoke-tested.",
+            "status": "todo",
+            "tags": ["project:flowboard", "needs-review"],
+            "task_type": "bug",
+            "created_at": task["created_at"],
+            "updated_at": task["updated_at"],
+            "closed_at": None,
+        }
+        assert manifest["attachments"][0]["filename"] == "notes.txt"
+        assert manifest["attachments"][0]["size"] == len(b"first file")
+        assert archive.read(manifest["attachments"][0]["path"]) == b"first file"
 
-        post = loads(markdown)
-        assert post.metadata["title"] == "Export just this task"
-        assert post.metadata["status"] == "todo"
-        assert post.metadata["tags"] == ["project:flowboard", "needs-review"]
-        assert post.metadata["task_type"] == "bug"
-        assert post.metadata["attachments"] == [
-            "notes.txt",
-            "notes (2).txt",
-            f"task-{task['id']} (2).md",
-        ]
-        assert post.metadata["flowboard_export_format"] == "single-task-v1"
-        assert post.metadata["result"] == "Release published and smoke-tested."
-        assert post.content.startswith("# Export just this task\n")
-        assert "## Описание" in post.content
-        assert "A **Markdown** description." in post.content
-        assert "<!-- flowboard-result-start -->" in post.content
-        assert "Release published and smoke-tested." in post.content
-        assert "## Вложения" in post.content
-        assert "- [notes.txt](notes.txt)" in post.content
-        from app.importer import parse_markdown_file
+    imported = client.post(
+        "/api/import", files=[("files", ("task.zip", response.content, "application/zip"))]
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json() == {"created": 1, "skipped": []}
+    restored = next(
+        item for item in client.get("/api/tasks").json()
+        if item["title"] == "Export just this task" and item["id"] != task["id"]
+    )
+    assert restored["description"] == task["description"]
+    assert restored["result"] == task["result"]
+    assert restored["tags"] == task["tags"]
+    assert restored["task_type"] == task["task_type"]
+    detail = client.get(f"/api/tasks/{restored['id']}").json()
+    assert [item["filename"] for item in detail["attachments"]] == ["notes.txt", "notes.txt"]
+    assert [
+        client.get(f"/api/files/{item['id']}").content for item in detail["attachments"]
+    ] == [b"first file", b"second file"]
 
-        imported, skipped = parse_markdown_file(markdown_name, markdown)
-        assert not skipped
-        assert len(imported) == 1
-        assert imported[0].description == "A **Markdown** description."
-        assert imported[0].result == "Release published and smoke-tested."
-        assert archive.read("notes.txt") == b"first file"
-        assert archive.read("notes (2).txt") == b"second file"
-        assert archive.read(f"task-{task['id']} (2).md") == b"name collision"
+
+def test_single_task_import_rejects_invalid_manifest_without_creating_task(client):
+    invalid_manifests = [
+        {"format": "flowboard-task", "format_version": 2, "task": {"title": "Bad"}},
+        {"format": "flowboard-task", "format_version": 1, "task": []},
+        {
+            "format": "flowboard-task",
+            "format_version": 1,
+            "task": {"title": "Bad", "status": "unknown"},
+        },
+    ]
+    for index, manifest in enumerate(invalid_manifests):
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w") as archive:
+            archive.writestr("task.json", json.dumps(manifest))
+        response = client.post(
+            "/api/import",
+            files=[("files", (f"invalid-{index}.zip", output.getvalue(), "application/zip"))],
+        )
+        assert response.status_code == 200
+        assert response.json()["created"] == 0
+        assert len(response.json()["skipped"]) == 1
+    assert client.get("/api/tasks").json() == []
+
+
+def test_single_task_import_rejects_unsafe_and_unlisted_archive_paths(client):
+    manifest = {
+        "format": "flowboard-task",
+        "format_version": 1,
+        "task": {"title": "Unsafe path"},
+        "attachments": [],
+    }
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("task.json", json.dumps(manifest))
+        archive.writestr("../outside.txt", "not safe")
+    response = client.post(
+        "/api/import", files=[("files", ("unsafe.zip", output.getvalue(), "application/zip"))]
+    )
+    assert response.status_code == 200
+    assert response.json()["created"] == 0
+    assert "небезопасный путь" in response.json()["skipped"][0]["reason"]
+    assert client.get("/api/tasks").json() == []
 
 
 def test_single_task_export_returns_404_for_unknown_task(client):
@@ -308,3 +347,38 @@ def test_zip_export_fails_when_registered_attachment_is_missing(client):
     assert response.status_code == 500
     assert f"задачи {task['id']}" in response.json()["detail"]
     assert "missing.txt" in response.json()["detail"]
+
+
+def test_single_task_import_keeps_legacy_markdown_compatibility(client):
+    legacy_markdown = '''---
+title: Legacy single task
+status: doing
+tags:
+  - project:flowboard
+task_type: docs
+flowboard_export_format: single-task-v1
+result: Old result
+---
+# Legacy single task
+
+## Описание
+
+<!-- flowboard-description-start -->
+Original description
+<!-- flowboard-description-end -->
+
+## Результат выполнения
+
+<!-- flowboard-result-start -->
+Old result
+<!-- flowboard-result-end -->
+'''.encode("utf-8")
+    response = upload_md(client, [("legacy-task.md", legacy_markdown)])
+    assert response.status_code == 200, response.text
+    assert response.json() == {"created": 1, "skipped": []}
+    task = client.get("/api/tasks").json()[0]
+    assert task["title"] == "Legacy single task"
+    assert task["status"] == "doing"
+    assert task["description"] == "Original description"
+    assert task["result"] == "Old result"
+    assert task["task_type"] == "docs"

@@ -111,109 +111,55 @@ def build_zip_export(
     return output.getvalue()
 
 
-def _unique_export_filename(filename: str, used_names: set[str]) -> str:
-    """Return a flat, collision-free filename safe to use at the archive root."""
-    raw_name = str(filename or "attachment").replace("\\", "/")
-    basename = raw_name.rsplit("/", 1)[-1]
-    basename = "".join(character for character in basename if character.isprintable()).strip()
-    if basename in {"", ".", ".."}:
-        basename = "attachment"
-    basename = basename[:255]
-    candidate = basename
-    index = 2
-    while candidate.casefold() in used_names:
-        dot_index = basename.rfind(".")
-        suffix = basename[dot_index:] if 0 < dot_index < len(basename) - 1 else ""
-        stem = basename[: -len(suffix)] if suffix else basename
-        extra = f" ({index})"
-        candidate = f"{stem[: max(1, 255 - len(suffix) - len(extra))]}{extra}{suffix}"
-        index += 1
-    used_names.add(candidate.casefold())
-    return candidate
-
-
 def build_task_zip_export(
     task: dict[str, Any],
     attachments: list[dict[str, Any]],
     attachment_paths: dict[int, Path],
 ) -> bytes:
-    """Package one task as a portable Markdown file with sibling attachment files."""
-    from urllib.parse import quote
-
-    markdown_filename = f"task-{task['id']}.md"
-    used_names = {markdown_filename.casefold()}
-    export_names: list[tuple[dict[str, Any], str]] = []
-    for attachment in attachments:
-        export_names.append(
-            (attachment, _unique_export_filename(attachment["filename"], used_names))
+    """Package one task as a versioned JSON manifest and its attachment files."""
+    manifest_attachments: list[dict[str, Any]] = []
+    files: list[tuple[str, Path]] = []
+    for index, attachment in enumerate(attachments, start=1):
+        path = attachment_paths.get(int(attachment["id"]))
+        if path is None or not path.is_file():
+            raise FileNotFoundError(f"Вложение «{attachment['filename']}» не найдено")
+        archive_path = f"attachments/{index:04d}{path.suffix.lower()}"
+        manifest_attachments.append(
+            {
+                "path": archive_path,
+                "filename": attachment["filename"],
+                "size": path.stat().st_size,
+                "created_at": attachment["created_at"],
+            }
         )
+        files.append((archive_path, path))
 
-    filenames = [filename for _, filename in export_names]
-    metadata: dict[str, Any] = {
+    task_data: dict[str, Any] = {
         "title": task["title"],
+        "description": task.get("description") or "",
         "result": task.get("result") or "",
         "status": task["status"],
         "tags": _tags(task["tags"]),
         "task_type": task.get("task_type", ""),
         "created_at": task["created_at"],
         "updated_at": task["updated_at"],
-        "attachments": filenames,
-        "flowboard_export_format": "single-task-v1",
+        "closed_at": task.get("closed_at"),
     }
-    if task.get("closed_at"):
-        metadata["closed_at"] = task["closed_at"]
-
-    # Keep description Markdown intact while separating generated document chrome.
-    # Import uses these markers to retrieve only the original description.
-    status_label = STATUS_LABELS.get(task["status"], task["status"])
-    description = str(task.get("description") or "").strip("\r\n")
-    lines = [
-        f"# {task['title']}",
-        "",
-        f"**Статус:** {status_label}",
-    ]
-    tags = _tags(task["tags"])
-    if tags:
-        rendered_tags = ", ".join("`" + tag.replace("`", "\\`") + "`" for tag in tags)
-        lines.append(f"**Теги:** {rendered_tags}")
-    lines.extend(["", "## Описание", "", "<!-- flowboard-description-start -->", ""])
-    if description:
-        lines.append(description)
-    lines.extend(
-        [
-            "",
-            "<!-- flowboard-description-end -->",
-            "",
-            "## Результат выполнения",
-            "",
-            "<!-- flowboard-result-start -->",
-            "",
-        ]
-    )
-    result = str(task.get("result") or "").strip("\r\n")
-    if result:
-        lines.append(result)
-    lines.extend(["", "<!-- flowboard-result-end -->", "", "## Вложения", ""])
-    if filenames:
-        for filename in filenames:
-            label = filename.replace("\\", "\\\\").replace("[", r"\[").replace("]", r"\]")
-            lines.append(f"- [{label}]({quote(filename, safe='')})")
-    else:
-        lines.append("_Нет вложений._")
-
-    body = "\n".join(lines).rstrip("\n") + "\n"
-    markdown = frontmatter.dumps(frontmatter.Post(body, **metadata))
-    if not markdown.endswith("\n"):
-        markdown += "\n"
+    manifest = {
+        "format": "flowboard-task",
+        "format_version": 1,
+        "task": task_data,
+        "attachments": manifest_attachments,
+    }
 
     output = io.BytesIO()
     with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(markdown_filename, markdown.encode("utf-8"))
-        for attachment, filename in export_names:
-            path = attachment_paths.get(int(attachment["id"]))
-            if path is None or not path.is_file():
-                raise FileNotFoundError(f"Вложение «{attachment['filename']}» не найдено")
-            archive.write(path, arcname=filename)
+        archive.writestr(
+            "task.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+        for archive_path, path in files:
+            archive.write(path, arcname=archive_path)
     return output.getvalue()
 
 

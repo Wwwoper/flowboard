@@ -19,12 +19,12 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/tokens.css?v=0.5.69">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.69">
-  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.69">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.69">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.69">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.69">
+  <link rel="stylesheet" href="/static/tokens.css?v=0.5.75">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.75">
+  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.75">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.75">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.75">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.75">
 </head>
 <body>
   <div class="app-shell">
@@ -391,7 +391,11 @@
         <section id="settings-panel-organization" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-organization" data-settings-panel="organization" hidden>
           <h3>Проекты и организация</h3>
           <p class="settings-panel-description">Управляйте проектами рабочего пространства и их архивом.</p>
-          <div class="settings-option-list" id="organization-settings-actions"></div>
+          <div class="settings-option-list" id="organization-settings-actions">
+            <button id="open-ai-guidelines" class="button button-quiet toolbar-menu-item" type="button" aria-label="Открыть регламент ИИ">
+              <span>Регламент ИИ</span>
+            </button>
+          </div>
           <div class="settings-section">
             <h4>Данные и резервные копии</h4>
             <p class="settings-section-description">Скачайте архив со всеми задачами и вложениями, чтобы сохранить копию рабочего пространства отдельно от приложения.</p>
@@ -400,6 +404,38 @@
             </div>
             <p class="theme-manager-help">Восстановление выполняется из ZIP-архива отдельно; инструкция есть в руководстве Flowboard.</p>
           </div>
+        </section>
+
+        <section id="ai-guidelines-settings-page" class="settings-subpage ai-guidelines-settings-page" aria-labelledby="ai-guidelines-heading" hidden>
+          <div class="settings-subpage-header">
+            <div><p class="eyebrow">ДОКУМЕНТАЦИЯ</p><h3 id="ai-guidelines-heading">Регламент ИИ</h3></div>
+            <button id="close-ai-guidelines" class="button button-small button-quiet settings-back-button" type="button">← Назад к настройкам</button>
+          </div>
+          <p class="settings-panel-description">Регламент определяет правила подготовки задач для ИИ-ассистентов. Изменения применяются после явного сохранения.</p>
+          <div class="ai-guidelines-meta" aria-live="polite">
+            <span>Источник: <strong id="ai-guidelines-source">Загрузка…</strong></span>
+            <span id="ai-guidelines-version">Базовая версия: —</span>
+            <span id="ai-guidelines-updated" hidden></span>
+          </div>
+          <div class="ai-guidelines-editor-section">
+            <label class="field-label" for="ai-guidelines-editor">Текст регламента (Markdown)</label>
+            <textarea id="ai-guidelines-editor" class="text-field ai-guidelines-editor" spellcheck="false" aria-describedby="ai-guidelines-help ai-guidelines-status" placeholder="Загрузка регламента…" disabled></textarea>
+            <p id="ai-guidelines-help" class="settings-section-description">Поддерживается Markdown. Предпросмотр формируется сервером с отключённым HTML и очисткой опасных ссылок.</p>
+          </div>
+          <div class="ai-guidelines-actions" role="group" aria-label="Действия с регламентом">
+            <button id="save-ai-guidelines" class="button button-primary" type="button" disabled>Сохранить изменения</button>
+            <button id="copy-ai-guidelines" class="button button-quiet" type="button" disabled>Скопировать регламент</button>
+            <button id="download-ai-guidelines" class="button button-quiet" type="button" disabled>Скачать Markdown</button>
+            <button id="reset-ai-guidelines" class="button button-danger-quiet" type="button" disabled>Восстановить исходную редакцию</button>
+          </div>
+          <div class="ai-guidelines-status-row">
+            <p id="ai-guidelines-status" class="ai-guidelines-status" role="status" aria-live="polite">Загрузка регламента…</p>
+            <button id="retry-ai-guidelines" class="button button-small button-quiet" type="button" hidden>Повторить загрузку</button>
+          </div>
+          <section class="ai-guidelines-preview-section" aria-labelledby="ai-guidelines-preview-heading">
+            <h4 id="ai-guidelines-preview-heading">Предпросмотр</h4>
+            <div id="ai-guidelines-preview" class="markdown-preview ai-guidelines-preview" aria-live="polite"><p>Предпросмотр появится после загрузки регламента.</p></div>
+          </section>
         </section>
 
         <section id="shortcuts-settings-page" class="settings-subpage" aria-labelledby="shortcuts-heading" hidden>

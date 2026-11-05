@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_interactive_controls_share_visible_hover_and_keyboard_focus_states(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.5.69' in html
+    assert '/static/board-workspace.css?v=0.5.75' in html
 
     tokens = client.get("/static/tokens.css").text
     workspace = client.get("/static/board-workspace.css").text

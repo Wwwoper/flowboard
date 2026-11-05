@@ -129,6 +129,18 @@
     attachmentPreviewToken: 0,
     attachmentsExpanded: false,
     attachmentDisclosureTaskId: null,
+    aiGuidelines: {
+      loaded: false,
+      loading: false,
+      saving: false,
+      text: "",
+      originalText: "",
+      source: "base",
+      baseVersion: "",
+      updatedAt: null,
+      previewRequest: 0,
+      previewTimer: null,
+    },
   };
   state.columnPreferences = readColumnPreferences();
   state.archivedTasks = [];
@@ -256,6 +268,20 @@
     shortcutsButton: $("#shortcuts-button"),
     shortcutsPage: $("#shortcuts-settings-page"),
     shortcutsBack: $("#close-shortcuts"),
+    aiGuidelinesOpen: $("#open-ai-guidelines"),
+    aiGuidelinesPage: $("#ai-guidelines-settings-page"),
+    aiGuidelinesBack: $("#close-ai-guidelines"),
+    aiGuidelinesEditor: $("#ai-guidelines-editor"),
+    aiGuidelinesSource: $("#ai-guidelines-source"),
+    aiGuidelinesVersion: $("#ai-guidelines-version"),
+    aiGuidelinesUpdated: $("#ai-guidelines-updated"),
+    aiGuidelinesSave: $("#save-ai-guidelines"),
+    aiGuidelinesCopy: $("#copy-ai-guidelines"),
+    aiGuidelinesDownload: $("#download-ai-guidelines"),
+    aiGuidelinesReset: $("#reset-ai-guidelines"),
+    aiGuidelinesStatus: $("#ai-guidelines-status"),
+    aiGuidelinesRetry: $("#retry-ai-guidelines"),
+    aiGuidelinesPreview: $("#ai-guidelines-preview"),
     projectDialog: $("#project-dialog"),
     closeProjectDialog: $("#close-project-dialog"),
     projectCommandSearch: $("#project-command-search"),
@@ -1638,7 +1664,8 @@
   }
 
   async function openArchive() {
-    openSettingsSubpage("archive");
+    await openSettingsSubpage("archive");
+    if (!isSettingsSubpageActive("archive")) return;
     els.archiveCount.textContent = "Загрузка архива…";
     try {
       await Promise.all([loadArchiveSettings(), loadArchivedTasks()]);
@@ -3575,7 +3602,7 @@
     if (els.settingsDialog.open) {
       if (!isTyping && !event.metaKey && !event.ctrlKey && !event.altKey && event.key === "?") {
         event.preventDefault();
-        openSettingsSubpage("shortcuts");
+        void openSettingsSubpage("shortcuts");
       }
       return;
     }
@@ -3600,7 +3627,7 @@
       els.search.select();
     } else if (event.key === "?") {
       event.preventDefault();
-      openSettingsSubpage("shortcuts");
+      void openSettingsSubpage("shortcuts");
     }
   });
 
@@ -3622,19 +3649,191 @@
     if (focus) selectedTab.focus({ preventScroll: true });
   }
 
+  function aiGuidelinesHasUnsavedChanges() {
+    return state.aiGuidelines.loaded && els.aiGuidelinesEditor.value !== state.aiGuidelines.originalText;
+  }
+
+  function updateAiGuidelinesControls() {
+    const loaded = state.aiGuidelines.loaded && !state.aiGuidelines.loading;
+    const dirty = aiGuidelinesHasUnsavedChanges();
+    els.aiGuidelinesSave.disabled = !loaded || !dirty || state.aiGuidelines.saving;
+    els.aiGuidelinesCopy.disabled = !loaded || state.aiGuidelines.loading;
+    els.aiGuidelinesDownload.disabled = !loaded || state.aiGuidelines.loading;
+    els.aiGuidelinesReset.disabled = !loaded || state.aiGuidelines.saving || state.aiGuidelines.source !== "user";
+    els.aiGuidelinesEditor.disabled = !loaded || state.aiGuidelines.loading;
+    els.aiGuidelinesEditor.setAttribute("aria-busy", String(state.aiGuidelines.loading || state.aiGuidelines.saving));
+    els.aiGuidelinesRetry.hidden = state.aiGuidelines.loaded || state.aiGuidelines.loading;
+  }
+
+  function setAiGuidelinesStatus(message, kind = "info") {
+    els.aiGuidelinesStatus.textContent = message;
+    els.aiGuidelinesStatus.dataset.state = kind;
+  }
+
+  function renderAiGuidelinesMetadata() {
+    els.aiGuidelinesSource.textContent = state.aiGuidelines.source === "user" ? "Пользовательская редакция" : "Встроенная редакция";
+    els.aiGuidelinesVersion.textContent = `Базовая версия: ${state.aiGuidelines.baseVersion || "—"}`;
+    if (state.aiGuidelines.source === "user" && state.aiGuidelines.updatedAt) {
+      const date = new Date(state.aiGuidelines.updatedAt);
+      els.aiGuidelinesUpdated.textContent = `Последнее сохранение: ${Number.isNaN(date.getTime()) ? state.aiGuidelines.updatedAt : date.toLocaleString()}`;
+      els.aiGuidelinesUpdated.hidden = false;
+    } else {
+      els.aiGuidelinesUpdated.textContent = "";
+      els.aiGuidelinesUpdated.hidden = true;
+    }
+  }
+
+  async function requestAiGuidelinesPreview() {
+    const requestId = ++state.aiGuidelines.previewRequest;
+    const text = els.aiGuidelinesEditor.value;
+    try {
+      const result = await api("/api/preview-markdown", { method: "POST", body: { text } });
+      if (requestId !== state.aiGuidelines.previewRequest) return;
+      // The preview endpoint disables raw HTML and sanitizes tags, attributes and URL protocols.
+      els.aiGuidelinesPreview.innerHTML = result.html;
+    } catch (error) {
+      if (requestId !== state.aiGuidelines.previewRequest) return;
+      els.aiGuidelinesPreview.replaceChildren(document.createTextNode("Не удалось построить предпросмотр. Повторите ввод или откройте страницу позже."));
+      setAiGuidelinesStatus(`Не удалось построить предпросмотр: ${error.message}`, "error");
+    }
+  }
+
+  async function loadAiGuidelines({ force = false } = {}) {
+    if (state.aiGuidelines.loading || (state.aiGuidelines.loaded && !force)) return;
+    state.aiGuidelines.loading = true;
+    updateAiGuidelinesControls();
+    setAiGuidelinesStatus("Загрузка регламента…");
+    try {
+      const result = await api("/api/ai-task-guidelines");
+      state.aiGuidelines.loaded = true;
+      state.aiGuidelines.text = result.text;
+      state.aiGuidelines.originalText = result.text;
+      state.aiGuidelines.source = result.source;
+      state.aiGuidelines.baseVersion = result.base_version;
+      state.aiGuidelines.updatedAt = result.updated_at;
+      els.aiGuidelinesEditor.value = result.text;
+      renderAiGuidelinesMetadata();
+      setAiGuidelinesStatus("Регламент загружен.", "success");
+      await requestAiGuidelinesPreview();
+    } catch (error) {
+      setAiGuidelinesStatus(`Не удалось загрузить регламент: ${error.message}. Повторите попытку.`, "error");
+    } finally {
+      state.aiGuidelines.loading = false;
+      updateAiGuidelinesControls();
+    }
+  }
+
+  async function saveAiGuidelines() {
+    if (!state.aiGuidelines.loaded || state.aiGuidelines.saving || !aiGuidelinesHasUnsavedChanges()) return;
+    const submittedText = els.aiGuidelinesEditor.value;
+    state.aiGuidelines.saving = true;
+    updateAiGuidelinesControls();
+    setAiGuidelinesStatus("Сохранение изменений…");
+    try {
+      const result = await api("/api/ai-task-guidelines", { method: "PUT", body: { text: submittedText } });
+      state.aiGuidelines.originalText = submittedText;
+      state.aiGuidelines.text = submittedText;
+      state.aiGuidelines.source = result.source;
+      state.aiGuidelines.baseVersion = result.base_version;
+      state.aiGuidelines.updatedAt = result.updated_at;
+      renderAiGuidelinesMetadata();
+      setAiGuidelinesStatus(els.aiGuidelinesEditor.value === submittedText
+        ? "Изменения сохранены."
+        : "Сохранён отправленный текст. В редакторе остались новые несохранённые изменения.", "success");
+    } catch (error) {
+      setAiGuidelinesStatus(`Не удалось сохранить регламент: ${error.message}. Текст в редакторе сохранён — можно повторить.`, "error");
+    } finally {
+      state.aiGuidelines.saving = false;
+      updateAiGuidelinesControls();
+    }
+  }
+
+  async function copyAiGuidelines() {
+    const text = els.aiGuidelinesEditor.value;
+    if (!state.aiGuidelines.loaded) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const temporary = document.createElement("textarea");
+        temporary.value = text;
+        temporary.setAttribute("readonly", "");
+        temporary.style.position = "fixed";
+        temporary.style.opacity = "0";
+        document.body.append(temporary);
+        temporary.select();
+        const copied = document.execCommand("copy");
+        temporary.remove();
+        if (!copied) throw new Error("Буфер обмена недоступен в этом браузере");
+      }
+      setAiGuidelinesStatus("Полный текст регламента скопирован.", "success");
+    } catch (error) {
+      setAiGuidelinesStatus(`Не удалось скопировать регламент: ${error.message || "буфер обмена недоступен"}.`, "error");
+    }
+  }
+
+  function downloadAiGuidelines() {
+    if (!state.aiGuidelines.loaded) return;
+    const blob = new Blob([els.aiGuidelinesEditor.value], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ai-task-guidelines.md";
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setAiGuidelinesStatus("Файл Markdown подготовлен для скачивания.", "success");
+  }
+
+  async function resetAiGuidelines() {
+    if (state.aiGuidelines.source !== "user" || state.aiGuidelines.saving) return;
+    const warning = aiGuidelinesHasUnsavedChanges()
+      ? "Сбросить пользовательскую редакцию и удалить несохранённые изменения?"
+      : "Удалить пользовательскую редакцию и восстановить встроенный регламент?";
+    const confirmed = await requestActionConfirmation({
+      title: "Восстановить исходную редакцию?",
+      message: warning,
+      confirmLabel: "Восстановить",
+      danger: true,
+    });
+    if (!confirmed) return;
+    state.aiGuidelines.saving = true;
+    updateAiGuidelinesControls();
+    setAiGuidelinesStatus("Восстановление исходной редакции…");
+    try {
+      const result = await api("/api/ai-task-guidelines", { method: "DELETE" });
+      state.aiGuidelines.text = result.text;
+      state.aiGuidelines.originalText = result.text;
+      state.aiGuidelines.source = result.source;
+      state.aiGuidelines.baseVersion = result.base_version;
+      state.aiGuidelines.updatedAt = result.updated_at;
+      els.aiGuidelinesEditor.value = result.text;
+      renderAiGuidelinesMetadata();
+      setAiGuidelinesStatus("Встроенная редакция восстановлена.", "success");
+      await requestAiGuidelinesPreview();
+    } catch (error) {
+      setAiGuidelinesStatus(`Не удалось восстановить исходную редакцию: ${error.message}. Повторите попытку.`, "error");
+    } finally {
+      state.aiGuidelines.saving = false;
+      updateAiGuidelinesControls();
+    }
+  }
+
   function settingsSubpageFor(name) {
-    return ({ archive: els.archivePage, shortcuts: els.shortcutsPage, projects: manageProjectsPage })[name] || null;
+    return ({ archive: els.archivePage, shortcuts: els.shortcutsPage, projects: manageProjectsPage, "ai-guidelines": els.aiGuidelinesPage })[name] || null;
   }
 
   function isSettingsSubpageActive(name) {
     return activeSettingsSubpage === name;
   }
 
-  function openSettingsSubpage(name) {
+  async function openSettingsSubpage(name) {
     const page = settingsSubpageFor(name);
-    if (!page) return;
+    if (!page) return false;
+    if (activeSettingsSubpage && !(await closeSettingsSubpage({ focus: false }))) return false;
     if (!els.settingsDialog.open) els.settingsDialog.showModal();
-    if (activeSettingsSubpage) closeSettingsSubpage({ focus: false });
     settingsParentScrollTop = $(".settings-panels").scrollTop;
     $$('[data-settings-tab]').forEach((tab) => { tab.hidden = true; });
     $$('[data-settings-panel]').forEach((panel) => { panel.hidden = true; });
@@ -3644,9 +3843,10 @@
     $(".settings-panels").scrollTop = 0;
     const backButton = page.querySelector(".settings-back-button");
     if (backButton) backButton.focus({ preventScroll: true });
+    return true;
   }
 
-  function closeSettingsSubpage({ focus = true } = {}) {
+  function restoreSettingsParent({ focus = true } = {}) {
     if (!activeSettingsSubpage) return;
     const page = settingsSubpageFor(activeSettingsSubpage);
     if (page) page.hidden = true;
@@ -3661,6 +3861,21 @@
     if (focus && selectedTab) selectedTab.focus({ preventScroll: true });
   }
 
+  async function closeSettingsSubpage({ focus = true } = {}) {
+    if (!activeSettingsSubpage) return true;
+    if (activeSettingsSubpage === "ai-guidelines" && aiGuidelinesHasUnsavedChanges()) {
+      const confirmed = await requestActionConfirmation({
+        title: "Несохранённые изменения",
+        message: "Есть несохранённые изменения регламента. Покинуть страницу и отменить их?",
+        confirmLabel: "Отменить изменения",
+        danger: true,
+      });
+      if (!confirmed) return false;
+    }
+    restoreSettingsParent({ focus });
+    return true;
+  }
+
   els.settingsOpen.addEventListener("click", () => {
     if (!els.settingsDialog.open) els.settingsDialog.showModal();
     if (activeSettingsSubpage) {
@@ -3671,19 +3886,35 @@
     const activeTab = $('[data-settings-tab][aria-selected="true"]');
     (activeTab || els.settingsClose).focus({ preventScroll: true });
   });
-  els.settingsClose.addEventListener("click", () => els.settingsDialog.close());
-  els.settingsDialog.addEventListener("click", (event) => {
-    if (event.target === els.settingsDialog) els.settingsDialog.close();
+  els.settingsClose.addEventListener("click", async () => {
+    if (await closeSettingsSubpage({ focus: false })) els.settingsDialog.close();
   });
-  els.settingsDialog.addEventListener("close", () => {
-    closeSettingsSubpage({ focus: false });
+  els.settingsDialog.addEventListener("click", async (event) => {
+    if (event.target === els.settingsDialog && await closeSettingsSubpage({ focus: false })) els.settingsDialog.close();
   });
-  els.settingsDialog.addEventListener("cancel", (event) => {
+  els.settingsDialog.addEventListener("close", () => restoreSettingsParent({ focus: false }));
+  els.settingsDialog.addEventListener("cancel", async (event) => {
     event.preventDefault();
-    if (activeSettingsSubpage) closeSettingsSubpage();
+    if (activeSettingsSubpage) await closeSettingsSubpage();
     else els.settingsDialog.close();
   });
-  els.shortcutsBack.addEventListener("click", closeSettingsSubpage);
+  els.shortcutsBack.addEventListener("click", () => void closeSettingsSubpage());
+  els.aiGuidelinesOpen.addEventListener("click", async () => {
+    if (await openSettingsSubpage("ai-guidelines")) void loadAiGuidelines();
+  });
+  els.aiGuidelinesBack.addEventListener("click", () => void closeSettingsSubpage());
+  els.aiGuidelinesEditor.addEventListener("input", () => {
+    updateAiGuidelinesControls();
+    if (aiGuidelinesHasUnsavedChanges()) setAiGuidelinesStatus("Есть несохранённые изменения.", "pending");
+    else setAiGuidelinesStatus("Нет несохранённых изменений.", "info");
+    if (state.aiGuidelines.previewTimer) clearTimeout(state.aiGuidelines.previewTimer);
+    state.aiGuidelines.previewTimer = setTimeout(() => void requestAiGuidelinesPreview(), 350);
+  });
+  els.aiGuidelinesRetry.addEventListener("click", () => void loadAiGuidelines({ force: true }));
+  els.aiGuidelinesSave.addEventListener("click", () => void saveAiGuidelines());
+  els.aiGuidelinesCopy.addEventListener("click", () => void copyAiGuidelines());
+  els.aiGuidelinesDownload.addEventListener("click", downloadAiGuidelines);
+  els.aiGuidelinesReset.addEventListener("click", () => void resetAiGuidelines());
   const settingsTabList = $(".settings-tabs");
   const settingsTabsUseHorizontalLayout = window.matchMedia?.("(max-width: 640px)");
 
@@ -3782,7 +4013,7 @@
       toast(error.message || "Не удалось сбросить тему", "error");
     }
   });
-  els.shortcutsButton.addEventListener("click", () => openSettingsSubpage("shortcuts"));
+  els.shortcutsButton.addEventListener("click", () => void openSettingsSubpage("shortcuts"));
   els.closeProjectDialog.addEventListener("click", () => els.projectDialog.close());
   els.projectDialog.addEventListener("click", (event) => {
     if (event.target === els.projectDialog) els.projectDialog.close();
@@ -3944,9 +4175,8 @@
     renderProjectManagerList(archivedProjectSection, archivedProjects, "Восстановить", "is-restore", restoreProject);
   }
 
-  function openManageProjectsPage() {
-    renderProjectManager();
-    openSettingsSubpage("projects");
+  async function openManageProjectsPage() {
+    if (await openSettingsSubpage("projects")) renderProjectManager();
   }
 
   function archiveProject(slug) {

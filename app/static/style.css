@@ -1633,3 +1633,55 @@ dialog.workset-history-dialog:not([open]) { display: none; }
     white-space: normal;
   }
 }
+
+/* AI task guidelines editor inside the existing settings workspace. */
+.ai-guidelines-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 16px;
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.ai-guidelines-meta strong { color: var(--color-text); font-weight: var(--weight-semibold); }
+.ai-guidelines-editor-section { display: grid; gap: var(--space-2); min-width: 0; }
+.ai-guidelines-editor {
+  display: block;
+  width: 100%;
+  min-height: min(42vh, 420px);
+  padding: var(--space-4);
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  tab-size: 2;
+}
+.ai-guidelines-editor:focus-visible { outline: var(--focus-width) solid var(--color-primary); outline-offset: var(--focus-offset); }
+.ai-guidelines-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.ai-guidelines-actions .button { min-height: 36px; }
+.ai-guidelines-status-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-height: 32px; margin-top: var(--space-2); }
+.ai-guidelines-status { margin: 0; color: var(--color-text-muted); font-size: var(--text-xs); line-height: 1.5; }
+.ai-guidelines-status[data-state="pending"] { color: var(--color-primary); }
+.ai-guidelines-status[data-state="error"] { color: var(--color-error); }
+.ai-guidelines-status[data-state="success"] { color: var(--color-success); }
+.ai-guidelines-preview-section { min-width: 0; margin-top: var(--space-5); padding-top: var(--space-5); border-top: var(--border-width) solid var(--color-border); }
+.ai-guidelines-preview-section h4 { margin: 0 0 var(--space-3); color: var(--color-text); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.ai-guidelines-preview {
+  min-width: 0;
+  max-height: min(48vh, 520px);
+  overflow: auto;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.ai-guidelines-preview > :first-child { margin-top: 0; }
+.ai-guidelines-preview > :last-child { margin-bottom: 0; }
+.ai-guidelines-preview img { max-width: 100%; height: auto; }
+@media (max-width: 640px) {
+  .ai-guidelines-editor { min-height: 38vh; }
+  .ai-guidelines-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .ai-guidelines-actions .button { width: 100%; }
+  .ai-guidelines-preview { max-height: 42vh; }
+}

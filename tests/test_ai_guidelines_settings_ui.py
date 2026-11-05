@@ -21,14 +21,23 @@ def test_ai_guidelines_settings_page_uses_existing_nested_settings_dialog(client
         'id="ai-guidelines-version"',
         'id="ai-guidelines-updated"',
         'id="save-ai-guidelines"',
-        'id="copy-ai-guidelines"',
-        'id="download-ai-guidelines"',
-        'id="reset-ai-guidelines"',
-        'id="retry-ai-guidelines"',
+        'id="copy-ai-guidelines" class="icon-button ai-guidelines-toolbar-action" type="button" aria-label="Копировать регламент" title="Копировать регламент" disabled',
+        'id="download-ai-guidelines" class="icon-button ai-guidelines-toolbar-action" type="button" aria-label="Скачать регламент в формате Markdown" title="Скачать Markdown" disabled',
+        'id="reset-ai-guidelines" class="icon-button ai-guidelines-toolbar-action ai-guidelines-reset-action" type="button" aria-label="Восстановить исходную редакцию" title="Восстановить исходную редакцию" disabled',
+        'id="retry-ai-guidelines" class="text-button ai-guidelines-retry-link" type="button" hidden>Повторить загрузку</button>',
     ):
         assert fragment in settings_dialog
     assert 'id="ai-guidelines-settings-page"' in html
     assert 'id="ai-guidelines-dialog"' not in html
+    tablist = settings_dialog.split('class="ai-guidelines-tabs"', 1)[1].split('</div>', 1)[0]
+    assert 'class="ai-guidelines-tab-actions"' in tablist
+    assert tablist.index('id="ai-guidelines-preview-tab"') < tablist.index('id="copy-ai-guidelines"')
+    assert tablist.index('id="copy-ai-guidelines"') < tablist.index('id="download-ai-guidelines"') < tablist.index('id="reset-ai-guidelines"')
+    actions = settings_dialog.split('class="ai-guidelines-actions"', 1)[1].split('</div>', 1)[0]
+    assert 'id="save-ai-guidelines"' in actions
+    assert 'copy-ai-guidelines' not in actions
+    assert 'download-ai-guidelines' not in actions
+    assert 'reset-ai-guidelines' not in actions
 
 
 def test_ai_guidelines_settings_actions_keep_drafts_and_use_safe_preview(client):
@@ -65,6 +74,10 @@ def test_ai_guidelines_settings_actions_keep_drafts_and_use_safe_preview(client)
         ".settings-dialog.is-ai-guidelines .settings-panels",
         ".ai-guidelines-workspace",
         ".ai-guidelines-tabs",
+        ".ai-guidelines-tab-actions",
+        ".ai-guidelines-toolbar-action",
+        ".ai-guidelines-retry-link",
+        "justify-content: space-between",
         ".ai-guidelines-editor",
         ".ai-guidelines-preview",
         ".ai-guidelines-actions",

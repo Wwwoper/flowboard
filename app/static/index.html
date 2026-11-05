@@ -19,12 +19,12 @@
   <meta name="description" content="Лёгкий личный канбан-трекер">
   <title>Kanban Tracker</title>
   <link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/tokens.css?v=0.5.77">
-  <link rel="stylesheet" href="/static/style.css?v=0.5.77">
-  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.77">
-  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.77">
-  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.77">
-  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.77">
+  <link rel="stylesheet" href="/static/tokens.css?v=0.5.78">
+  <link rel="stylesheet" href="/static/style.css?v=0.5.78">
+  <link rel="stylesheet" href="/static/github-theme.css?v=0.5.78">
+  <link rel="stylesheet" href="/static/themed-controls.css?v=0.5.78">
+  <link rel="stylesheet" href="/static/task-editor-redesign.css?v=0.5.78">
+  <link rel="stylesheet" href="/static/board-workspace.css?v=0.5.78">
 </head>
 <body>
   <div class="app-shell">
@@ -422,6 +422,17 @@
             <div class="ai-guidelines-tabs" role="tablist" aria-label="Регламент ИИ" aria-orientation="horizontal">
               <button id="ai-guidelines-edit-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="true" aria-controls="ai-guidelines-edit-panel" tabindex="0">Редактирование</button>
               <button id="ai-guidelines-preview-tab" class="ai-guidelines-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-guidelines-preview-panel" tabindex="-1">Предпросмотр</button>
+              <div class="ai-guidelines-tab-actions" role="group" aria-label="Дополнительные действия с регламентом">
+                <button id="copy-ai-guidelines" class="icon-button ai-guidelines-toolbar-action" type="button" aria-label="Копировать регламент" title="Копировать регламент" disabled>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+                </button>
+                <button id="download-ai-guidelines" class="icon-button ai-guidelines-toolbar-action" type="button" aria-label="Скачать регламент в формате Markdown" title="Скачать Markdown" disabled>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg>
+                </button>
+                <button id="reset-ai-guidelines" class="icon-button ai-guidelines-toolbar-action ai-guidelines-reset-action" type="button" aria-label="Восстановить исходную редакцию" title="Восстановить исходную редакцию" disabled>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+              </div>
             </div>
             <section id="ai-guidelines-edit-panel" class="ai-guidelines-tab-panel ai-guidelines-editor-section" role="tabpanel" aria-labelledby="ai-guidelines-edit-tab">
               <label class="visually-hidden" for="ai-guidelines-editor">Текст регламента (Markdown)</label>
@@ -434,13 +445,10 @@
           </div>
           <div class="ai-guidelines-actions" role="group" aria-label="Действия с регламентом">
             <button id="save-ai-guidelines" class="button button-primary" type="button" disabled>Сохранить</button>
-            <button id="copy-ai-guidelines" class="button button-quiet" type="button" disabled>Копировать</button>
-            <button id="download-ai-guidelines" class="button button-quiet" type="button" disabled>Скачать Markdown</button>
-            <button id="reset-ai-guidelines" class="button button-danger-quiet" type="button" disabled>Восстановить исходную редакцию</button>
           </div>
           <div class="ai-guidelines-status-row">
             <p id="ai-guidelines-status" class="ai-guidelines-status" role="status" aria-live="polite">Загрузка регламента…</p>
-            <button id="retry-ai-guidelines" class="button button-small button-quiet" type="button" hidden>Повторить загрузку</button>
+            <button id="retry-ai-guidelines" class="text-button ai-guidelines-retry-link" type="button" hidden>Повторить загрузку</button>
           </div>
         </section>
 

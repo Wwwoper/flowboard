@@ -3,9 +3,9 @@ from __future__ import annotations
 
 def test_responsive_stylesheets_are_versioned_together(client):
     html = client.get("/").text
-    assert 'href="/static/style.css?v=0.5.77"' in html
-    assert 'href="/static/board-workspace.css?v=0.5.77"' in html
-    assert 'href="/static/task-editor-redesign.css?v=0.5.77"' in html
+    assert 'href="/static/style.css?v=0.5.78"' in html
+    assert 'href="/static/board-workspace.css?v=0.5.78"' in html
+    assert 'href="/static/task-editor-redesign.css?v=0.5.78"' in html
 
 
 def test_mobile_board_filters_and_actions_can_shrink_without_clipping(client):

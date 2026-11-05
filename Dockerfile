@@ -10,7 +10,7 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 RUN uv sync --no-dev --no-install-project
 
-RUN mkdir -p /app/data && chown -R nobody:nogroup /app
+RUN mkdir -p /app/data && chown -R nobody:nogroup /app && chmod -R a-w /app/app/resources
 USER nobody
 VOLUME ["/app/data"]
 EXPOSE 8000

@@ -2483,6 +2483,8 @@
   async function importMarkdown(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
+    files.sort((a, b) => a.lastModified - b.lastModified
+      || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
     const data = new FormData();
     files.forEach((file) => data.append("files", file, file.name));
     try {

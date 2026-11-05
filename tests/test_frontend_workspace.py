@@ -44,7 +44,7 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.60" in html
+    assert "/static/app.js?v=0.5.61" in html
     assert "/static/style.css?v=0.5.36" in html
 
 
@@ -211,7 +211,7 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.60" in html
+    assert "/static/app.js?v=0.5.61" in html
     assert "/static/style.css?v=0.5.36" in html
 
     script = client.get("/static/app.js").text
@@ -408,7 +408,7 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.60" in html
+    assert "/static/app.js?v=0.5.61" in html
     assert "/static/style.css?v=0.5.36" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
@@ -452,7 +452,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     assert '/static/github-theme.css?v=0.2.5' in html
     assert '/static/themed-controls.css?v=0.1.16' in html
     assert '/static/board-workspace.css?v=0.1.18' in html
-    assert '/static/app.js?v=0.5.60' in html
+    assert '/static/app.js?v=0.5.61' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -632,3 +632,20 @@ def test_project_manager_exposes_rename_action_and_persists_project_rename():
     assert 'method: "PATCH"' in script
     assert 'body: { new_slug: newSlug }' in script
     assert 'flowboard-workset:${oldSlug}' in script
+
+
+
+def test_markdown_import_orders_files_by_modification_time_and_name():
+    script = (Path(__file__).parents[1] / "app/static/app.js").read_text()
+    sort_expression = (
+        'files.sort((a, b) => a.lastModified - b.lastModified\n'
+        '      || a.name.localeCompare(b.name, undefined, '
+        '{ numeric: true, sensitivity: "base" }));'
+    )
+    assert sort_expression in script
+    import_function = script.split("async function importMarkdown(fileList) {", 1)[1].split(
+        "async function reorderAfterDrop(event)", 1
+    )[0]
+    assert import_function.index("files.sort(") < import_function.index(
+        'files.forEach((file) => data.append("files", file, file.name));'
+    )

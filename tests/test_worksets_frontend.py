@@ -50,7 +50,7 @@ def test_workset_controls_are_available_without_a_separate_context_row(client):
     assert 'id="wip-warning"' not in html
     assert "task-workset-chip" in script
     assert "window.prompt(" not in script
-    assert "/static/app.js?v=0.5.60" in html
+    assert "/static/app.js?v=0.5.61" in html
     assert "/static/themed-selects.js?v=0.1.10" in html
     assert "/static/style.css?v=0.5.36" in html
     assert "/static/board-workspace.css?v=0.1.18" in html

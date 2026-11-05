@@ -15,7 +15,7 @@ from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -47,6 +47,7 @@ from app.models import (
     WorksetRead,
     WorksetTaskAdd,
 )
+from app.version import APP_VERSION, BUILD_ID
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ATTACHMENT_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,10}$")
@@ -163,7 +164,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="Kanban Tracker",
     description="Лёгкий личный канбан-трекер с импортом Markdown и резервным экспортом.",
-    version="0.1.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -647,9 +648,12 @@ def _stored_extension(filename: str) -> str:
 
 
 @app.get("/", include_in_schema=False)
-def index() -> FileResponse:
-    # Always revalidate the HTML so new asset version query strings reach browsers.
-    return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache"})
+def index() -> HTMLResponse:
+    """Serve the board shell with the running app version and source revision."""
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    html = html.replace("__FLOWBOARD_VERSION__", APP_VERSION)
+    html = html.replace("__FLOWBOARD_BUILD__", BUILD_ID)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 @app.patch("/api/projects/{project_slug}")

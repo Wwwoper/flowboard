@@ -170,6 +170,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .board-column-done .task-card { border-color: var(--line); }
 .page-footer { display: flex; justify-content: space-between; gap: 15px; padding: 24px 1px 32px; color: var(--muted); font-size: 10px; }
 .page-footer span:first-child { display: flex; align-items: center; gap: 7px; }
+.footer-build-info { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .footer-pulse { background: var(--green); width: 6px; height: 6px; }
 
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
@@ -325,6 +326,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .task-card { padding: 11px 11px 9px; }
   .task-card-title { font-size: 12px; }
   .page-footer { flex-direction: column; gap: 7px; padding: 19px 1px 24px; }
+  .footer-build-info { margin-left: 0; }
   .task-panel { padding: 20px 17px 25px; }
   .task-panel { padding: 14px; overflow-y: auto; display: block; }
   .task-form { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: visible; }

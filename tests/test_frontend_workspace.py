@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.61" in html
-    assert "/static/style.css?v=0.5.36" in html
+    assert "/static/app.js?v=0.5.62" in html
+    assert "/static/style.css?v=0.5.37" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -211,8 +211,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.61" in html
-    assert "/static/style.css?v=0.5.36" in html
+    assert "/static/app.js?v=0.5.62" in html
+    assert "/static/style.css?v=0.5.37" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -408,8 +408,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.61" in html
-    assert "/static/style.css?v=0.5.36" in html
+    assert "/static/app.js?v=0.5.62" in html
+    assert "/static/style.css?v=0.5.37" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
     assert 'data-tooltip="Показать остальные завершённые задачи"' in html
@@ -448,11 +448,11 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.36" in html
+    assert "/static/style.css?v=0.5.37" in html
     assert '/static/github-theme.css?v=0.2.5' in html
     assert '/static/themed-controls.css?v=0.1.16' in html
     assert '/static/board-workspace.css?v=0.1.18' in html
-    assert '/static/app.js?v=0.5.61' in html
+    assert '/static/app.js?v=0.5.62' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -602,7 +602,7 @@ console.log(JSON.stringify({{matched, typeCount, noneMatches}}));
 
 def test_settings_pages_share_compact_cards_spacing_and_left_aligned_back_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.36" in html
+    assert "/static/style.css?v=0.5.37" in html
 
     script = client.get("/static/app.js").text
     assert 'manageProjectsHeader.append(manageProjectsTitleBlock, manageProjectsBackButton);' in script

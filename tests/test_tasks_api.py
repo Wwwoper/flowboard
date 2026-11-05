@@ -158,11 +158,19 @@ def test_task_api_responses_disable_browser_caching(client):
     assert detail_response.headers["cache-control"] == "no-store"
 
 
-def test_index_revalidates_html_and_references_versioned_assets(client):
+def test_index_revalidates_html_and_exposes_matching_app_version(client):
+    from app.version import APP_VERSION, BUILD_ID
+
     response = client.get("/")
 
     assert response.headers["cache-control"] == "no-cache"
-    assert "/static/app.js?v=0.5.61" in response.text
+    assert f"Flowboard v{APP_VERSION}" in response.text
+    assert f"build {BUILD_ID}" in response.text
+    assert f"/static/app.js?v={APP_VERSION}" in response.text
+    assert client.get("/openapi.json").json()["info"]["version"] == APP_VERSION
+    assert "__FLOWBOARD_VERSION__" not in response.text
+    assert "__FLOWBOARD_BUILD__" not in response.text
+    assert "/static/style.css?v=0.5.37" in response.text
 
 
 def test_index_exposes_accessible_theme_toggle(client):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
 from app.config import MAX_TASK_TEXT_LENGTH
 from app.task_types import validate_custom_tags
@@ -88,6 +88,24 @@ class ArchiveSettingsRead(BaseModel):
 class ArchiveSettingsPatch(StrictModel):
     archive_enabled: bool | None = None
     archive_after_days: Literal[7, 30, 60, 90] | None = None
+
+
+class AiTaskGuidelinesRead(BaseModel):
+    text: str
+    source: Literal["base", "user"]
+    base_version: str
+    updated_at: str | None = None
+
+
+class AiTaskGuidelinesUpdate(StrictModel):
+    text: StrictStr = Field(min_length=1, max_length=30000)
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Текст регламента не может быть пустым")
+        return value
 
 
 class TaskSummary(BaseModel):

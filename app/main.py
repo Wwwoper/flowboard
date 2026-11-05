@@ -18,6 +18,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from app.ai_guidelines import AI_TASK_GUIDELINES_BASE_VERSION, read_ai_task_guidelines
 from app.config import settings
 from app.db import connect, get_db, initialize_database
 from app.exporter import build_markdown_export, build_zip_export, export_filename
@@ -27,6 +28,8 @@ from app.task_transfer import MAX_ARCHIVE_SIZE, parse_task_archive
 from app.models import (
     ArchiveSettingsPatch,
     ArchiveSettingsRead,
+    AiTaskGuidelinesRead,
+    AiTaskGuidelinesUpdate,
     AttachmentRead,
     ImportResult,
     ImportSkipped,
@@ -57,6 +60,88 @@ PROJECT_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ARCHIVE_SETTING_DEFAULTS = {"archive_enabled": "true", "archive_after_days": "30"}
 TASK_SETTING_DEFAULTS = {"require_result_to_close": "false"}
 ARCHIVE_INTERVAL_SECONDS = 60 * 60
+AI_TASK_GUIDELINES_OVERRIDE_KEY = "ai_task_guidelines_override"
+
+
+def _ai_task_guidelines_base_text() -> str:
+    try:
+        return read_ai_task_guidelines()
+    except (OSError, UnicodeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Встроенный регламент временно недоступен",
+        ) from exc
+
+
+def _ai_task_guidelines_override(connection: sqlite3.Connection) -> tuple[str, str] | None:
+    try:
+        row = connection.execute(
+            "SELECT value FROM app_settings WHERE key = ?",
+            (AI_TASK_GUIDELINES_OVERRIDE_KEY,),
+        ).fetchone()
+    except sqlite3.Error as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Не удалось прочитать настройки регламента",
+        ) from exc
+    if row is None:
+        return None
+    try:
+        stored = json.loads(row["value"])
+        text = stored["text"]
+        updated_at = stored["updated_at"]
+        if not isinstance(text, str) or not isinstance(updated_at, str):
+            raise ValueError("Invalid stored guideline override")
+    except (TypeError, ValueError, KeyError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось прочитать пользовательскую редакцию регламента",
+        ) from exc
+    return text, updated_at
+
+
+def _ai_task_guidelines_read(
+    base_text: str, connection: sqlite3.Connection
+) -> AiTaskGuidelinesRead:
+    override = _ai_task_guidelines_override(connection)
+    if override is None:
+        return AiTaskGuidelinesRead(
+            text=base_text,
+            source="base",
+            base_version=AI_TASK_GUIDELINES_BASE_VERSION,
+            updated_at=None,
+        )
+    text, updated_at = override
+    return AiTaskGuidelinesRead(
+        text=text,
+        source="user",
+        base_version=AI_TASK_GUIDELINES_BASE_VERSION,
+        updated_at=updated_at,
+    )
+
+
+def _get_ai_task_guidelines_db():
+    try:
+        connection = connect()
+    except sqlite3.Error as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Хранилище регламента временно недоступно",
+        ) from exc
+    try:
+        yield connection
+    finally:
+        try:
+            connection.close()
+        except sqlite3.Error:
+            pass
+
+
+def _rollback_ai_task_guidelines(connection: sqlite3.Connection) -> None:
+    try:
+        connection.rollback()
+    except sqlite3.Error:
+        pass
 
 
 def _archive_settings(connection: sqlite3.Connection) -> dict[str, Any]:
@@ -880,6 +965,73 @@ def workset_history(
         events=[WorksetEventRead(**item) for item in page_rows],
         has_more=has_more,
         next_offset=offset + limit if has_more else None,
+    )
+
+
+@app.get("/api/ai-task-guidelines", response_model=AiTaskGuidelinesRead)
+def get_ai_task_guidelines(
+    connection: sqlite3.Connection = Depends(_get_ai_task_guidelines_db),
+) -> AiTaskGuidelinesRead:
+    base_text = _ai_task_guidelines_base_text()
+    return _ai_task_guidelines_read(base_text, connection)
+
+
+@app.put("/api/ai-task-guidelines", response_model=AiTaskGuidelinesRead)
+def update_ai_task_guidelines(
+    payload: AiTaskGuidelinesUpdate,
+    connection: sqlite3.Connection = Depends(_get_ai_task_guidelines_db),
+) -> AiTaskGuidelinesRead:
+    updated_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    stored_value = json.dumps(
+        {"text": payload.text, "updated_at": updated_at},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (AI_TASK_GUIDELINES_OVERRIDE_KEY, stored_value),
+        )
+        connection.commit()
+    except sqlite3.Error as exc:
+        _rollback_ai_task_guidelines(connection)
+        raise HTTPException(
+            status_code=503,
+            detail="Не удалось сохранить пользовательскую редакцию регламента",
+        ) from exc
+    return AiTaskGuidelinesRead(
+        text=payload.text,
+        source="user",
+        base_version=AI_TASK_GUIDELINES_BASE_VERSION,
+        updated_at=updated_at,
+    )
+
+
+@app.delete("/api/ai-task-guidelines", response_model=AiTaskGuidelinesRead)
+def reset_ai_task_guidelines(
+    connection: sqlite3.Connection = Depends(_get_ai_task_guidelines_db),
+) -> AiTaskGuidelinesRead:
+    base_text = _ai_task_guidelines_base_text()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "DELETE FROM app_settings WHERE key = ?",
+            (AI_TASK_GUIDELINES_OVERRIDE_KEY,),
+        )
+        connection.commit()
+    except sqlite3.Error as exc:
+        _rollback_ai_task_guidelines(connection)
+        raise HTTPException(
+            status_code=503,
+            detail="Не удалось сбросить пользовательскую редакцию регламента",
+        ) from exc
+    return AiTaskGuidelinesRead(
+        text=base_text,
+        source="base",
+        base_version=AI_TASK_GUIDELINES_BASE_VERSION,
+        updated_at=None,
     )
 
 

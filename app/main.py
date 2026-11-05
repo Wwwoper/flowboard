@@ -18,7 +18,11 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from app.ai_guidelines import AI_TASK_GUIDELINES_BASE_VERSION, read_ai_task_guidelines
+from app.ai_guidelines import (
+    AI_TASK_GUIDELINES_BASE_VERSION,
+    AI_TASK_GUIDELINES_OVERRIDE_KEY,
+    read_ai_task_guidelines,
+)
 from app.config import settings
 from app.db import connect, get_db, initialize_database
 from app.exporter import build_markdown_export, build_zip_export, export_filename
@@ -60,7 +64,6 @@ PROJECT_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ARCHIVE_SETTING_DEFAULTS = {"archive_enabled": "true", "archive_after_days": "30"}
 TASK_SETTING_DEFAULTS = {"require_result_to_close": "false"}
 ARCHIVE_INTERVAL_SECONDS = 60 * 60
-AI_TASK_GUIDELINES_OVERRIDE_KEY = "ai_task_guidelines_override"
 
 
 def _ai_task_guidelines_base_text() -> str:
@@ -1551,6 +1554,7 @@ def export_tasks(format: str = "md", connection: sqlite3.Connection = Depends(ge
             dict(row)
             for row in connection.execute("SELECT * FROM workset_events ORDER BY id").fetchall()
         ]
+        override = _ai_task_guidelines_override(connection)
         try:
             content = build_zip_export(
                 tasks,
@@ -1558,6 +1562,7 @@ def export_tasks(format: str = "md", connection: sqlite3.Connection = Depends(ge
                 worksets=worksets,
                 workset_memberships=memberships,
                 workset_events=events,
+                ai_task_guidelines_override=override[0] if override is not None else None,
             )
         except FileNotFoundError as error:
             raise HTTPException(

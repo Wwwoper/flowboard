@@ -6,6 +6,8 @@ import zipfile
 
 import pytest
 
+from app.ai_guidelines import AI_TASK_GUIDELINES_OVERRIDE_KEY, read_ai_task_guidelines
+from app.config import settings as app_settings
 from app.restore import restore_backup
 
 
@@ -90,6 +92,105 @@ def test_restore_accepts_legacy_manifest_without_result(client, tmp_path):
         connection.close()
     assert result == ("", "legacy-tag", "bug")
 
+
+def test_restore_preserves_user_guidelines_and_ignores_other_settings(
+    client, tmp_path, monkeypatch
+):
+    content = "# Пользовательская редакция\r\n\r\nТочный текст — 日本語 🧭\n"
+    assert client.put("/api/ai-task-guidelines", json={"text": content}).status_code == 200
+    assert client.patch(
+        "/api/task-settings", json={"require_result_to_close": True}
+    ).status_code == 200
+
+    archive_path = tmp_path / "guidelines.zip"
+    archive_path.write_bytes(client.get("/api/export?format=zip").content)
+    target = tmp_path / "guidelines-restored"
+    assert restore_backup(archive_path, target) == 0
+
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        settings = dict(connection.execute("SELECT key, value FROM app_settings"))
+    finally:
+        connection.close()
+
+    stored = json.loads(settings[AI_TASK_GUIDELINES_OVERRIDE_KEY])
+    assert stored["text"] == content
+    assert isinstance(stored["updated_at"], str) and stored["updated_at"]
+    assert settings["require_result_to_close"] == "false"
+    assert settings["archive_enabled"] == "true"
+    assert settings["archive_after_days"] == "30"
+
+    monkeypatch.setattr(app_settings, "DATA_DIR", target)
+    response = client.get("/api/ai-task-guidelines")
+    assert response.status_code == 200
+    assert response.json()["source"] == "user"
+    assert response.json()["text"] == content
+
+
+def test_restore_legacy_backup_without_guidelines_uses_bundled_base(
+    client, tmp_path, monkeypatch
+):
+    assert client.put(
+        "/api/ai-task-guidelines", json={"text": "Пользовательский текст из исходной БД"}
+    ).status_code == 200
+    source = tmp_path / "current.zip"
+    source.write_bytes(client.get("/api/export?format=zip").content)
+    legacy = tmp_path / "legacy-without-guidelines.zip"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(legacy, "w") as backup:
+        manifest = json.loads(original.read("tasks.json"))
+        manifest.pop("ai_task_guidelines_override", None)
+        backup.writestr("tasks.json", json.dumps(manifest))
+        for name in original.namelist():
+            if name != "tasks.json":
+                backup.writestr(name, original.read(name))
+
+    target = tmp_path / "legacy-restored"
+    assert restore_backup(legacy, target) == 0
+    connection = sqlite3.connect(target / "tracker.db")
+    try:
+        override = connection.execute(
+            "SELECT value FROM app_settings WHERE key = ?",
+            (AI_TASK_GUIDELINES_OVERRIDE_KEY,),
+        ).fetchone()
+    finally:
+        connection.close()
+    assert override is None
+
+    monkeypatch.setattr(app_settings, "DATA_DIR", target)
+    response = client.get("/api/ai-task-guidelines")
+    assert response.status_code == 200
+    assert response.json()["source"] == "base"
+    assert response.json()["text"] == read_ai_task_guidelines()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, True, 123, [], {}, "", "   ", "x" * 30_001],
+)
+def test_restore_rejects_invalid_guidelines_without_touching_target(tmp_path, value):
+    archive_path = tmp_path / "invalid-guidelines.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(
+            "tasks.json",
+            json.dumps(
+                {
+                    "format_version": 1,
+                    "tasks": [],
+                    "ai_task_guidelines_override": value,
+                }
+            ),
+        )
+
+    target = tmp_path / "existing-data"
+    target.mkdir()
+    sentinel = target / "keep.txt"
+    sentinel.write_text("existing data", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="пользовательская редакция регламента"):
+        restore_backup(archive_path, target, replace=True)
+
+    assert sentinel.read_text(encoding="utf-8") == "existing data"
+    assert sorted(path.name for path in tmp_path.iterdir() if ".restore-" in path.name) == []
 
 def test_zip_backup_preserves_history_for_a_deleted_empty_workset(client, tmp_path):
     task = client.post(

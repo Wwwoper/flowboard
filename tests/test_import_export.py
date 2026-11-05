@@ -134,6 +134,30 @@ def test_zip_export_contains_manifest_and_all_attachments(client, tmp_path):
         assert archived_task["attachments"][0]["archive_path"] == attachment_path
 
 
+def test_full_zip_export_includes_only_saved_guidelines_override(client):
+    client.patch("/api/task-settings", json={"require_result_to_close": True})
+
+    without_override = client.get("/api/export?format=zip")
+    assert without_override.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(without_override.content)) as archive:
+        manifest = json.loads(archive.read("tasks.json"))
+    assert manifest["format_version"] == 1
+    assert "ai_task_guidelines_override" not in manifest
+    assert "app_settings" not in manifest
+
+    content = "# Пользовательский регламент\r\n\r\nТочный текст — 日本語 🧭\n"
+    saved = client.put("/api/ai-task-guidelines", json={"text": content})
+    assert saved.status_code == 200, saved.text
+
+    exported = client.get("/api/export?format=zip")
+    assert exported.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(exported.content)) as archive:
+        manifest = json.loads(archive.read("tasks.json"))
+
+    assert manifest["format_version"] == 1
+    assert manifest["ai_task_guidelines_override"] == content
+    assert "app_settings" not in manifest
+
 def test_single_task_export_uses_versioned_json_and_imports_attachments(client):
     task = client.post(
         "/api/tasks",

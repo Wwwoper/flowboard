@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app import frontmatter_compat as frontmatter
+from app.ai_guidelines import AI_TASK_GUIDELINES_OVERRIDE_KEY
 from app.config import STATUS_LABELS, STATUSES, settings
 
 
@@ -63,6 +64,7 @@ def build_zip_export(
     worksets: list[dict[str, Any]] | None = None,
     workset_memberships: list[dict[str, Any]] | None = None,
     workset_events: list[dict[str, Any]] | None = None,
+    ai_task_guidelines_override: str | None = None,
 ) -> bytes:
     """Package JSON task data and every attachment into one portable archive."""
     manifest = {
@@ -73,6 +75,9 @@ def build_zip_export(
         "workset_memberships": workset_memberships or [],
         "workset_events": workset_events or [],
     }
+    if ai_task_guidelines_override is not None and ai_task_guidelines_override.strip():
+        manifest[AI_TASK_GUIDELINES_OVERRIDE_KEY] = ai_task_guidelines_override
+
     for task in tasks:
         item = dict(task)
         item["attachments"] = [

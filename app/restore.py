@@ -6,6 +6,7 @@ Example: uv run python -m app.restore backups/tasks-2026-10-22.zip --data-dir ./
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 import json
 import re
 import shutil
@@ -16,6 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import uuid4
 
+from app.ai_guidelines import AI_TASK_GUIDELINES_OVERRIDE_KEY
 from app.config import MAX_TASK_TEXT_LENGTH, STATUSES
 from app.db import connect, initialize_database
 from app.task_types import normalize_task_type, split_legacy_tags
@@ -45,6 +47,18 @@ def _read_manifest(archive: zipfile.ZipFile) -> dict[str, Any]:
         or format_version != 1
     ):
         raise ValueError("Неподдерживаемая версия формата резервной копии")
+
+    if AI_TASK_GUIDELINES_OVERRIDE_KEY in manifest:
+        guidelines_override = manifest[AI_TASK_GUIDELINES_OVERRIDE_KEY]
+        if (
+            not isinstance(guidelines_override, str)
+            or not guidelines_override.strip()
+            or len(guidelines_override) > MAX_TASK_TEXT_LENGTH
+        ):
+            raise ValueError(
+                "Некорректная пользовательская редакция регламента "
+                "в tasks.json (ожидается непустая строка до 30000 символов)"
+            )
 
     task_items = manifest.get("tasks")
     if not isinstance(task_items, list):
@@ -121,6 +135,23 @@ def restore_backup(archive_path: Path, data_dir: Path, *, replace: bool = False)
             initialize_database(db_path)
             connection = connect(db_path)
             try:
+                if AI_TASK_GUIDELINES_OVERRIDE_KEY in manifest:
+                    connection.execute(
+                        "INSERT INTO app_settings (key, value) VALUES (?, ?)",
+                        (
+                            AI_TASK_GUIDELINES_OVERRIDE_KEY,
+                            json.dumps(
+                                {
+                                    "text": manifest[AI_TASK_GUIDELINES_OVERRIDE_KEY],
+                                    "updated_at": datetime.now(UTC)
+                                    .isoformat(timespec="seconds")
+                                    .replace("+00:00", "Z"),
+                                },
+                                ensure_ascii=False,
+                                separators=(",", ":"),
+                            ),
+                        ),
+                    )
                 for task in task_items:
                     restored_tags, legacy_types = split_legacy_tags(task.get("tags", ""))
                     restored_type = normalize_task_type(task.get("task_type"))

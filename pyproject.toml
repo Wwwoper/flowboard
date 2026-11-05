@@ -3,7 +3,7 @@ package = false
 
 [project]
 name = "kanban-tracker"
-version = "0.5.67"
+version = "0.5.68"
 description = "Лёгкий self-hosted канбан-трекер для личных проектов"
 readme = "README.md"
 requires-python = ">=3.12"

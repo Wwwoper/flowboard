@@ -1030,3 +1030,46 @@
     transform: none !important;
   }
 }
+
+/* Responsive guardrails: filters may shrink, but every action remains reachable. */
+@media (max-width: 760px) {
+  .toolbar-filters-group {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-toolbar-group,
+  .workset-toolbar-group {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .project-filter-box,
+  .workset-filter-box,
+  .project-filter-box .theme-select,
+  .workset-filter-box .theme-select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .toolbar-actions-group {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .toolbar-actions-group .toolbar-group,
+  .toolbar-actions-group .button {
+    max-width: 100%;
+  }
+
+  .toolbar-actions-group .button {
+    white-space: normal;
+  }
+}

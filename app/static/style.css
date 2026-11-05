@@ -1558,3 +1558,78 @@ dialog.workset-history-dialog:not([open]) { display: none; }
 @media (max-width: 520px) {
   .project-manager-actions { flex-wrap: wrap; justify-content: flex-end; }
 }
+
+/* Keep the settings dialog inside short and narrow viewports. */
+.settings-dialog,
+.settings-dialog-header,
+.settings-layout,
+.settings-panels,
+.settings-panel {
+  min-width: 0;
+}
+
+.settings-dialog {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+}
+
+.settings-panel,
+.settings-section,
+.settings-option-row,
+.theme-manager-current {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .settings-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .settings-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .settings-panels {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: max(var(--space-5), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--space-5), env(safe-area-inset-left, 0px));
+  }
+
+  .settings-option-row {
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .settings-dialog .theme-manager-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .settings-dialog-header {
+    gap: var(--space-3);
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  .settings-panels {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  .settings-dialog .theme-manager-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-dialog .theme-manager-secondary-actions .toolbar-menu-item.button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}

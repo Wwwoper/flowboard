@@ -1416,3 +1416,71 @@
     overflow: hidden;
   }
 }
+
+/* On phones, keep the editor as one natural scroll surface instead of nested panes. */
+@media (max-width: 700px) {
+  .task-panel {
+    width: 100%;
+    max-width: 100vw;
+    padding-right: max(var(--space-4), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--space-4), env(safe-area-inset-left, 0px));
+  }
+
+  .task-panel .task-form-content {
+    min-width: 0;
+    overflow-x: clip;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .task-panel .task-properties-sidebar {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    padding-bottom: var(--space-3);
+  }
+
+  .task-panel .task-properties-sidebar .attachment-list {
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+
+  .task-panel .task-panel-footer {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 420px) {
+  .task-panel .task-panel-header,
+  .task-panel .task-title-field,
+  .task-panel .task-title-row,
+  .task-panel .task-editor-workspace,
+  .task-panel .task-properties-sidebar,
+  .task-panel .task-panel-footer {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .task-panel .task-title-row {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 32px);
+  }
+
+  .task-panel .task-title-display,
+  .task-panel .task-title-display-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .task-panel .task-workspace-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .task-panel .task-workspace-tab {
+    flex: 0 0 auto;
+  }
+}

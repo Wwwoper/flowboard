@@ -11,7 +11,7 @@ def test_done_column_can_collapse_at_every_viewport_width_and_keeps_titles_reada
     assert '.board-column-done .done-card {' in css
     assert 'opacity: 1;' in css
     assert '.board-column-done .done-card .task-card-title' in css
-    assert 'color: var(--ink);' in css
+    assert 'color: var(--color-text);' in css
     assert '.board-column-done .done-card .task-card-footer' in css
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html

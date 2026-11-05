@@ -60,8 +60,8 @@ def test_custom_theme_controls_and_script_are_served(client):
     ):
         assert f'id="{element_id}"' in html
     assert '/static/theme-manager.js?v=0.2.1' in html
-    assert '/static/app.js?v=0.5.65' in html
-    assert '/static/github-theme.css?v=0.2.5' in html
+    assert '/static/app.js?v=0.5.66' in html
+    assert '/static/github-theme.css?v=0.5.66' in html
     assert 'id="saved-themes-select"' in html
     assert 'id="delete-theme-button"' in html
 
@@ -257,9 +257,9 @@ def test_appearance_settings_group_controls_and_show_active_palette(client):
 
     css = (ROOT / "app" / "static" / "style.css").read_text()
     assert '.toast-position-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }' in css
-    assert '.toast-position-option:has(input:checked) { border: 2px solid var(--accent);' in css
+    assert '.toast-position-option:has(input:checked) { border: 2px solid var(--color-primary);' in css
     assert '@media (prefers-reduced-motion: reduce)' in css
-    assert '.settings-section { margin-top: 20px; padding-top: 16px;' in css
-    assert '.settings-section-description { margin: 5px 0 12px;' in css
+    assert '.settings-section { margin-top: var(--space-6); padding-top: var(--space-5);' in css
+    assert '.settings-section-description { margin: 5px 0 var(--space-4);' in css
     assert '.settings-panel[data-settings-panel="appearance"] .settings-section' not in css
     assert '.settings-dialog .theme-manager-select-row > .theme-manager-select-wrapper' in css

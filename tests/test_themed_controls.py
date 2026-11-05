@@ -3,7 +3,7 @@ from __future__ import annotations
 
 def test_theme_aware_controls_assets_are_loaded(client):
     html = client.get("/").text
-    assert '/static/themed-controls.css?v=0.1.16' in html
+    assert '/static/themed-controls.css?v=0.5.66' in html
     assert '/static/themed-selects.js?v=0.1.10' in html
 
     css_response = client.get("/static/themed-controls.css")
@@ -14,10 +14,10 @@ def test_theme_aware_controls_assets_are_loaded(client):
         '.quick-type-option[data-task-type="feature"]',
         '.quick-type-option[data-task-type="docs"]',
         '.quick-type-option[data-task-type="refactor"]',
-        'color: var(--gh-red-fg, var(--red))',
-        'color: var(--gh-green-fg, var(--green))',
-        'color: var(--gh-yellow-fg, var(--orange))',
-        'color: var(--gh-purple-fg, var(--accent-dark))',
+        'color: var(--gh-red-fg, var(--color-error))',
+        'color: var(--gh-green-fg, var(--color-success))',
+        'color: var(--gh-yellow-fg, var(--color-warning))',
+        'color: var(--gh-purple-fg, var(--color-primary-hover))',
         ".theme-select-trigger",
         ".settings-dialog .theme-manager-select-wrapper .theme-select-trigger",
         ".theme-manager-select-wrapper {",
@@ -32,7 +32,7 @@ def test_theme_aware_controls_assets_are_loaded(client):
         "align-items: center;",
         ".task-title-row .task-title-reference",
         "height: 36px;",
-        "border: 1.5px solid var(--line-strong) !important;",
+        "border: 1.5px solid var(--color-border-strong) !important;",
         ".task-title-row #focus-task[aria-pressed=\"true\"]",
         ".task-title-row .task-action-icon",
         "width: 20px !important;",

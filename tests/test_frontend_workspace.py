@@ -44,8 +44,8 @@ def test_project_workspace_controls_are_served(client):
         "shortcuts-settings-page",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.65" in html
-    assert "/static/style.css?v=0.5.38" in html
+    assert "/static/app.js?v=0.5.66" in html
+    assert "/static/style.css?v=0.5.66" in html
 
 
 def test_frontend_includes_project_search_undo_focus_and_density_behaviors(client):
@@ -99,7 +99,7 @@ def test_frontend_styles_support_compact_density_focus_and_image_previews(client
     assert ".attachment-preview" in css
     assert ".project-command-option" in css
     assert '[data-theme="dark"] .focus-bar' in css
-    assert "border-left: 3px solid var(--accent);" in css
+    assert "border-left: 3px solid var(--color-primary);" in css
     assert "@keyframes focus-indicator-pulse" in css
     assert ".focus-indicator::before { animation: none; }" in css
     assert "#copy-description.is-copied .copy-description-check" in css
@@ -211,8 +211,8 @@ def test_task_panel_has_compact_layout_searchable_tag_editor_and_single_task_exp
         "task-description-section",
     ):
         assert f'id="{element_id}"' in html
-    assert "/static/app.js?v=0.5.65" in html
-    assert "/static/style.css?v=0.5.38" in html
+    assert "/static/app.js?v=0.5.66" in html
+    assert "/static/style.css?v=0.5.66" in html
 
     script = client.get("/static/app.js").text
     assert "function renderTaskTagEditor()" in script
@@ -408,8 +408,8 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
     assert 'id="task-filter-tags"' in html
     assert 'data-archive-completed' in html
     assert 'id="archive-task"' in html
-    assert "/static/app.js?v=0.5.65" in html
-    assert "/static/style.css?v=0.5.38" in html
+    assert "/static/app.js?v=0.5.66" in html
+    assert "/static/style.css?v=0.5.66" in html
     assert 'id="toggle-done" class="done-toggle"' in html
     assert '<span>Ещё</span>' not in html
     assert 'data-tooltip="Показать остальные завершённые задачи"' in html
@@ -448,11 +448,11 @@ def test_archive_and_unified_type_tag_filters_leave_only_sorting_in_columns(clie
 
 def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.38" in html
-    assert '/static/github-theme.css?v=0.2.5' in html
-    assert '/static/themed-controls.css?v=0.1.16' in html
-    assert '/static/board-workspace.css?v=0.1.18' in html
-    assert '/static/app.js?v=0.5.65' in html
+    assert "/static/style.css?v=0.5.66" in html
+    assert '/static/github-theme.css?v=0.5.66' in html
+    assert '/static/themed-controls.css?v=0.5.66' in html
+    assert '/static/board-workspace.css?v=0.5.66' in html
+    assert '/static/app.js?v=0.5.66' in html
 
     style = client.get("/static/style.css").text
     theme = client.get("/static/github-theme.css").text
@@ -465,7 +465,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
         assert "\nselect:focus-visible {" not in stylesheet
         assert "\ntextarea:focus-visible {" not in stylesheet
 
-    assert "--focus-ring: var(--gh-focus, color-mix(in srgb, var(--accent) 35%, transparent));" in workspace
+    assert "--focus-ring: var(--gh-focus, color-mix(in srgb, var(--color-primary) 35%, transparent));" in workspace
     assert "*:focus {\n  outline: none !important;\n}" in workspace
     assert ':root[data-focus-modality="keyboard"] *:focus-visible' in workspace
     assert ':root[data-focus-modality="pointer"] *:focus-visible' in workspace
@@ -488,7 +488,7 @@ def test_input_focus_uses_theme_ring_only_for_keyboard_navigation(client):
 def test_file_and_settings_menus_are_grouped_and_explain_theme_states(client):
     html = client.get("/").text
     controls = client.get("/static/themed-controls.css").text
-    assert "/static/themed-controls.css?v=0.1.16" in html
+    assert "/static/themed-controls.css?v=0.5.66" in html
     assert html.count('class="settings-tab"') == 4
     for fragment in (
         'id="settings-tab-tasks" class="settings-tab" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-tasks" data-settings-tab="tasks">Задачи и архив</button>',
@@ -602,7 +602,7 @@ console.log(JSON.stringify({{matched, typeCount, noneMatches}}));
 
 def test_settings_pages_share_compact_cards_spacing_and_left_aligned_back_navigation(client):
     html = client.get("/").text
-    assert "/static/style.css?v=0.5.38" in html
+    assert "/static/style.css?v=0.5.66" in html
 
     script = client.get("/static/app.js").text
     assert 'manageProjectsHeader.append(manageProjectsTitleBlock, manageProjectsBackButton);' in script
@@ -616,12 +616,12 @@ def test_settings_pages_share_compact_cards_spacing_and_left_aligned_back_naviga
         'flex-direction: column; gap: 10px; margin-bottom: 18px; }'
     ) in css
     assert '.settings-subpage-header h3 { margin: 0; font-size: 17px; letter-spacing: -.2px; }' in css
-    assert '.settings-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }' in css
-    assert '.settings-section-description { margin: 5px 0 12px; color: var(--muted); font-size: 12px;' in css
-    assert '  border-radius: 10px;\n  color: var(--ink);\n  background: var(--surface);' in css
+    assert '.settings-section { margin-top: var(--space-6); padding-top: var(--space-5); border-top: var(--border-width) solid var(--color-border); }' in css
+    assert '.settings-section-description { margin: 5px 0 var(--space-4); color: var(--muted); font-size: var(--text-xs);' in css
+    assert '  border-radius: 10px;\n  color: var(--color-text);\n  background: var(--color-surface);' in css
     assert '.project-manager-item { display: flex; align-items: center;' in css
-    assert '.project-manager-action.is-archive,\n.project-manager-action.is-restore { color: var(--ink-soft); }' in css
-    assert 'background: var(--surface-soft); font-size: 12px; line-height: 1.5; }' in css
+    assert '.project-manager-action.is-archive,\n.project-manager-action.is-restore { color: var(--color-text-muted); }' in css
+    assert 'background: var(--color-surface-soft); font-size: var(--text-xs); line-height: 1.5; }' in css
     assert '.settings-panel[data-settings-panel="appearance"] .settings-section' not in css
 
 

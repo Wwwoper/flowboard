@@ -1,0 +1,88 @@
+/*
+ * Flowboard design-system tokens.
+ * Semantic color tokens intentionally alias the existing theme variables.
+ * This keeps the current GitHub palette, dark theme and imported themes intact
+ * while component styles migrate incrementally.
+ */
+:root {
+  color-scheme: light;
+
+  /* Typography */
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-root: 16px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-input: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-task-title: 1.25rem;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-button: 650;
+  --weight-bold: 700;
+  --line-heading: 1.2;
+  --line-body: 1.45;
+  --line-reading: 1.6;
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+  --icon-lg: 1.5rem;
+  --icon-stroke: 1.75;
+
+  /* Spacing: preserve the existing short scale and its numbering. */
+  --space-1: 0.25rem;
+  --space-2: 0.375rem;
+  --space-3: 0.5rem;
+  --space-4: 0.75rem;
+  --space-5: 1rem;
+  --space-6: 1.25rem;
+  --space-7: 1.5rem;
+  --space-8: 2rem;
+  --space-9: 2.5rem;
+  --space-10: 3rem;
+  --space-11: 4rem;
+
+  /* Semantic colors: resolve through the active legacy/custom palette. */
+  --color-background: var(--page);
+  --color-backdrop: var(--overlay);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-soft);
+  --color-border: var(--line);
+  --color-border-strong: var(--line-strong);
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--accent-dark);
+  --color-primary-active: var(--accent-dark);
+  --color-on-primary: var(--accent-ink);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-pale);
+  --color-error: var(--red);
+  --color-error-soft: var(--gh-red-bg, var(--accent-pale));
+  --color-success: var(--green);
+  --color-success-soft: var(--gh-green-bg, var(--accent-pale));
+  --color-warning: var(--orange);
+  --color-warning-soft: var(--gh-yellow-bg, var(--accent-pale));
+  --color-status-todo: var(--muted);
+  --color-status-doing: var(--accent);
+  --color-status-waiting: var(--orange);
+  --color-status-done: var(--green);
+
+  /* Geometry */
+  --border-width: 1px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --radius-sm: 0.375rem;
+  --radius-control: 0.5625rem;
+  --radius-card: 0.75rem;
+  --radius-dialog: 1rem;
+  --radius-pill: 9999px;
+
+  /* Elevation: aliases retain the current theme-specific shadows. */
+  --shadow-card: var(--gh-board-shadow, var(--shadow));
+  --shadow-overlay: var(--shadow);
+  --opacity-disabled: 0.6;
+  --duration-fast: 150ms;
+}

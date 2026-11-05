@@ -7,29 +7,23 @@ def test_main_screen_uses_shared_typography_and_spacing_tokens(client):
     html = client.get("/").text
     css = client.get("/static/style.css").text
     workspace_css = client.get("/static/board-workspace.css").text
+    tokens_css = client.get("/static/tokens.css").text
 
     for token, value in (
         ("--type-page-title:", "clamp(1.625rem, 2.4vw, 1.875rem)"),
-        ("--type-column-title:", "0.8125rem"),
-        ("--type-task-title:", "0.875rem"),
-        ("--type-preview:", "0.75rem"),
+        ("--type-column-title:", "var(--text-sm)"),
+        ("--type-task-title:", "var(--text-base)"),
+        ("--type-preview:", "var(--text-xs)"),
         ("--type-meta:", "0.6875rem"),
-        ("--type-hint:", "0.75rem"),
+        ("--type-hint:", "var(--text-xs)"),
     ):
         assert token in css
         assert f"{token} {value};" in css
 
-    for token in (
-        "--line-height-heading:",
-        "--line-height-body:",
-        "--line-height-meta:",
-        "--space-1:",
-        "--space-2:",
-        "--space-3:",
-        "--space-4:",
-        "--space-5:",
-    ):
+    for token in ("--line-height-heading:", "--line-height-body:", "--line-height-meta:"):
         assert token in css
+    for token in ("--space-1:", "--space-2:", "--space-3:", "--space-4:", "--space-5:", "--space-11:"):
+        assert token in tokens_css
 
     for rule in (
         ".page-heading h1 {\n  font-size: var(--type-page-title);",
@@ -48,8 +42,9 @@ def test_main_screen_uses_shared_typography_and_spacing_tokens(client):
     # Font sizes scale with the root font size; long words and titles can wrap.
     assert "clamp(1.625rem, 2.4vw, 1.875rem)" in css
     assert "overflow-wrap: anywhere;" in css
-    assert 'href="/static/style.css?v=0.5.38"' in html
-    assert 'href="/static/board-workspace.css?v=0.1.18"' in html
+    assert 'href="/static/tokens.css?v=0.5.66"' in html
+    assert 'href="/static/style.css?v=0.5.66"' in html
+    assert 'href="/static/board-workspace.css?v=0.5.66"' in html
     assert ".toolbar-menu-trigger" in css
     assert ".settings-open-button::after,\n.topbar-import-button::after { display: none; }" in css
 

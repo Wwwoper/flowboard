@@ -12,14 +12,14 @@ def test_board_surface_hierarchy_uses_theme_tokens_for_surfaces_and_states(clien
 
     for fragment in (
         ":root .board-column {",
-        "var(--gh-column, var(--surface-soft))",
-        "border-color: color-mix(in srgb, var(--line) 42%,",
+        "var(--gh-column, var(--color-surface-soft))",
+        "border-color: color-mix(in srgb, var(--color-border) 42%,",
         ":root .board-column.is-drop-target",
-        "background: color-mix(in srgb, var(--accent-pale) 64%,",
+        "background: color-mix(in srgb, var(--color-accent-soft) 64%,",
         ".column-count.is-over-limit {",
         "var(--gh-yellow-bg)",
         ":root .task-card:hover",
-        "var(--line-strong)",
+        "var(--color-border-strong)",
         ":root .task-card.dragging",
         "opacity: .4;",
         ":root .task-card.is-focused",

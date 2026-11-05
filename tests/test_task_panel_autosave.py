@@ -18,7 +18,7 @@ def test_task_panel_uses_autosave_without_a_manual_save_button(client):
     style = client.get("/static/style.css").text
     assert ".task-header-action" in style
     assert ".task-autosave-status" in style
-    assert ".task-panel { padding-top: 32px; }" in style
+    assert ".task-panel { padding-top: var(--space-8); }" in style
 
     script = client.get("/static/app.js").text
     assert "function scheduleTaskDraftSave(delay = 180)" in script
@@ -48,7 +48,7 @@ def test_task_description_can_be_copied_with_clipboard_api(client):
     style = client.get("/static/style.css").text
     redesign_style = client.get("/static/task-editor-redesign.css").text
     assert ".workspace-copy-button" in redesign_style
-    assert "padding: 8px 3px;" in redesign_style
+    assert "padding: var(--space-3) 3px;" in redesign_style
 
     script = client.get("/static/app.js").text
     assert 'copyDescription: $("#copy-description")' in script
@@ -83,7 +83,7 @@ def test_task_description_checklists_toggle_without_entering_edit_mode(client):
 def test_task_checkboxes_use_active_theme_colors(client):
     style = client.get("/static/style.css").text
     assert ".markdown-preview input[data-task-checkbox]" in style
-    assert "accent-color: var(--accent);" in style
+    assert "accent-color: var(--color-primary);" in style
 
 
 def test_task_title_editor_closes_on_outside_pointer_after_successful_save(client):
@@ -95,7 +95,7 @@ def test_task_title_editor_closes_on_outside_pointer_after_successful_save(clien
     assert 'if (!els.taskTitle.hidden && !els.taskTitle.contains(target))' in script
     assert 'if (!titleEditorClosePending) scheduleTaskDraftSave(180);' in script
     assert "function finishTitleEditing(focusDisplay = true)" in script
-    assert "/static/app.js?v=0.5.65" in client.get("/").text
+    assert "/static/app.js?v=0.5.66" in client.get("/").text
 
 
 def test_task_document_editors_close_when_pointer_moves_outside_the_active_editor(client):
@@ -106,7 +106,7 @@ def test_task_document_editors_close_when_pointer_moves_outside_the_active_edito
     assert 'document.addEventListener("pointerdown", closeTaskDocumentEditorOnOutsidePointerDown)' in script
     assert "void setDescriptionEditing(false);" in script
     assert "void setResultEditing(false);" in script
-    assert "/static/app.js?v=0.5.65" in client.get("/").text
+    assert "/static/app.js?v=0.5.66" in client.get("/").text
 
 
 def test_project_change_error_is_rendered_next_to_project_field(client):

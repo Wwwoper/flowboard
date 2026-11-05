@@ -3,14 +3,14 @@ from __future__ import annotations
 
 def test_primary_actions_follow_the_active_theme_accent(client):
     html = client.get("/").text
-    assert '/static/github-theme.css?v=0.2.5' in html
-    assert '/static/themed-controls.css?v=0.1.16' in html
+    assert '/static/github-theme.css?v=0.5.66' in html
+    assert '/static/themed-controls.css?v=0.5.66' in html
 
     css = client.get("/static/github-theme.css").text
     assert ".button-primary {" in css
-    assert "color: var(--accent-ink);" in css
-    assert "background: var(--accent);" in css
-    assert "background: var(--accent-dark);" in css
+    assert "color: var(--color-on-primary);" in css
+    assert "background: var(--color-primary);" in css
+    assert "background: var(--color-primary-hover);" in css
     assert "background: var(--gh-primary);" not in css
 
 

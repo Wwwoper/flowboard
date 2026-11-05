@@ -57,7 +57,7 @@ def test_task_card_excerpt_and_long_labels_remain_compact_and_wrappable(client):
     assert "overflow-wrap: anywhere" in css
     board_css = client.get("/static/board-workspace.css").text
     assert "font-size: 11px;" in board_css
-    assert "color: var(--ink-soft);" in board_css
+    assert "color: var(--color-text-muted);" in board_css
     assert ".task-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }" in css
 
 

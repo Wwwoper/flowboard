@@ -4,7 +4,7 @@ from __future__ import annotations
 
 def test_board_workspace_fills_available_desktop_height_with_internal_scrolling(client):
     html = client.get("/").text
-    assert '/static/board-workspace.css?v=0.1.18' in html
+    assert '/static/board-workspace.css?v=0.5.66' in html
 
     css = client.get("/static/board-workspace.css").text
     assert "@media (min-width: 1181px)" in css
@@ -62,8 +62,8 @@ def test_theme_surfaces_focus_states_and_header_hit_areas_use_shared_tokens(clie
 
     assert ':root[data-theme="dark"]' in base_css
     assert ':root[data-theme="dark"]' in theme_css
-    assert "color-mix(in srgb, var(--gh-column, var(--surface-soft))" in board_css
-    assert "border-color: color-mix(in srgb, var(--line) 42%," in board_css
+    assert "color-mix(in srgb, var(--gh-column, var(--color-surface-soft))" in board_css
+    assert "border-color: color-mix(in srgb, var(--color-border) 42%," in board_css
     assert ".column-add:focus-visible" in base_css
     assert ".column-options-toggle:focus-visible" in base_css
     assert ".done-toggle:focus-visible" in base_css
@@ -116,7 +116,7 @@ def test_toolbar_search_expands_and_filters_wrap_as_a_single_group(client):
     board_css = client.get("/static/board-workspace.css").text
     themed_css = client.get("/static/themed-controls.css").text
 
-    assert "/static/board-workspace.css?v=0.1.18" in html
+    assert "/static/board-workspace.css?v=0.5.66" in html
     assert ".toolbar-main-group {" in board_css
     assert "flex: 1 1 640px;" in board_css
     assert "flex-wrap: nowrap;" in board_css

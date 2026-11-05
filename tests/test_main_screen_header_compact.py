@@ -8,7 +8,7 @@ def test_main_screen_header_compacts_vertical_rhythm_without_shrinking_controls(
         "padding: var(--space-5) 0 var(--space-3);",
         "min-height: 52px;",
         "height: 36px;",
-        "padding: 12px 0 8px;",
+        "padding: var(--space-4) 0 var(--space-3);",
         "@media (max-width: 1000px)",
         "flex-wrap: wrap;",
         ".search-box { flex: 1 1 100%; min-width: 0; }",
